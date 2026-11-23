@@ -24,6 +24,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <math.h>
 
 #import <Foundation/NSString.h>
+#import <CoreFoundation/CFStringEncodingConverter.h>
 #import <Foundation/NSCoder.h>
 #import <Foundation/NSStringSymbol.h>
 #import <Foundation/NSStringUTF8.h>

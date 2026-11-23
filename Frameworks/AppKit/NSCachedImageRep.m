@@ -10,6 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSWindow.h>
 #import <AppKit/NSGraphicsContext.h>
 #import <CoreGraphics/CGWindow.h>
+#import <Onyx2D/O2BitmapContext.h>
 #import <AppKit/NSWindow-Private.h>
 
 @implementation NSCachedImageRep
@@ -60,7 +61,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -(BOOL)drawAtPoint:(NSPoint)point {
    NSRect     rect={point,_size};
-   CGImageRef imageRef=CGBitmapContextCreateImage([[_window graphicsContext] graphicsPort]);
+   CGImageRef imageRef=O2BitmapContextCreateImage([[_window graphicsContext] graphicsPort]);
    
    CGContextDrawImage(NSCurrentGraphicsPort(),rect,imageRef);
    
@@ -70,7 +71,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(BOOL)drawInRect:(NSRect)rect {
-   CGImageRef imageRef=CGBitmapContextCreateImage([[_window graphicsContext] graphicsPort]);
+   CGImageRef imageRef=O2BitmapContextCreateImage([[_window graphicsContext] graphicsPort]);
    
    CGContextDrawImage(NSCurrentGraphicsPort(),rect,imageRef);
    

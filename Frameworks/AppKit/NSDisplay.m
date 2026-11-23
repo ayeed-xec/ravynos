@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. */
 
 #import <AppKit/NSDisplay.h>
+#import <CoreGraphics/CGDirectDisplay.h>
 #import <AppKit/NSRaise.h>
 #import <AppKit/NSColorList.h>
 #import <AppKit/NSFontTypeface.h>

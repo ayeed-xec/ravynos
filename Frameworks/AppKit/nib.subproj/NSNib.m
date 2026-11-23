@@ -8,6 +8,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #import <AppKit/NSNib.h>
 #import <Foundation/NSURL.h>
+#import <CoreFoundation/CFBundle.h>
 #import <AppKit/NSRaise.h>
 #import <Foundation/NSKeyedArchiver.h>
 #import <AppKit/NSNibLoading.h>
