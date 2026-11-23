@@ -11,6 +11,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @class NSError, NSHost, NSData, CFSSLHandler;
 
 @interface NSSocket : NSObject
+{
+@package
+    int _descriptor;
+}
+
+- (int)descriptor;
+- (void)setDescriptor:(int)descriptor;
 
 // returns nil if descriptor is not a socket
 - initWithFileDescriptor:(int)descriptor;

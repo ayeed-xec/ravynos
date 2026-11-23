@@ -33,7 +33,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSThread.h>
 #import <Foundation/NSAutoreleasePool.h>
 
-#import "NSSocket_bsd.h"
+#import "NSSocket.h"
 #import "NSFileHandle_posix.h"
 
 @implementation NSFileHandle(ImplementedInSubclass)
@@ -370,7 +370,7 @@ CONFORMING TO
    if (_inputSource != nil)
     [NSException raise:NSInternalInconsistencyException format:@"%@ already has background activity", [self description]];
 
-    _inputSource=[NSSelectInputSource socketInputSourceWithSocket:[NSSocket_bsd socketWithDescriptor:_fileDescriptor]];
+    _inputSource=[NSSelectInputSource socketInputSourceWithSocket:[NSSocket socketWithDescriptor:_fileDescriptor]];
     [_inputSource setSelectEventMask:NSSelectReadEvent];
     [_inputSource setDelegate:self];
     _backgroundModes = [modes retain];

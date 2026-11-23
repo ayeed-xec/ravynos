@@ -8,7 +8,7 @@ INFO_PLIST = Info.plist
 RESOURCES_DIRS = English.lproj
 RESOURCES_FILES != cd ${.CURDIR}; echo NSCharacterSet/*.bitmap
 HEADERS != cd ${.CURDIR}; echo Headers/Foundation/* Headers/*.h \
-	platform_posix/NSSocket_bsd.h
+	platform_posix/NSSocket_impl.h
 SLF = /System/Library/Frameworks
 INSTALL_NAME_DIR = ${SLF}/${FRAMEWORK}.framework/Versions/${FMWK_VERSION}
 
@@ -323,7 +323,7 @@ SRCS = 	NSFormatter.m \
 	platform_posix/NSRecursiveLock_posix.m \
 	platform_posix/NSRunLoopState_posix.m \
 	platform_posix/NSSelectSet_bsd.m \
-	platform_posix/NSSocket_bsd.m \
+	platform_posix/NSSocket.m \
 	platform_posix/NSSocketPort_posix.m \
 	platform_posix/NSTask_posix.m \
 	platform_posix/NSTimeZone_posix.m \

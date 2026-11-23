@@ -6,10 +6,15 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #ifdef PLATFORM_USES_BSD_SOCKETS
-#import "NSSocket_bsd.h"
+#import <Foundation/NSSocket.h>
+#import "NSSocket_impl.h"
 #import <Foundation/NSError.h>
 #import <Foundation/NSHost.h>
 #import <Foundation/NSArray.h>
+#ifdef LINUX
+#include <sys/time.h>
+#include <sys/select.h>
+#endif
 #import <Foundation/NSString.h>
 
 #include <errno.h>
@@ -28,12 +33,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSSocket(bsd)
 
 +allocWithZone:(NSZone *)zone {
-   return NSAllocateObject([NSSocket_bsd class],0,NULL);
+   return NSAllocateObject([NSSocket class],0,NULL);
 }
 
 @end
 
-@implementation NSSocket_bsd
+@implementation NSSocket(posix)
 
 static inline void byteZero(void *vsrc,size_t size){
    uint8_t *src=vsrc;
@@ -124,10 +129,10 @@ static inline void byteZero(void *vsrc,size_t size){
 }
 
 -(BOOL)isEqual:other {
-   if(![other isKindOfClass:[NSSocket_bsd class]])
+   if(![other isKindOfClass:[NSSocket class]])
     return NO;
 
-   return (_descriptor==((NSSocket_bsd *)other)->_descriptor)?YES:NO;
+   return (_descriptor==((NSSocket *)other)->_descriptor)?YES:NO;
 }
 
 -(NSError *)close {
@@ -232,7 +237,7 @@ static inline void byteZero(void *vsrc,size_t size){
    if(errorp!=NULL)
     *errorp=error;
 
-   return (error!=nil)?nil:[[[NSSocket_bsd alloc] initWithDescriptor:newSocket] autorelease];
+   return (error!=nil)?nil:[[[NSSocket alloc] initWithDescriptor:newSocket] autorelease];
 }
 
 - (CFSSLHandler*)sslHandler {
