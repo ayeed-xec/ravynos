@@ -13,6 +13,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 FOUNDATION_EXPORT NSString *const NSBundleDidLoadNotification;
 FOUNDATION_EXPORT NSString *const NSLoadedClasses;
 
+enum {
+    NSBundleExecutableArchitectureI386    = 0x00000007,
+    NSBundleExecutableArchitecturePPC     = 0x00000012,
+    NSBundleExecutableArchitectureX86_64  = 0x01000007,
+    NSBundleExecutableArchitecturePPC64   = 0x01000012,
+    NSBundleExecutableArchitectureARM     = 0x0000000c,
+    NSBundleExecutableArchitectureARM64   = 0x0100000c,
+};
+
 @interface NSBundle : NSObject {
     NSString *_path;
     NSString *_resourcePath;

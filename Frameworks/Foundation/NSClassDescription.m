@@ -55,22 +55,18 @@ NSStringFromClass(class)];
 }
 
 -(NSArray *)attributeKeys {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(NSString *)inverseForRelationshipKey:(NSString *)key {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(NSArray *)toManyRelationshipKeys {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(NSArray *)toOneRelationshipKeys {
-   NSUnimplementedMethod();
    return nil;
 }
 

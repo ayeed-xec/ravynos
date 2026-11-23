@@ -26,6 +26,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    _classes=NSCreateHashTable(NSNonOwnedPointerHashCallBacks,0);
    _cStrings=NSCreateHashTable(NSObjectHashCallBacks,0);
 
+   _classNames=nil;
+   _replacements=nil;
+
    return self;
 }
 
@@ -35,6 +38,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    NSFreeHashTable(_objects);
    NSFreeHashTable(_classes);
    NSFreeHashTable(_cStrings);
+   [_classNames release];
+   [_replacements release];
    [super dealloc];
 }
 
@@ -190,8 +195,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
     if (NSHashGet(_classes, class) == NULL)
     {
+        NSString *className=NSStringFromClass(class);
+
         NSHashInsert(_classes, class);
-        [self _appendCString:[NSStringFromClass(class) cString]];
+
+        if(_classNames!=nil){
+            NSString *archiveName=[_classNames objectForKey:className];
+
+            if(archiveName!=nil)
+             className=archiveName;
+        }
+
+        [self _appendCString:[className cString]];
         [self _appendWordFour:[class version]];
         [self _appendClassVersion:[class superclass]];
     }
@@ -200,6 +215,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 - (void)_appendObject:(id)object conditional:(BOOL)conditional
 {
+    if (_replacements!=nil && object!=nil) {
+        id replacement=[_replacements objectForKey:object];
+
+        if(replacement!=nil)
+            object=replacement;
+    }
+
     if (_pass == 0) {
         if (object != nil) {
             //NSLog(@"%@ conditional=%s", NSStringFromClass([object class]), conditional ? "YES" : "NO");
@@ -436,11 +458,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)encodeClassName:(NSString *)runtime intoClassName:(NSString *)archive {
-   NSUnimplementedMethod();
+   if(_classNames==nil)
+    _classNames=[[NSMutableDictionary alloc] init];
+
+   [_classNames setObject:archive forKey:runtime];
 }
 
 -(void)replaceObject:original withObject:replacement {
-   NSUnimplementedMethod();
+   if(_replacements==nil)
+    _replacements=[[NSMutableDictionary alloc] init];
+
+   [_replacements setObject:replacement forKey:original];
 }
 
 @end

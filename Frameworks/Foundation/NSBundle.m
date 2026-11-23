@@ -26,6 +26,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSRaiseException.h>
 
 #import <objc/objc.h>
+#import <mach-o/dyld.h>
 #include <stdio.h>
 
 typedef void *NSModuleHandle;
@@ -392,22 +393,12 @@ static NSMapTable *pathToObject=NULL;
 
 + (void)registerFrameworks
 {
-    unsigned i, count;
-    const char **array = objc_copyImageNames(&count);
-
-    for (i = 0; i < count; i++) {
-        NSString *path = [NSString stringWithUTF8String:array[i]];
-        NSBundle *bundle = [NSBundle bundleWithModulePath:path];
-
-        [_allFrameworks addObject:bundle];
-    }
-    free(array);
 }
 
 
 + (void)initialize
 {
-    if (self == [NSBundle class]) {
+        if (self == [NSBundle class]) {
         const char *module = getenv("CFProcessPath");
         if (!module) {
 #if defined(GCC_RUNTIME_3) || defined(APPLE_RUNTIME_4)
@@ -486,8 +477,13 @@ static NSMapTable *pathToObject=NULL;
 
 
 +(NSBundle *)bundleWithIdentifier:(NSString *)identifier {
-   NSUnimplementedMethod();
-   return 0;
+   for(NSBundle *bundle in [self allBundles]){
+    if([[[bundle infoDictionary] objectForKey:@"CFBundleIdentifier"]
+        isEqualToString:identifier])
+     return bundle;
+   }
+
+   return nil;
 }
 
 
@@ -546,12 +542,27 @@ static NSMapTable *pathToObject=NULL;
 	return [[NSBundle bundleWithPath: path] pathsForResourcesOfType:type inDirectory: nil];
 }
 +(NSArray *)preferredLocalizationsFromArray:(NSArray *)localizations {
-   NSUnimplementedMethod();
-   return 0;
+   return [self preferredLocalizationsFromArray:localizations
+                                 forPreferences:nil];
 }
 +(NSArray *)preferredLocalizationsFromArray:(NSArray *)localizations forPreferences:(NSArray *)preferences {
-   NSUnimplementedMethod();
-   return 0;
+   NSArray *prefs=(preferences!=nil) ? preferences
+                    : [[NSLocale preferredLanguages] copy];
+
+   for(NSString *preferred in prefs){
+    for(NSString *candidate in localizations){
+     if([candidate isEqualToString:preferred])
+      return [NSArray arrayWithObject:candidate];
+     if([[preferred stringByDeletingPathExtension]
+         hasPrefix:candidate])
+      return [NSArray arrayWithObject:candidate];
+    }
+   }
+
+   if([localizations count]>0)
+    return [NSArray arrayWithObject:[localizations objectAtIndex:0]];
+
+   return [NSArray array];
 }
 
 -(NSString *)bundlePath {
@@ -604,33 +615,47 @@ static NSMapTable *pathToObject=NULL;
 }
 
 -(NSString *)developmentLocalization {
-   NSUnimplementedMethod();
-   return 0;
+   return [[self infoDictionary] objectForKey:@"CFBundleDevelopmentRegion"];
 }
 -(NSArray *)executableArchitectures {
-   NSUnimplementedMethod();
-   return 0;
+   return [NSArray arrayWithObject:[NSNumber numberWithInteger:NSBundleExecutableArchitectureX86_64]];
 }
 
 -(NSArray *)localizations {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableArray *result=[NSMutableArray array];
+   NSFileManager *manager=[NSFileManager defaultManager];
+   NSString *subdirectory=@"";
+   NSArray *contents;
+
+   if([_resourcePath hasSuffix:@".lproj"])
+    subdirectory=[[NSFileManager defaultManager] currentDirectoryPath];
+
+   contents=[manager directoryContentsAtPath:_resourcePath];
+   for(NSString *entry in contents){
+    if([entry hasSuffix:@".lproj"])
+     [result addObject:[entry stringByDeletingPathExtension]];
+   }
+
+   if([result count]==0)
+    [result addObject:@"en"];
+
+   return result;
 }
+
 -(NSArray *)preferredLocalizations {
-   NSUnimplementedMethod();
-   return 0;
+   return [[self class] preferredLocalizationsFromArray:[self localizations]];
 }
+
 -(NSString *)privateFrameworksPath {
-   NSUnimplementedMethod();
-   return 0;
+   return [[self bundlePath] stringByAppendingPathComponent:@"Contents/PrivateFrameworks"];
 }
+
 -(NSString *)sharedFrameworksPath {
-   NSUnimplementedMethod();
-   return 0;
+   return [[self bundlePath] stringByAppendingPathComponent:@"Contents/SharedFrameworks"];
 }
+
 -(NSString *)sharedSupportPath {
-   NSUnimplementedMethod();
-   return 0;
+   return [[self bundlePath] stringByAppendingPathComponent:@"Contents/SharedSupport"];
 }
 
 -(NSString *)pathForAuxiliaryExecutable:(NSString *)executable {
@@ -669,8 +694,13 @@ static NSMapTable *pathToObject=NULL;
    return _isLoaded;
 }
 -(BOOL)preflightAndReturnError:(NSError **)error {
-   NSUnimplementedMethod();
-   return 0;
+   void *handle=NSLoadModule([[_path stringByAppendingPathComponent:@"Contents/MacOS"] fileSystemRepresentation],error);
+
+   if(handle==NULL)
+    return NO;
+
+   NSUnloadModule(handle);
+   return YES;
 }
 
 /*
@@ -756,8 +786,17 @@ static NSMapTable *pathToObject=NULL;
 }
 
 -(BOOL)unload {
-   NSUnimplementedMethod();
-   return 0;
+   void *load=nil;
+   NSError *error=nil;
+
+   if(![self isLoaded])
+    return YES;
+
+   if(NSUnloadModule(load)==NO)
+    return NO;
+
+   [self _setLoaded:NO];
+   return YES;
 }
 
 -(NSArray *)lookInDirectories {
@@ -892,8 +931,16 @@ static NSMapTable *pathToObject=NULL;
 }
 
 -(NSString *)pathForResource:(NSString *)name ofType:(NSString *)type inDirectory:(NSString *)path forLocalization:(NSString *)localization {
-   NSUnimplementedMethod();
-   return 0;
+   NSString *localizedDirectory;
+
+   if(localization==nil)
+    return [self pathForResource:name ofType:type inDirectory:path];
+
+   localizedDirectory=[NSString stringWithFormat:@"%@.lproj",localization];
+   if(path!=nil)
+    localizedDirectory=[path stringByAppendingPathComponent:localizedDirectory];
+
+   return [self pathForResource:name ofType:type inDirectory:localizedDirectory];
 }
 
 -(NSString *)pathForResource:(NSString *)name ofType:(NSString *)type {
@@ -923,8 +970,24 @@ static NSMapTable *pathToObject=NULL;
 }
 
 -(NSArray *)pathsForResourcesOfType:(NSString *)type inDirectory:(NSString *)path forLocalization:(NSString *)localization {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableArray *result=[NSMutableArray array];
+   NSString *fullPath=[self resourcePath];
+
+   if(path!=nil)
+    fullPath=[fullPath stringByAppendingPathComponent:path];
+
+   if(localization!=nil)
+    fullPath=[fullPath stringByAppendingPathComponent:
+     [NSString stringWithFormat:@"%@.lproj",localization]];
+
+   NSArray *allFiles=[[NSFileManager defaultManager] directoryContentsAtPath:fullPath];
+
+   for(NSString *check in allFiles){
+    if([type length]==0 || [[check pathExtension] isEqualToString:type])
+     [result addObject:[fullPath stringByAppendingPathComponent:check]];
+   }
+
+   return result;
 }
 
 -(NSString *)localizedStringForKey:(NSString *)key value:(NSString *)value table:(NSString *)table {

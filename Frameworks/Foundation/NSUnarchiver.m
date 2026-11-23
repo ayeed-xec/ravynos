@@ -7,6 +7,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <Foundation/NSUnarchiver.h>
 #import <Foundation/NSRaise.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSMutableArray.h>
 #import <Foundation/NSByteOrder.h>
@@ -464,25 +465,36 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)decodeClassName:(NSString *)archiveName asClassName:(NSString *)runtimeName {
-   NSUnimplementedMethod();
+   if(_classes==nil)
+    _classes=[[NSMutableDictionary alloc] init];
+   [_classes setObject:runtimeName forKey:archiveName];
 }
 
 -(NSString *)classNameDecodedForArchiveClassName:(NSString *)className {
-   NSUnimplementedMethod();
-   return 0;
+   if(_classes==nil)
+    return className;
+   return [_classes objectForKey:className] ?: className;
 }
 
 +(void)decodeClassName:(NSString *)archiveName asClassName:(NSString *)runtimeName {
-   NSUnimplementedMethod();
+   static NSMutableDictionary *globalClassNames=nil;
+   if(globalClassNames==nil)
+    globalClassNames=[[NSMutableDictionary alloc] init];
+   [globalClassNames setObject:runtimeName forKey:archiveName];
 }
 
 +(NSString *)classNameDecodedForArchiveClassName:(NSString *)className {
-   NSUnimplementedMethod();
-   return 0;
+   static NSMutableDictionary *globalClassNames=nil;
+   if(globalClassNames==nil)
+    return className;
+   return [globalClassNames objectForKey:className] ?: className;
 }
 
 -(void)replaceObject:original withObject:replacement {
-   NSUnimplementedMethod();
+   if(_objects==nil)
+    _objects=[[NSMutableArray alloc] init];
+   [_objects addObject:original];
+   [_objects addObject:replacement];
 }
 
 @end
