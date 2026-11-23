@@ -84,7 +84,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
            _tighteningFactorForTruncation = [coder decodeFloatForKey: @"TighteningFactor"];
    }
    else {
-    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+    [coder decodeValueOfObjCType: @encode(NSWritingDirection) at: &_writingDirection];
+    [coder decodeValueOfObjCType: @encode(float) at: &_paragraphSpacing];
+    [coder decodeValueOfObjCType: @encode(float) at: &_paragraphSpacingBefore];
+    _textBlocks = [[coder decodeObject] retain];
+    _textLists = [[coder decodeObject] retain];
+    [coder decodeValueOfObjCType: @encode(int) at: &_headerLevel];
+    [coder decodeValueOfObjCType: @encode(float) at: &_firstLineHeadIndent];
+    [coder decodeValueOfObjCType: @encode(float) at: &_headIndent];
+    [coder decodeValueOfObjCType: @encode(float) at: &_tailIndent];
+    [coder decodeValueOfObjCType: @encode(int) at: &_alignment];
+    [coder decodeValueOfObjCType: @encode(int) at: &_lineBreakMode];
+    [coder decodeValueOfObjCType: @encode(float) at: &_minimumLineHeight];
+    [coder decodeValueOfObjCType: @encode(float) at: &_maximumLineHeight];
+    [coder decodeValueOfObjCType: @encode(float) at: &_lineHeightMultiple];
+    [coder decodeValueOfObjCType: @encode(float) at: &_lineSpacing];
+    [coder decodeValueOfObjCType: @encode(float) at: &_defaultTabInterval];
+    _tabStops = [[coder decodeObject] retain];
+    [coder decodeValueOfObjCType: @encode(float) at: &_hyphenationFactor];
+    [coder decodeValueOfObjCType: @encode(float) at: &_tighteningFactorForTruncation];
    }
 
    return self;
@@ -141,7 +159,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 [coder encodeFloat: _hyphenationFactor forKey: @"HyphenationFactor"];
                 [coder encodeFloat: _tighteningFactorForTruncation forKey: @"TighteningFactor"];
         } else {
-                NSUnimplementedMethod();
+                [coder encodeValueOfObjCType: @encode(NSWritingDirection) at: &_writingDirection];
+                [coder encodeValueOfObjCType: @encode(float) at: &_paragraphSpacing];
+                [coder encodeValueOfObjCType: @encode(float) at: &_paragraphSpacingBefore];
+                [coder encodeObject: _textBlocks];
+                [coder encodeObject: _textLists];
+                [coder encodeValueOfObjCType: @encode(int) at: &_headerLevel];
+                [coder encodeValueOfObjCType: @encode(float) at: &_firstLineHeadIndent];
+                [coder encodeValueOfObjCType: @encode(float) at: &_headIndent];
+                [coder encodeValueOfObjCType: @encode(float) at: &_tailIndent];
+                [coder encodeValueOfObjCType: @encode(int) at: &_alignment];
+                [coder encodeValueOfObjCType: @encode(int) at: &_lineBreakMode];
+                [coder encodeValueOfObjCType: @encode(float) at: &_minimumLineHeight];
+                [coder encodeValueOfObjCType: @encode(float) at: &_maximumLineHeight];
+                [coder encodeValueOfObjCType: @encode(float) at: &_lineHeightMultiple];
+                [coder encodeValueOfObjCType: @encode(float) at: &_lineSpacing];
+                [coder encodeValueOfObjCType: @encode(float) at: &_defaultTabInterval];
+                [coder encodeObject: _tabStops];
+                [coder encodeValueOfObjCType: @encode(float) at: &_hyphenationFactor];
+                [coder encodeValueOfObjCType: @encode(float) at: &_tighteningFactorForTruncation];
         }
 }
 

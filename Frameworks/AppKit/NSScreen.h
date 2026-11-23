@@ -28,6 +28,19 @@
 extern NSString * const NSScreenColorSpaceDidChangeNotification;
 
 @interface NSScreen : NSObject
+{
+    NSRect _frame;
+    NSRect _visibleFrame;
+    NSWindowDepth _depth;
+    NSColorSpace *_colorSpace;
+    CGFloat _backingScaleFactor;
+    CGFloat _maximumPotentialExtendedDynamicRangeColorComponentsValue;
+    CGFloat _maximumExtendedDynamicRangeColorComponentValue;
+    CGFloat _maximumReferenceExtendedDynamicRangeColorComponentValue;
+    NSString *_localizedName;
+    NSDictionary *_deviceDescription;
+    const NSWindowDepth *_supportedWindowDepths;
+}
 
 @property(class, strong, readonly) NSScreen *mainScreen;
 @property(class, strong, readonly) NSScreen *deepestScreen;

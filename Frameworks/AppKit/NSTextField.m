@@ -140,6 +140,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(BOOL)becomeFirstResponder {
+   if([_cell refusesFirstResponder])
+      return NO;
+
    [self selectText:nil];
    return YES;
 }
@@ -326,6 +329,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   [_currentEditor setSelectable:[self isSelectable]];
 }
 
+-(NSString *)stringValue {
+   if(_currentEditor)
+      return [_currentEditor string];
+
+   return [super stringValue];
+}
+
 -(void)setStringValue:(NSString *)value {
    if (!_currentEditor)
       [super setStringValue:value];
@@ -378,6 +388,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    
    if(!didSelector)
     [super doCommandBySelector:selector];
+}
+
+-(void)takeNumberFromString:(id)sender {
+   NSNumberFormatter *formatter = (NSNumberFormatter *)[self formatter];
+
+   if(![formatter isKindOfClass:[NSNumberFormatter class]])
+      return;
+
+   NSString *string = [self stringValue];
+   NSNumber *number = nil;
+   NSString *error = nil;
+
+   if([formatter getObjectValue:&number forString:string errorDescription:&error] == YES) {
+      [self setObjectValue:number];
+   } else {
+      SEL sel = @selector(control:didFailToFormatString:errorDescription:);
+      if([_delegate respondsToSelector:sel])
+         [_delegate control:self didFailToFormatString:string errorDescription:error];
+   }
 }
 
 -(void)setTitleWithMnemonic:(NSString *)value {

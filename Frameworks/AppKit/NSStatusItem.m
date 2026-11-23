@@ -411,7 +411,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 - (void)drawStatusBarBackgroundInRect:(NSRect)rect withHighlight:(BOOL)highlight{
-    NSUnimplementedMethod();
+   if(highlight){
+      [[NSColor selectedMenuItemColor] set];
+      NSRectFill(rect);
+   }
 }
 
 // Coder support

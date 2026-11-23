@@ -24,7 +24,14 @@ NSString * const NSSplitViewWillResizeSubviewsNotification = @"NSSplitViewWillRe
 @implementation NSSplitView
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeBool:[self isVertical] forKey:@"NSIsVertical"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class], sel_getName(_cmd),coder];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -397,14 +404,116 @@ static float constrainTo(float value,float min,float max){
 
 - (float)minPossiblePositionOfDividerAtIndex:(int)index
 {
-    NSUnimplementedMethod();
-    return 0;
+    NSAssert(index >= 0 && index < [[self subviews] count] - 1, @"divider index out of range");
+
+    NSView *subview0 = [[self subviews] objectAtIndex: index];
+    NSView *subview1 = [[self subviews] objectAtIndex: index + 1];
+
+    BOOL subview0Expanded = [self isSubviewCollapsed: subview0] == NO;
+    BOOL subview1Expanded = [self isSubviewCollapsed: subview1] == NO;
+
+    float    minPosition = 0;
+
+    NSRect frame0 = NSZeroRect;
+    NSRect frame1 = NSZeroRect;
+
+    if (subview0Expanded) {
+        frame0 = [subview0 frame];
+    }
+
+    if (subview1Expanded) {
+        frame1 = [subview1 frame];
+    }
+
+    if (subview0Expanded) {
+        if ([self isVertical]) {
+            minPosition = NSMinX(frame0);
+        } else {
+            minPosition = NSMinY(frame0);
+        }
+    } else {
+        NSAssert(subview1Expanded, @"both are collapsed??");
+        if ([self isVertical]) {
+            minPosition = NSMinX(frame1);
+        } else {
+            minPosition = NSMinY(frame1);
+        }
+    }
+
+
+    if ([_delegate respondsToSelector: @selector(splitView:constrainMinCoordinate:ofSubviewAt:)]) {
+        minPosition = [_delegate splitView: self constrainMinCoordinate: minPosition ofSubviewAt: index];
+    }
+    else if([_delegate respondsToSelector:@selector(splitView:constrainMinCoordinate:maxCoordinate:ofSubviewAt:)]) {
+        float maxPosition = 0;
+
+        if (subview1Expanded) {
+            maxPosition = [self isVertical] ? NSMaxX(frame1) : NSMaxY(frame1);
+        } else {
+            maxPosition = [self isVertical] ? NSMaxX(frame0) : NSMaxY(frame0);
+        }
+
+        [_delegate splitView: self constrainMinCoordinate: &minPosition maxCoordinate: &maxPosition ofSubviewAt: index];
+    }
+
+    return minPosition;
 }
 
 - (float)maxPossiblePositionOfDividerAtIndex:(int)index
 {
-    NSUnimplementedMethod();
-    return 0;
+    NSAssert(index >= 0 && index < [[self subviews] count] - 1, @"divider index out of range");
+
+    NSView *subview0 = [[self subviews] objectAtIndex: index];
+    NSView *subview1 = [[self subviews] objectAtIndex: index + 1];
+
+    BOOL subview0Expanded = [self isSubviewCollapsed: subview0] == NO;
+    BOOL subview1Expanded = [self isSubviewCollapsed: subview1] == NO;
+
+    float    maxPosition = 0;
+
+    NSRect frame0 = NSZeroRect;
+    NSRect frame1 = NSZeroRect;
+
+    if (subview0Expanded) {
+        frame0 = [subview0 frame];
+    }
+
+    if (subview1Expanded) {
+        frame1 = [subview1 frame];
+    }
+
+    if (subview1Expanded) {
+        if ([self isVertical]) {
+            maxPosition = NSMaxX(frame1);
+        } else {
+            maxPosition = NSMaxY(frame1);
+        }
+    } else {
+        NSAssert(subview0Expanded, @"both are collapsed??");
+        if ([self isVertical]) {
+            maxPosition = NSMaxX(frame0);
+        } else {
+            maxPosition = NSMaxY(frame0);
+        }
+    }
+
+
+    if ([_delegate respondsToSelector: @selector(splitView:constrainMaxCoordinate:ofSubviewAt:)]) {
+        maxPosition = [_delegate splitView: self constrainMaxCoordinate: maxPosition ofSubviewAt: index];
+    }
+    else if([_delegate respondsToSelector:@selector(splitView:constrainMinCoordinate:maxCoordinate:ofSubviewAt:)]) {
+        float minPosition = 0;
+
+        if (subview0Expanded) {
+            minPosition = [self isVertical] ? NSMinX(frame0) : NSMinY(frame0);
+        } else {
+            minPosition = [self isVertical] ? NSMinX(frame1) : NSMinY(frame1);
+        }
+
+        [_delegate splitView: self constrainMinCoordinate: &minPosition maxCoordinate: &maxPosition ofSubviewAt: index];
+    }
+
+    return maxPosition;
 }
 
 /** adjusts the subviews on either side of the divider while

@@ -55,7 +55,8 @@ static NSUInteger    _pickerMask=0;
 }
 
 + (void)setPickerMode:(NSColorPanelMode)mode {
-   NSUnimplementedMethod();
+   [[NSUserDefaults standardUserDefaults]
+    setInteger:mode forKey:@"NSColorPanelMode"];
 }
 
 +(BOOL)dragColor:(NSColor *)color withEvent:(NSEvent *)event fromView:(NSView *)view {
@@ -162,8 +163,16 @@ static NSUInteger    _pickerMask=0;
 }
 
 -(NSView *)accessoryView {
-   NSUnimplementedMethod();
-   return nil;
+   return _accessoryView;
+}
+
+-(void)setAccessoryView:(NSView *)view {
+   if (_accessoryView != view) {
+      NSView *old = _accessoryView;
+      _accessoryView = view;
+      if (old != nil) [old removeFromSuperview];
+      if (view != nil) [self addSubview:view];
+   }
 }
 
 -(void)setColorButtonClicked:sender {
@@ -216,10 +225,6 @@ static NSUInteger    _pickerMask=0;
    _continuous=flag;
 }
 
--(void)setAccessoryView:(NSView *)view {
-   NSUnimplementedMethod();
-}
-
 -(void)setAction:(SEL)action {
    _action=action;
 }
@@ -229,11 +234,17 @@ static NSUInteger    _pickerMask=0;
 }
 
 -(void)attachColorList:(NSColorList *)colorList {
-   NSUnimplementedMethod();
+   unsigned i,count=[_colorPickers count];
+
+   for(i=0;i<count;i++)
+    [[_colorPickers objectAtIndex:i] attachColorList:colorList];
 }
 
 -(void)detachColorList:(NSColorList *)colorList {
-   NSUnimplementedMethod();
+   unsigned i,count=[_colorPickers count];
+
+   for(i=0;i<count;i++)
+    [[_colorPickers objectAtIndex:i] detachColorList:colorList];
 }
 
 -(void)_alphaChanged:sender {

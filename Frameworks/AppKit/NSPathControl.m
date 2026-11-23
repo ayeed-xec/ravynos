@@ -76,18 +76,39 @@
 
 - (id < NSPathControlDelegate >)delegate;
 {
-	NSUnimplementedMethod();
-	return nil;
+	NSPathCell *cell = [self cell];
+	return [cell delegate];
 }
 
 - (void)setDelegate:(id < NSPathControlDelegate >)delegate;
 {
-	NSUnimplementedMethod();
+	NSPathCell *cell = [self cell];
+	[cell setDelegate: delegate];
 }
 
 - (void)setDraggingSourceOperationMask:(NSDragOperation)mask forLocal:(BOOL)isLocal;
 {
-	NSUnimplementedMethod();
+	if (isLocal)
+		_dragSourceOperationMaskForLocal = mask;
+	else
+		_dragSourceOperationMaskForNonLocal = mask;
+}
+
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal;
+{
+	return isLocal ? _dragSourceOperationMaskForLocal
+	               : _dragSourceOperationMaskForNonLocal;
+}
+
+- initWithFrame:(NSRect)frame;
+{
+	self = [super initWithFrame: frame];
+	if (self) {
+		_dragSourceOperationMaskForLocal = NSDragOperationEvery;
+		_dragSourceOperationMaskForNonLocal = NSDragOperationNone;
+	}
+
+	return self;
 }
 
 - (NSMenu *)menu;

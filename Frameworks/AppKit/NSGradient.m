@@ -157,7 +157,19 @@ static void evaluate(void *info,float const *input,float *output) {
 }
 
 - (void)drawFromCenter:(NSPoint)startCenter radius:(CGFloat)startRadius toCenter:(NSPoint)endCenter radius:(CGFloat)endRadius options:(NSGradientDrawingOptions)options {
-	NSUnimplementedMethod();
+   CGContextRef context=[[NSGraphicsContext currentContext] graphicsPort];
+   CGFunctionCallbacks callbacks = { 0, evaluate, NULL };
+   CGFunctionRef function = CGFunctionCreate(self, 1, NULL, _numberOfComponents, NULL, &callbacks);
+   CGColorSpaceRef colorSpace = [_colorSpace CGColorSpace];
+   CGShadingRef shading = CGShadingCreateRadial(colorSpace,
+    CGPointMake(startCenter.x, startCenter.y), startRadius,
+    CGPointMake(endCenter.x, endCenter.y), endRadius,
+    function, NO, NO);
+
+   CGContextDrawShading(context,shading);
+
+   CGFunctionRelease(function);
+   CGShadingRelease(shading);
 }
 
 - (void)drawInRect:(NSRect)rect angle:(CGFloat)angle
@@ -219,11 +231,22 @@ static void evaluate(void *info,float const *input,float *output) {
 }
 
 -(void)drawInRect:(NSRect)rect relativeCenterPosition:(NSPoint)center {
-	NSUnimplementedMethod();
+   NSPoint start=NSMakePoint(rect.origin.x+center.x*rect.size.width,
+                             rect.origin.y+center.y*rect.size.height);
+   NSPoint end=NSMakePoint(rect.origin.x+(1.0-center.x)*rect.size.width,
+                           rect.origin.y+(1.0-center.y)*rect.size.height);
+
+   [self drawFromPoint:start toPoint:end options:0];
 }
 
 -(void)drawInBezierPath:(NSBezierPath *)path relativeCenterPosition:(NSPoint)center {
-	NSUnimplementedMethod();
+   NSRect rect=[path bounds];
+   [NSGraphicsContext saveGraphicsState];
+
+   [path addClip];
+   [self drawInRect:rect relativeCenterPosition:center];
+
+   [NSGraphicsContext restoreGraphicsState];
 }
 
 - (NSColorSpace *)colorSpace {

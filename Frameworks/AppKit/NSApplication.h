@@ -84,6 +84,12 @@ typedef enum {
     NSPrintingFailure,
 } NSApplicationPrintReply;
 
+typedef NS_ENUM(NSInteger, NSApplicationActivationPolicy) {
+    NSApplicationActivationPolicyRegular,
+    NSApplicationActivationPolicyAccessory,
+    NSApplicationActivationPolicyProhibited,
+};
+
 @interface NSApplication : NSResponder {
     NSString *bundleID;
     NSDisplay *_display;
@@ -112,6 +118,11 @@ typedef enum {
 
     int _machEventPipe[2];
     NSSelectInputSource *_inputSource;
+
+    NSApplicationActivationPolicy _activationPolicy;
+    BOOL _finishedLaunching;
+    NSMenu *_servicesMenu;
+    NSApplicationDelegateReply _lastOpenOrPrintReply;
 }
 
 @property(strong) NSMenu *helpMenu;
@@ -156,6 +167,9 @@ typedef enum {
 
 - (void)finishLaunching;
 - (void)run;
+
+- (BOOL)setActivationPolicy:(NSApplicationActivationPolicy)activationPolicy;
+- (NSApplicationActivationPolicy)activationPolicy;
 
 - (void)sendEvent:(NSEvent *)event;
 

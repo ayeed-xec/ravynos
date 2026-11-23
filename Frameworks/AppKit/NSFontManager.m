@@ -9,6 +9,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSFontManager.h>
 #import <AppKit/NSFontPanel.h>
 #import <AppKit/NSFont.h>
+#import <AppKit/NSFontDescriptor.h>
+#import <AppKit/NSAttributedString.h>
 #import <AppKit/NSFontFamily.h>
 #import <AppKit/NSFontTypeface.h>
 #import <AppKit/NSNibLoading.h>
@@ -69,27 +71,22 @@ static Class _fontPanelFactory;
 }
 
 -(NSArray *)collectionNames {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSArray array];
 }
 
 -(BOOL)addCollection:(NSString *)name options:(int)options {
-   NSUnimplementedMethod();
-   return 0;
+   return NO;
 }
 
 -(void)addFontDescriptors:(NSArray *)descriptors toCollection:(NSString *)name {
-   NSUnimplementedMethod();
 }
 
 -(BOOL)removeCollection:(NSString *)name {
-   NSUnimplementedMethod();
-   return 0;
+   return NO;
 }
 
 -(NSArray *)fontDescriptorsInCollection:(NSString *)name {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSArray array];
 }
 
 -(NSArray *)availableFonts {
@@ -163,13 +160,25 @@ static Class _fontPanelFactory;
 }
 
 -(NSArray *)availableFontNamesMatchingFontDescriptor:(NSFontDescriptor *)descriptor {
-   NSUnimplementedMethod();
-   return nil;
+   NSString *family=[descriptor objectForKey:NSFontFamilyAttribute];
+
+   if(family==nil)
+    return [NSArray array];
+
+   return [self availableMembersOfFontFamily:family] ?: [NSArray array];
 }
 
 -(NSArray *)availableFontNamesWithTraits:(NSFontTraitMask)traits {
-   NSUnimplementedMethod();
-   return nil;
+   NSMutableArray *result=[NSMutableArray array];
+
+   for(NSFontFamily *family in [self availableFontFamilies]){
+    for(NSFontTypeface *typeface in [family typefaces]){
+     if(([typeface traits] & traits)==traits)
+      [result addObject:[typeface name]];
+    }
+   }
+
+   return result;
 }
 
 -(BOOL)fontNamed:(NSString *)name hasTraits:(NSFontTraitMask)traits {
@@ -258,8 +267,7 @@ static Class _fontPanelFactory;
 }
 
 -(BOOL)isEnabled {
-   NSUnimplementedMethod();
-   return 0;
+   return _delegate==nil || [_delegate respondsToSelector:@selector(isEnabled)]==NO;
 }
 
 -(BOOL)isMultiple {
@@ -491,8 +499,16 @@ static Class _fontPanelFactory;
 }
 
 -(NSDictionary *)convertAttributes:(NSDictionary *)attributes {
-   NSUnimplementedMethod();
-   return nil;
+   NSMutableDictionary *result=[attributes mutableCopy];
+   NSFont *font=[result objectForKey:NSFontAttributeName];
+
+   if(font!=nil){
+    NSFont *converted=[self convertFont:font];
+    if(converted!=font)
+     [result setObject:converted forKey:NSFontAttributeName];
+   }
+
+   return [result autorelease];
 }
 
 -(void)addFontTrait:sender {
@@ -534,7 +550,7 @@ static Class _fontPanelFactory;
 }
 
 -(void)orderFrontStylesPanel:sender {
-   NSUnimplementedMethod();
+   [self orderFrontFontPanel:sender];
 }
 
 #pragma mark -

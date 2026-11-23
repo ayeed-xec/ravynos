@@ -14,6 +14,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/AppKitExport.h>
 #import <AppKit/NSView.h>
 #import <AppKit/NSDisplay.h>
+#import <Onyx2D/O2Context.h>
 #import <ApplicationServices/ApplicationServices.h>
 
 @class NSView, NSEvent, NSColor, NSColorSpace, NSCursor, NSImage, NSScreen, NSText, NSTextView, CGWindow, NSPasteboard, NSSheetContext, NSUndoManager, NSButton, NSButtonCell, NSDrawer, NSDockTile, NSToolbar, NSWindowAnimationContext, NSTrackingArea, NSThemeFrame, NSWindowController, NSMenuItem, CARenderer;
@@ -86,6 +87,13 @@ enum {
 typedef NSUInteger NSWindowSharingType;
 
 typedef int NSSelectionDirection;
+
+enum {
+    NSSelectionDirectionSelect     =  0,
+    NSSelectionDirectionSelectNext =  1,
+    NSSelectionDirectionSelectPrev = -1,
+    NSSelectionDirectionNone       =  2,
+};
 
 APPKIT_EXPORT NSString *const NSWindowDidBecomeKeyNotification;
 APPKIT_EXPORT NSString *const NSWindowDidResignKeyNotification;
@@ -214,6 +222,17 @@ APPKIT_EXPORT NSString *const NSWindowDidEndLiveResizeNotification;
     NSPoint _mouseDownLocationInWindow;
 
     NSScreen *_preferredScreen;
+
+    NSURL *_representedURL;
+    NSWindowAnimationContext *_windowAnimationContext;
+    NSDockTile *_dockTile;
+    NSWindowBackingLocation _backingLocation;
+    BOOL _allowsConcurrentViewDrawing;
+    BOOL _preventsApplicationTerminationWhenModal;
+    BOOL _isMovable;
+    NSWindowCollectionBehavior _collectionBehavior;
+    NSWindowDepth _depthLimit;
+    NSWindowSharingType _sharingType;
 }
 
 + (NSWindowDepth)defaultDepthLimit;

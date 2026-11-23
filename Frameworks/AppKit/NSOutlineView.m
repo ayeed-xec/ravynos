@@ -91,7 +91,7 @@ static inline id childOfItemAtIndex(NSOutlineView *self,id item,int index){
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-    NSUnimplementedMethod();
+    [super encodeWithCoder:coder];
 }
 
 -(void)invalidateRowCache {
@@ -110,6 +110,9 @@ static inline id childOfItemAtIndex(NSOutlineView *self,id item,int index){
     _itemToLevel = NSCreateMapTable(NSNonOwnedPointerOrNullMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     _itemToExpansionState = NSCreateMapTable(NSNonOwnedPointerOrNullMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     _itemToNumberOfChildren = NSCreateMapTable(NSNonOwnedPointerOrNullMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
+
+    _dropTargetItem = nil;
+    _dropChildIndex = -1;
 
     _markerCell = [[NSButtonCell alloc] initImageCell:nil];
     [_markerCell setBezelStyle:NSDisclosureBezelStyle];
@@ -140,6 +143,9 @@ static inline id childOfItemAtIndex(NSOutlineView *self,id item,int index){
     _itemToLevel = NSCreateMapTable(NSNonOwnedPointerOrNullMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     _itemToExpansionState = NSCreateMapTable(NSNonOwnedPointerOrNullMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     _itemToNumberOfChildren = NSCreateMapTable(NSNonOwnedPointerOrNullMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
+
+    _dropTargetItem = nil;
+    _dropChildIndex = -1;
 
     _markerCell = [[NSButtonCell alloc] initImageCell:nil];
     [_markerCell setBezelStyle:NSDisclosureBezelStyle];
@@ -424,7 +430,8 @@ static inline id childOfItemAtIndex(NSOutlineView *self,id item,int index){
 }
 
 -(void)setDropItem:(id)item dropChildIndex:(int)index {
-    NSUnimplementedMethod();
+    _dropTargetItem=item;
+    _dropChildIndex=index;
 }
 
 -(BOOL)shouldCollapseAutoExpandedItemsForDeposited:(BOOL)collapse {

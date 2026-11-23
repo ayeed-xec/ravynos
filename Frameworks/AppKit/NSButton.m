@@ -112,7 +112,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)getPeriodicDelay:(float *)delay interval:(float *)interval {
-   NSUnimplementedMethod();
+   [_cell getPeriodicDelay:delay interval:interval];
 }
 
 -(void)setTransparent:(BOOL)value {
@@ -198,11 +198,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)setTitleWithMnemonic:(NSString *)value {
-   NSUnimplementedMethod();
+   NSMutableString *stripped=[NSMutableString stringWithString:value];
+   NSRange full;
+
+   [stripped replaceOccurrencesOfString:@"&&"
+                             withString:@"\x01"
+                                options:0
+                                  range:NSMakeRange(0,[stripped length])];
+   full=NSMakeRange(0,[stripped length]);
+   [stripped replaceOccurrencesOfString:@"&"
+                             withString:@""
+                                options:0
+                                  range:full];
+   [stripped replaceOccurrencesOfString:@"\x01"
+                             withString:@"&"
+                                options:0
+                                  range:NSMakeRange(0,[stripped length])];
+   [self setTitle:stripped];
 }
 
 -(void)setPeriodicDelay:(float)delay interval:(float)interval {
-   NSUnimplementedMethod();
+   [_cell setPeriodicDelay:delay interval:interval];
 }
 
 -(void)highlight:(BOOL)value {

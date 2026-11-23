@@ -24,7 +24,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSTextFieldCell
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeBool:_drawsBackground forKey:@"NSDrawsBackground"];
+    [keyed encodeObject:_backgroundColor forKey:@"NSBackgroundColor"];
+    [keyed encodeObject:_textColor forKey:@"NSTextColor"];
+    [keyed encodeInt:_bezelStyle forKey:@"NSTextBezelStyle"];
+    if([_placeholder isKindOfClass:[NSAttributedString class]])
+     [keyed encodeObject:_placeholder forKey:@"NSPlaceholderAttributedString"];
+    else
+     [keyed encodeObject:_placeholder forKey:@"NSPlaceholderString"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"%@ can not encodeWithCoder:%@",[self class],[coder class]];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -240,6 +254,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 -(void)editWithFrame:(NSRect)frame inView:(NSView *)view editor:(NSText *)editor delegate:(id)delegate event:(NSEvent *)event {
    frame=[self titleRectForBounds:frame];
    [super editWithFrame:frame inView:view editor:editor delegate:delegate event:event];
+}
+
+-(NSText *)setUpFieldEditorAttributes:(NSText *)editor {
+   editor=[super setUpFieldEditorAttributes:editor];
+
+   [editor setTextColor:[self textColor]];
+
+   return editor;
 }
 
 -(void)selectWithFrame:(NSRect)frame inView:(NSView *)view editor:(NSText *)editor delegate:(id)delegate start:(int)location length:(int)length {

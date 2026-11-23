@@ -399,7 +399,7 @@ static const float kImageMargin = 2.;
 }
 
 -(void)setAttributedAlternateTitle:(NSAttributedString *)title {
-   NSUnimplementedMethod();
+   [self setAlternateTitle:[title string]];
 }
 
 -(void)setHighlightsBy:(int)type {
@@ -1169,11 +1169,17 @@ static NSSize scaledImageSizeInFrameSize(NSSize imageSize,NSSize frameSize,NSIma
 }
 
 -(void)mouseEntered:(NSEvent *)event {
-   NSUnimplementedMethod();
+   if(_showsBorderOnlyWhileMouseInside){
+    [self setHighlighted:YES];
+    [_controlView setNeedsDisplay:YES];
+   }
 }
 
 -(void)mouseExited:(NSEvent *)event {
-   NSUnimplementedMethod();
+   if(_showsBorderOnlyWhileMouseInside){
+    [self setHighlighted:NO];
+    [_controlView setNeedsDisplay:YES];
+   }
 }
 
 @end

@@ -26,6 +26,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 - (void)selectText:sender;
 
+- (void)takeNumberFromString:(id)sender;
+
 - previousText;
 - nextText;
 

@@ -91,6 +91,10 @@ APPKIT_EXPORT NSString *const NSViewFocusDidChangeNotification;
     NSUInteger _rectsBeingRedrawnCount;
     CGFloat _frameRotation;
     CGFloat _boundsRotation;
+    CGFloat _alphaValue;
+    BOOL _acceptsTouchEvents;
+    BOOL _wantsRestingTouches;
+    BOOL _canDrawConcurrently;
 
     BOOL _validTrackingAreas;
     BOOL _validTransforms;

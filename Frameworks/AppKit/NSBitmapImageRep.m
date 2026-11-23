@@ -12,6 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSView.h>
 #import <AppKit/NSColor.h>
 #import <AppKit/NSRaise.h>
+#import <Onyx2D/O2ImageDestination.h>
 #import <AppKit/NSPasteboard.h>
 
 NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
@@ -69,13 +70,13 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 
 +(NSData *)TIFFRepresentationOfImageRepsInArray:(NSArray *)array usingCompression:(NSTIFFCompression)compression factor:(float)factor {
    NSMutableData        *result=[NSMutableData data];
-   CGImageDestinationRef dest=CGImageDestinationCreateWithData((CFMutableDataRef)result,(CFStringRef)@"public.tiff",[array count],NULL);
+   O2ImageDestinationRef dest=O2ImageDestinationCreateWithData((CFMutableDataRef)result,(CFStringRef)@"public.tiff",[array count],NULL);
 
    for(NSBitmapImageRep *bitmap in array){
-    CGImageDestinationAddImage(dest,[bitmap CGImage],NULL);
+    O2ImageDestinationAddImage(dest,[bitmap CGImage],NULL);
    }
 
-   CGImageDestinationFinalize(dest);
+   O2ImageDestinationFinalize(dest);
    CFRelease(dest);
 
    return result;
@@ -93,7 +94,7 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 }
 
 +(BOOL)canInitWithData:(NSData *)data {
-   CGImageSourceRef imageSource=CGImageSourceCreateWithData((CFDataRef)data,nil);
+   O2ImageSourceRef imageSource=[O2ImageSource newImageSourceWithData:(CFDataRef)data options:nil];
    BOOL result=(imageSource!=NULL)?YES:NO;
    CFRelease(imageSource);
    return result;
@@ -101,22 +102,22 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 
 +(NSArray *)imageRepsWithData:(NSData *)data {
    NSMutableArray *result=[NSMutableArray array];
-   CGImageSourceRef imageSource=CGImageSourceCreateWithData((CFDataRef)data,nil);
+   O2ImageSourceRef imageSource=[O2ImageSource newImageSourceWithData:(CFDataRef)data options:nil];
 
    if(imageSource==nil)
     return nil;
 
-   size_t i,count=CGImageSourceGetCount(imageSource);
+   size_t i,count=[imageSource count];
 
    for(i=0;i<count;i++){
-    CGImageRef cgImage=CGImageSourceCreateImageAtIndex(imageSource,i,nil);
+    CGImageRef cgImage=O2ImageSourceCreateImageAtIndex(imageSource,i,nil);
 
     if(cgImage==nil)
      break;
 
-    CFDictionaryRef properties=CGImageSourceCopyPropertiesAtIndex(imageSource,i,nil);
-    NSNumber        *xres=[[(id)CFDictionaryGetValue(properties,kCGImagePropertyDPIWidth) copy] autorelease];
-    NSNumber        *yres=[[(id)CFDictionaryGetValue(properties,kCGImagePropertyDPIHeight) copy] autorelease];
+    CFDictionaryRef properties=[imageSource copyPropertiesAtIndex:i options:nil];
+    NSNumber        *xres=[[(id)CFDictionaryGetValue(properties,kO2ImagePropertyDPIWidth) copy] autorelease];
+    NSNumber        *yres=[[(id)CFDictionaryGetValue(properties,kO2ImagePropertyDPIHeight) copy] autorelease];
 
     CFRelease(properties);
 
@@ -221,14 +222,14 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 
 
 -initWithData:(NSData *)data {
-   CGImageSourceRef imageSource=CGImageSourceCreateWithData((CFDataRef)data,nil);
+   O2ImageSourceRef imageSource=[O2ImageSource newImageSourceWithData:(CFDataRef)data options:nil];
 
    if(imageSource==nil){
     [self dealloc];
     return nil;
    }
 
-   CGImageRef       cgImage=CGImageSourceCreateImageAtIndex(imageSource,0,nil);
+   CGImageRef       cgImage=O2ImageSourceCreateImageAtIndex(imageSource,0,nil);
 
    if(cgImage==nil){
     CFRelease(imageSource);
@@ -236,9 +237,9 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
     return nil;
    }
 
-   CFDictionaryRef properties=CGImageSourceCopyPropertiesAtIndex(imageSource,0,nil);
-   NSNumber        *xres=[[(id)CFDictionaryGetValue(properties,kCGImagePropertyDPIWidth) copy] autorelease];
-   NSNumber        *yres=[[(id)CFDictionaryGetValue(properties,kCGImagePropertyDPIHeight) copy] autorelease];
+   CFDictionaryRef properties=[imageSource copyPropertiesAtIndex:0 options:nil];
+   NSNumber        *xres=[[(id)CFDictionaryGetValue(properties,kO2ImagePropertyDPIWidth) copy] autorelease];
+   NSNumber        *yres=[[(id)CFDictionaryGetValue(properties,kO2ImagePropertyDPIHeight) copy] autorelease];
 
    CFRelease(properties);
    CFRelease(imageSource);
@@ -600,19 +601,19 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
     // Convert the NS options to CG options - just NSImageCompressionFactor for now
     NSDictionary *CGProperties = [NSMutableDictionary dictionary];
 
-    [CGProperties setValue: [NSNumber numberWithInt: dpi] forKey: (id)kCGImageDestinationDPI];
+    [CGProperties setValue: [NSNumber numberWithInt: dpi] forKey: (id)kO2ImageDestinationDPI];
 
     if ([properties count]) {
         id compressionFactor = [properties valueForKey:NSImageCompressionFactor];
         if (compressionFactor) {
-            [CGProperties setValue:compressionFactor forKey:(id)kCGImageDestinationLossyCompressionQuality];
+            [CGProperties setValue:compressionFactor forKey:(id)kO2ImageDestinationLossyCompressionQuality];
         }
     }
-   CGImageDestinationRef dest=CGImageDestinationCreateWithData((CFMutableDataRef)result,uti,1,(CFDictionaryRef)CGProperties);
+   O2ImageDestinationRef dest=O2ImageDestinationCreateWithData((CFMutableDataRef)result,uti,1,(CFDictionaryRef)CGProperties);
 
-   CGImageDestinationAddImage(dest,[self CGImage],(CFDictionaryRef)CGProperties);
+   O2ImageDestinationAddImage(dest,[self CGImage],(CFDictionaryRef)CGProperties);
 
-   CGImageDestinationFinalize(dest);
+   O2ImageDestinationFinalize(dest);
    CFRelease(dest);
 
    return result;

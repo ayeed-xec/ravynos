@@ -48,7 +48,61 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #pragma mark -
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+    unsigned         flags=0;
+    unsigned         flags2=0;
+
+       if(_state==NSOnState)
+        flags|=0x80000000;
+       if(_isHighlighted)
+        flags|=0x40000000;
+       if(!_isEnabled)
+        flags|=0x20000000;
+       if(_isEditable)
+        flags|=0x10000000;
+
+       flags|=((_cellType & 0x3)<<26);
+
+       if(_isBordered)
+        flags|=0x00800000;
+       if(_isBezeled)
+        flags|=0x00400000;
+       if(_isSelectable)
+        flags|=0x00200000;
+       if(_isScrollable)
+        flags|=0x00100000;
+       if(_isContinuous)
+        flags|=0x00080100;
+
+       if(_focusRingType<=3)
+        flags|=_focusRingType;
+
+       if(_isRichText)
+        flags2|=0x40000000;
+
+       flags2|=((_textAlignment & 0x7)<<26);
+
+       if(_refusesFirstResponder)
+        flags2|=0x02000000;
+       if(_allowsMixedState)
+        flags2|=0x01000000;
+       if(_sendsActionOnEndEditing)
+        flags2|=0x00400000;
+
+       flags2|=((_lineBreakMode & 0x3)<<9);
+       flags2|=((_controlSize & 0x7)<<17);
+
+    [keyed encodeInt:flags forKey:@"NSCellFlags"];
+    [keyed encodeInt:flags2 forKey:@"NSCellFlags2"];
+    [keyed encodeObject:_objectValue forKey:@"NSContents"];
+    [keyed encodeObject:_image forKey:@"NSNormalImage"];
+    [keyed encodeObject:_font forKey:@"NSSupport"];
+    [keyed encodeObject:_formatter forKey:@"NSFormatter"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"%@ can not encodeWithCoder:%@",[self class],[coder class]];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {

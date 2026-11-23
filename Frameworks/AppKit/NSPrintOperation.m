@@ -13,6 +13,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSPanel.h>
 #import <AppKit/NSDisplay.h>
 #import <AppKit/NSGraphicsContext.h>
+#import <Onyx2D/O2PDFContext.h>
+#import <Onyx2D/O2DataConsumer.h>
 
 #import "NSPrintProgressPanelController.h"
 
@@ -248,24 +250,26 @@ static NSPrintOperation *_currentOperation=nil;
     if((context=(CGContextRef)[[_printInfo dictionary] objectForKey:@"_KGContext"])==nil)
      return nil;
    } else if(_type==NSPrintOperationPDFInRect){
-    NSDictionary *auxiliaryInfo=[NSDictionary dictionaryWithObject:[[_view window] title] forKey:(NSString *)kCGPDFContextTitle];
+    NSDictionary *auxiliaryInfo=[NSDictionary dictionaryWithObject:[[_view window] title] forKey:(NSString *)kO2PDFContextTitle];
     
-    CGDataConsumerRef consumer=CGDataConsumerCreateWithCFData((CFMutableDataRef)_mutableData);
+    O2DataConsumerRef consumer=O2DataConsumerCreateWithCFData((CFMutableDataRef)_mutableData);
     
-    context=CGPDFContextCreate(consumer,&_insideRect,(CFDictionaryRef)auxiliaryInfo);
+    context=[[O2PDFContext alloc] initWithConsumer:consumer mediaBox:&_insideRect auxiliaryInfo:auxiliaryInfo];
+    [(id)context autorelease];
     [(id)context autorelease];
     
-    CGDataConsumerRelease(consumer);
+    O2DataConsumerRelease(consumer);
    } else if (_type == NSPrintOperationFile) {
-	   NSDictionary *auxiliaryInfo=[NSDictionary dictionaryWithObject:[[_view window] title] forKey:(NSString *)kCGPDFContextTitle];
+	   NSDictionary *auxiliaryInfo=[NSDictionary dictionaryWithObject:[[_view window] title] forKey:(NSString *)kO2PDFContextTitle];
 	   
 	   NSString *filePath = [_printInfo.dictionary objectForKey:NSPrintSavePath];
-	   CGDataConsumerRef consumer=CGDataConsumerCreateWithURL((CFURLRef)[NSURL fileURLWithPath:filePath]);
+	   O2DataConsumerRef consumer=O2DataConsumerCreateWithURL((CFURLRef)[NSURL fileURLWithPath:filePath]);
 	   
-	   context=CGPDFContextCreate(consumer,&_insideRect,(CFDictionaryRef)auxiliaryInfo);
+	   context=[[O2PDFContext alloc] initWithConsumer:consumer mediaBox:&_insideRect auxiliaryInfo:auxiliaryInfo];
+    [(id)context autorelease];
 	   [(id)context autorelease];
 	   
-	   CGDataConsumerRelease(consumer);
+	   O2DataConsumerRelease(consumer);
 	   
    } else {
     return nil;
@@ -342,7 +346,7 @@ static NSPrintOperation *_currentOperation=nil;
    }
     
    [_view endDocument];
-   CGPDFContextClose(context);
+   [(id)context close];
    [NSGraphicsContext restoreGraphicsState];
    
    [self destroyContext];

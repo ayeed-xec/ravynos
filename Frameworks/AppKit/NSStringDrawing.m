@@ -11,6 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSStringDrawing.h>
 #import <AppKit/NSStringDrawer.h>
 #import <AppKit/NSRaise.h>
+#include <math.h>
 
 @implementation NSString(NSStringDrawing)
 
@@ -27,8 +28,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 - (NSRect)boundingRectWithSize:(NSSize)size options:(NSStringDrawingOptions)options attributes:(NSDictionary *)attributes {
-	NSUnimplementedMethod();
-	return NSMakeRect(0,0,0,0);
+	NSSize drawn=[[NSStringDrawer sharedStringDrawer] sizeOfString:self withAttributes:attributes inSize:size];
+
+	drawn.width=ceilf(drawn.width);
+	drawn.height=ceilf(drawn.height);
+
+	return NSMakeRect(0,0,drawn.width,drawn.height);
 }
 
 @end
@@ -48,7 +53,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)drawWithRect:(NSRect)rect options:(NSStringDrawingOptions)options {
-   NSUnimplementedMethod();
+   [[NSStringDrawer sharedStringDrawer] drawAttributedString:self inRect:rect];
 }
 
 @end

@@ -834,13 +834,18 @@ static inline CGFloat degreesToRadians(CGFloat degrees){
 }
 
 -(void)appendBezierPathWithPackedGlyphs:(const char *)packed {
-//   NSGlyph *glyphs;
-//   unsigned count=0;
+   const CGGlyph *packedGlyphs=(const CGGlyph *)packed;
+   unsigned       count;
 
-// FIX, unpack glyphs
-// does this use the current font?
-//   [self appendBezierPathWithGlyphs:glyphs count:count inFont:font];
-   NSUnimplementedMethod();
+   for(count=0; packedGlyphs[count]!=0; count++)
+    ;
+
+   if(count==0)
+    return;
+
+   NSFont *font=[NSFont userFontOfSize:0.0];
+
+   [self appendBezierPathWithGlyphs:(NSGlyph *)packedGlyphs count:count inFont:font];
 }
 
 -(void)appendBezierPath:(NSBezierPath *)other {

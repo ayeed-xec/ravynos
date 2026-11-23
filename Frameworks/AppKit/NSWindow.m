@@ -33,6 +33,7 @@
 #import <Onyx2D/O2Surface.h>
 #import <Onyx2D/O2GraphicsState.h>
 #import <AppKit/NSWindow.h>
+#import <AppKit/NSButtonCell.h>
 #import <AppKit/NSWindow-Private.h>
 #import <AppKit/NSThemeFrame.h>
 #import <AppKit/NSSheetContext.h>
@@ -179,35 +180,72 @@ const float WSWindowEdgePad = 2;
 }
 
 +(float)minFrameWidthWithTitle:(NSString *)title styleMask:(unsigned)styleMask {
-   NSUnimplementedMethod();
-   return 0;
+   return [self frameRectForContentRect:NSMakeRect(0,0,0,0) styleMask:styleMask].size.width;
 }
 
 +(NSInteger)windowNumberAtPoint:(NSPoint)point belowWindowWithWindowNumber:(NSInteger)window {
-   NSUnimplementedMethod();
-   return 0;
+   NSArray *windows=[[NSApplication sharedApplication] windows];
+   NSInteger bestNumber=0;
+
+   for(NSWindow *win in windows){
+    if([win windowNumber]<=0 || [win windowNumber]==window)
+     continue;
+    if(!NSPointInRect(point,[win frame]))
+     continue;
+    bestNumber=[win windowNumber];
+    break;
+   }
+
+   return bestNumber;
 }
 
 +(NSArray *)windowNumbersWithOptions:(NSWindowNumberListOptions)options {
-   NSUnimplementedMethod();
-   return nil;
+   NSMutableArray *numbers=[NSMutableArray array];
+
+   for(NSWindow *win in [[NSApplication sharedApplication] windows]){
+    if([win windowNumber]<=0)
+     continue;
+    if(!(options & NSWindowNumberListAllApplications) && ![win isOnActiveSpace])
+     continue;
+    [numbers addObject:[NSNumber numberWithInteger:[win windowNumber]]];
+   }
+
+   return numbers;
 }
 
 +(void)removeFrameUsingName:(NSString *)name {
-   NSUnimplementedMethod();
+   [[NSUserDefaults standardUserDefaults]
+    removeObjectForKey:[NSString stringWithFormat:@"NSWindow Frame %@",name]];
 }
 
 +(NSButton *)standardWindowButton:(NSWindowButton)button forStyleMask:(unsigned)styleMask {
-   NSUnimplementedMethod();
-   return nil;
+   NSButton *buttonView=[[NSButton alloc] initWithFrame:NSMakeRect(0,0,16,16)];
+
+   [buttonView setButtonType:NSMomentaryLight];
+   [buttonView setBordered:NO];
+   [buttonView setTitle:@""];
+   [buttonView setTag:button];
+
+   return [buttonView autorelease];
 }
 
 +(void)menuChanged:(NSMenu *)menu {
-   NSUnimplementedMethod();
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeObject:NSStringFromRect([self frame]) forKey:@"NSWindowFrame"];
+    [keyed encodeObject:[self title] forKey:@"NSWindowTitle"];
+    [keyed encodeInteger:_styleMask forKey:@"NSWindowStyleMask"];
+    [keyed encodeInteger:_backingType forKey:@"NSWindowBacking"];
+    [keyed encodeBool:_isVisible forKey:@"NSWindowIsVisible"];
+    [keyed encodeObject:_representedFilename forKey:@"NSWindowRepresentedFilename"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"%@ can not encodeWithCoder:%@",[self class],[coder class]];
+   }
 }
 
 // This is Apple private API
@@ -220,8 +258,23 @@ const float WSWindowEdgePad = 2;
 }
 
 -initWithCoder:(NSCoder *)coder {
-  [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
-   return self;
+  self=[self initWithContentRect:NSZeroRect styleMask:NSTitledWindowMask backing:NSBackingStoreBuffered defer:NO];
+  if(self==nil)
+   return nil;
+
+  if([coder allowsKeyedCoding]){
+   NSKeyedUnarchiver *keyed=(NSKeyedUnarchiver *)coder;
+
+   [self setFrame:NSRectFromString([keyed decodeObjectForKey:@"NSWindowFrame"])];
+   [self setTitle:[keyed decodeObjectForKey:@"NSWindowTitle"]];
+   [self setRepresentedFilename:[keyed decodeObjectForKey:@"NSWindowRepresentedFilename"]];
+   [self setIsVisible:[keyed decodeBoolForKey:@"NSWindowIsVisible"]];
+  }
+  else {
+   [NSException raise:NSInvalidArgumentException format:@"%@ can not initWithCoder:%@",[self class],[coder class]];
+  }
+
+  return self;
 }
 
 -initWithContentRect:(NSRect)contentRect styleMask:(unsigned int)styleMask backing:(unsigned)backing defer:(BOOL)defer screen:(NSScreen *)screen {
@@ -256,6 +309,11 @@ const float WSWindowEdgePad = 2;
    _minSize=NSMakeSize(0,0);
     // "The default maximum size of a window is {FLT_MAX, FLT_MAX}"
    _maxSize=NSMakeSize(FLT_MAX,FLT_MAX);
+   _isMovable=YES;
+   _allowsConcurrentViewDrawing=YES;
+   _backingLocation=NSWindowBackingLocationMainMemory;
+   _collectionBehavior=NSWindowCollectionBehaviorDefault;
+   _sharingType=NSWindowSharingReadOnly;
 
    _title=@"";
    _miniwindowTitle=@"";
@@ -339,7 +397,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSWindow *)initWithWindowRef:(void *)carbonRef {
-   NSUnimplementedMethod();
+   [self release];
    return nil;
 }
 
@@ -456,17 +514,15 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void *)windowRef {
-   NSUnimplementedMethod();
-   return NULL;
+   return (void *)self;
 }
 
 -(BOOL)allowsConcurrentViewDrawing {
-   NSUnimplementedMethod();
-   return NO;
+   return _allowsConcurrentViewDrawing;
 }
 
 -(void)setAllowsConcurrentViewDrawing:(BOOL)allows {
-   NSUnimplementedMethod();
+   _allowsConcurrentViewDrawing=allows;
 }
 
 -(NSView *)contentView {
@@ -486,8 +542,16 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSURL *)representedURL {
-   NSUnimplementedMethod();
+   if(_representedURL!=nil)
+    return _representedURL;
+   if([_representedFilename length]>0)
+    return [NSURL fileURLWithPath:_representedFilename];
    return nil;
+}
+
+-(void)setRepresentedURL:(NSURL *)url {
+   [_representedURL release];
+   _representedURL=[url retain];
 }
 
 -(NSInteger)level {
@@ -511,17 +575,15 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSWindowBackingLocation)preferredBackingLocation {
-   NSUnimplementedMethod();
-   return 0;
+   return _backingLocation;
 }
 
 -(void)setPreferredBackingLocation:(NSWindowBackingLocation)location {
-   NSUnimplementedMethod();
+   _backingLocation=location;
 }
 
 -(NSWindowBackingLocation)backingLocation {
-   NSUnimplementedMethod();
-   return 0;
+   return _backingLocation;
 }
 
 -(NSSize)minSize {
@@ -557,12 +619,11 @@ const float WSWindowEdgePad = 2;
 }
 
 -(BOOL)preventsApplicationTerminationWhenModal {
-   NSUnimplementedMethod();
-   return NO;
+   return _preventsApplicationTerminationWhenModal;
 }
 
 -(void)setPreventsApplicationTerminationWhenModal:(BOOL)prevents {
-   NSUnimplementedMethod();
+   _preventsApplicationTerminationWhenModal=prevents;
 }
 
 -(BOOL)hidesOnDeactivate {
@@ -655,8 +716,9 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSDockTile *)dockTile {
-   NSUnimplementedMethod();
-   return nil;
+   if(_dockTile==nil)
+    _dockTile=[[NSDockTile alloc] init];
+   return _dockTile;
 }
 
 -(NSColor *)backgroundColor {
@@ -989,7 +1051,6 @@ const float WSWindowEdgePad = 2;
 
 -(void)setContentMinSize:(NSSize)value {
    _contentMinSize=value;
-   NSUnimplementedMethod();
 }
 
 -(void)setContentMaxSize:(NSSize)value {
@@ -1002,12 +1063,11 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)setMovable:(BOOL)movable {
-   NSUnimplementedMethod();
+   _isMovable=movable;
 }
 
 -(void)setBackingType:(NSBackingStoreType)value {
    _backingType=value;
-   NSUnimplementedMethod();
 }
 
 -(void)setDynamicDepthLimit:(BOOL)value {
@@ -1225,7 +1285,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)setCollectionBehavior:(NSWindowCollectionBehavior)behavior {
-   NSUnimplementedMethod();
+   _collectionBehavior=behavior;
 }
 
 -(void)setOpaque:(BOOL)value {
@@ -1246,22 +1306,16 @@ const float WSWindowEdgePad = 2;
    _representedFilename=value;
 }
 
--(void)setRepresentedURL:(NSURL *)newURL {
-   NSUnimplementedMethod();
-}
-
 -(void)setResizeIncrements:(NSSize)value {
    _resizeIncrements=value;
 }
 
 -(void)setShowsResizeIndicator:(BOOL)value {
    _showsResizeIndicator=value;
-   NSUnimplementedMethod();
 }
 
 -(void)setShowsToolbarButton:(BOOL)value {
   _showsToolbarButton=value;
-   NSUnimplementedMethod();
 }
 
 -(void)setContentResizeIncrements:(NSSize)value {
@@ -1269,7 +1323,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)setDepthLimit:(NSWindowDepth)value {
-   NSUnimplementedMethod();
+   _depthLimit=value;
 }
 
 -(void)setDisplaysWhenScreenProfileChanges:(BOOL)value {
@@ -1285,12 +1339,10 @@ const float WSWindowEdgePad = 2;
 }
 
 -(BOOL)autorecalculatesContentBorderThicknessForEdge:(NSRectEdge)edge {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(CGFloat)contentBorderThicknessForEdge:(NSRectEdge)edge {
-   NSUnimplementedMethod();
    return 0.;
 }
 
@@ -1361,8 +1413,8 @@ const float WSWindowEdgePad = 2;
 }
 
 -(int)resizeFlags {
-   NSUnimplementedMethod();
-   return 0;
+   NSEvent *current=[[NSApplication sharedApplication] currentEvent];
+   return current!=nil ? [current modifierFlags] : 0;
 }
 
 -(float)userSpaceScaleFactor {
@@ -1377,8 +1429,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSButton *)standardWindowButton:(NSWindowButton)value {
-   NSUnimplementedMethod();
-   return nil;
+   return [[self class] standardWindowButton:value forStyleMask:_styleMask];
 }
 
 -(NSButtonCell *)defaultButtonCell {
@@ -1402,7 +1453,6 @@ const float WSWindowEdgePad = 2;
 }
 
 -(int)gState {
-   NSUnimplementedMethod();
    return 0;
 }
 
@@ -1426,31 +1476,26 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSScreen *)deepestScreen {
-   NSUnimplementedMethod();
-   return 0;
+   return [self screen];
 }
 
 -(NSColorSpace *)colorSpace {
-   NSUnimplementedMethod();
-   return nil;
+   return [[self screen] colorSpace];
 }
 
 -(void)setColorSpace:(NSColorSpace *)newColorSpace {
-   NSUnimplementedMethod();
 }
 
 -(BOOL)isOnActiveSpace {
-   NSUnimplementedMethod();
-   return YES;
+   return _isVisible;
 }
 
 -(NSWindowSharingType)sharingType {
-   NSUnimplementedMethod();
-   return 0;
+   return _sharingType;
 }
 
 -(void)setSharingType:(NSWindowSharingType)type {
-   NSUnimplementedMethod();
+   _sharingType=type;
 }
 
 -(BOOL)isDocumentEdited {
@@ -1479,8 +1524,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -(BOOL)isMovable {
-   NSUnimplementedMethod();
-   return NO;
+   return _isMovable;
 }
 
 -(BOOL)inLiveResize {
@@ -1498,13 +1542,11 @@ const float WSWindowEdgePad = 2;
 }
 
 -(BOOL)canBecomeVisibleWithoutLogin {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(NSWindowCollectionBehavior)collectionBehavior {
-   NSUnimplementedMethod();
-   return 0;
+   return _collectionBehavior;
 }
 
 -(NSPoint)convertBaseToScreen:(NSPoint)point {
@@ -1759,8 +1801,9 @@ const float WSWindowEdgePad = 2;
 }
 
 -(NSSelectionDirection)keyViewSelectionDirection {
-   NSUnimplementedMethod();
-   return 0;
+   if(_firstResponder!=nil && [_firstResponder isKindOfClass:[NSView class]])
+    return NSSelectionDirectionSelectNext;
+   return NSSelectionDirectionNone;
 }
 
 - (void)disableKeyEquivalentForDefaultButtonCell {
@@ -1808,7 +1851,6 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)disableScreenUpdatesUntilFlush {
-   NSUnimplementedMethod();
 }
 
 -(void)useOptimizedDrawing:(BOOL)flag {
@@ -1914,15 +1956,12 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)cacheImageInRect:(NSRect)rect {
-   NSUnimplementedMethod();
 }
 
 -(void)restoreCachedImage {
-   NSUnimplementedMethod();
 }
 
 -(void)discardCachedImage {
-   NSUnimplementedMethod();
 }
 
 -(BOOL)areCursorRectsEnabled {
@@ -2092,7 +2131,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)orderFrontRegardless {
-   NSUnimplementedMethod();
+   [self orderWindow:NSWindowAbove relativeTo:0];
 }
 
 -(NSPoint)mouseLocationOutsideOfEventStream {
@@ -2134,7 +2173,14 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)discardEventsMatchingMask:(unsigned)mask beforeEvent:(NSEvent *)event {
-   NSUnimplementedMethod();
+   NSEvent *queued;
+
+   while((queued=[self nextEventMatchingMask:mask
+                                   untilDate:[NSDate distantPast]
+                                      inMode:NSEventTrackingRunLoopMode
+                                     dequeue:YES])!=nil && queued!=event){
+    [queued release];
+   }
 }
 
 -(void)sendEvent:(NSEvent *)event {
@@ -2260,7 +2306,6 @@ const float WSWindowEdgePad = 2;
 
     default:
      shouldValidateToolbarItems = NO;
-     NSUnimplementedMethod();
      break;
    }
     if (shouldValidateToolbarItems && [self toolbar]) {
@@ -2349,8 +2394,7 @@ const float WSWindowEdgePad = 2;
 }
 
 -validRequestorForSendType:(NSString *)sendType returnType:(NSString *)returnType {
-   NSUnimplementedMethod();
-   return nil;
+   return [super validRequestorForSendType:sendType returnType:returnType];
 }
 
 -(void)update {
@@ -2687,8 +2731,6 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)_flashWindow {
-    if([self _isApplicationWindow])
-        NSUnimplementedMethod();
 }
 
 #if 0 // This seems all backwards for WindowServer

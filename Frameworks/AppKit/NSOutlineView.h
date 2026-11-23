@@ -38,6 +38,9 @@ APPKIT_EXPORT NSString *const NSOutlineViewSelectionIsChangingNotification;
     id _clickedItem;
     float _widestColumnWidth;
 
+    id _dropTargetItem;
+    int _dropChildIndex;
+
     float _indentationPerLevel;
     BOOL _indentationMarkerFollowsCell;
     BOOL _autoresizesOutlineColumn;
