@@ -7,7 +7,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #ifdef PLATFORM_USES_BSD_SOCKETS
 #import "NSSelectSet_bsd.h"
-#import "NSSocket_bsd.h"
+#import "NSSocket.h"
 #import <Foundation/NSError.h>
 #import <Foundation/NSSet.h>
 #import <Foundation/NSEnumerator.h>
@@ -53,11 +53,7 @@ void native_set_free(native_set *set){
 }
 
 void native_set_clear(native_set *set,int descriptor){
-#if defined(LINUX)
-   __FDS_BITS(set->fdset)[descriptor/NFDBITS]&=~(1<<(descriptor%NFDBITS));
-#else
-   set->fdset->fds_bits[descriptor/NFDBITS]&=~(1<<(descriptor%NFDBITS));
-#endif
+   FD_CLR(descriptor,set->fdset);
 }
 
 void native_set_set(native_set *set,int descriptor){
@@ -71,28 +67,20 @@ void native_set_set(native_set *set,int descriptor){
      native_set_clear(set,clear);
    }
 
-#ifdef LINUX
-   __FDS_BITS(set->fdset)[descriptor/NFDBITS]|=(1<<(descriptor%NFDBITS));
-#else
-   set->fdset->fds_bits[descriptor/NFDBITS]|=(1<<(descriptor%NFDBITS));
-#endif
+   FD_SET(descriptor,set->fdset);
 }
 
 BOOL native_set_is_set(native_set *native,int descriptor) {
   if(descriptor>native->max)
    return NO;
 
-#ifdef LINUX
-   return (__FDS_BITS(native->fdset)[descriptor/NFDBITS]&(1<<(descriptor%NFDBITS)))?YES:NO;
-#else
-   return (native->fdset->fds_bits[descriptor/NFDBITS]&(1<<(descriptor%NFDBITS)))?YES:NO;
-#endif
+   return FD_ISSET(descriptor,native->fdset)?YES:NO;
 }
 
 static int maxDescriptorInSet(NSSet *set){
    int           result=-1;
    NSEnumerator *state=[set objectEnumerator];
-   NSSocket_bsd *socket;
+   NSSocket *socket;
 
    while((socket=[state nextObject])!=nil){
     int check=[socket descriptor];
@@ -124,13 +112,13 @@ void NSSelectSetShutdownForCurrentThread() {
 
 static void transferSetToNative(NSSet *set,native_set *native){
    NSEnumerator *state=[set objectEnumerator];
-   NSSocket_bsd *socket;
+   NSSocket *socket;
 
    while((socket=[state nextObject])!=nil)
     native_set_set(native,[socket descriptor]);
 }
 
-static void transferNativeToSetWithOriginals(native_set *sset,NSMutableSet *set,NSSet *original,NSSocket_bsd *cheater){
+static void transferNativeToSetWithOriginals(native_set *sset,NSMutableSet *set,NSSet *original,NSSocket *cheater){
    int i;
 
    for(i=0;i<sset->max;i++){
@@ -145,7 +133,7 @@ static void transferNativeToSetWithOriginals(native_set *sset,NSMutableSet *set,
 - (NSError *)waitForSelectWithOutputSet:(NSSelectSet **)outputSetX beforeDate:(NSDate *)beforeDate
 {
     NSError *result = nil;
-    NSSocket_bsd *cheater = [NSSocket_bsd socketWithDescriptor:-1];
+    NSSocket *cheater = [NSSocket socketWithDescriptor:-1];
     int maxDescriptor = maxDescriptorInThreeSets(_readSet, _writeSet, _exceptionSet);
     native_set *activeRead = native_set_new(maxDescriptor);
     native_set *activeWrite = native_set_new(maxDescriptor);
