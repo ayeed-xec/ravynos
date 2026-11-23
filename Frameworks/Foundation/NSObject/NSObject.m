@@ -133,6 +133,7 @@ BOOL NSObjectIsKindOfClass(id object,Class kindOf) {
 }
 extern id NSObjCForward(id self, SEL _cmd, ...);
 extern id NSObjCForward_stret(id self, SEL _cmd, ...);
+extern void objc_setForwardHandler(id fwd, id fwd_stret);
 
 +(void)initialize {
     objc_setForwardHandler(NSObjCForward, NSObjCForward_stret);

@@ -107,6 +107,22 @@ __END_DECLS
 
 #elif defined(__GLIBC__)
 
+/* glibc's <netinet/in.h> would recurse back into this header via the
+ * SDK's netinet/in.h, so declare the byte-order functions directly. */
+#ifndef _SYS__ENDIAN_GLIBC_DECLS_
+#define _SYS__ENDIAN_GLIBC_DECLS_
+#if defined(__cplusplus)
+extern "C" {
+#endif
+__uint16_t ntohs(__uint16_t);
+__uint16_t htons(__uint16_t);
+__uint32_t ntohl(__uint32_t);
+__uint32_t htonl(__uint32_t);
+#if defined(__cplusplus)
+}
+#endif
+#endif
+
 #elif __DARWIN_BYTE_ORDER == __DARWIN_BIG_ENDIAN
 
 #define ntohl(x)        ((__uint32_t)(x))

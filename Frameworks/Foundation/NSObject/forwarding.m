@@ -1,6 +1,8 @@
 #import <runtime/objc.h>
 #import <Foundation/NSObject.h>
 #import <Foundation/NSInvocation.h>
+#import <Foundation/NSRaiseException.h>
+#import <strings.h>
 #include <Foundation/NSMethodSignature.h>
 #include <Foundation/NSException.h>
 #include <stdio.h>
@@ -58,7 +60,7 @@ void NSObjCForwardInvocation(void *returnValue,id object,SEL selector,va_list ar
      */
     int frameLength = [signature frameLength];
     uint8_t *packedFrame = __builtin_alloca(frameLength);
-    bzero(packedFrame, frameLength);
+    memset(packedFrame, 0, frameLength);
     *(id *)packedFrame = object;
     *(SEL *)(packedFrame + sizeof(id)) = selector;
 

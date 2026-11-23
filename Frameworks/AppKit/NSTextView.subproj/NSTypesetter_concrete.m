@@ -1041,13 +1041,13 @@ static void loadGlyphAndCharacterCacheForLocation(NSTypesetter_concrete *self,un
         _bidiLevelsCapacity = MAX([_attributedString length], 32);
         _bidiLevels = (uint8_t *)NSZoneMalloc([self zone], _bidiLevelsCapacity * sizeof(uint8_t));
         // Anything new is left-to-right by default
-        bzero(_bidiLevels, _bidiLevelsCapacity);
+        memset(_bidiLevels, 0, _bidiLevelsCapacity);
     }
     if (_bidiLevelsCapacity < NSMaxRange(glyphRange)) {
         int newBidiLevelsCapacity = MAX(_bidiLevelsCapacity*2, NSMaxRange(glyphRange));
         _bidiLevels = (uint8_t *)NSZoneRealloc([self zone], _bidiLevels, newBidiLevelsCapacity * sizeof(uint8_t));
         // Anything new is left-to-right by default
-        bzero(_bidiLevels + _bidiLevelsCapacity, newBidiLevelsCapacity - _bidiLevelsCapacity);
+        memset(_bidiLevels + _bidiLevelsCapacity, 0, newBidiLevelsCapacity - _bidiLevelsCapacity);
         _bidiLevelsCapacity = newBidiLevelsCapacity;
     }
     memcpy(_bidiLevels+glyphRange.location, bidiLevels, glyphRange.length * sizeof(uint8_t));

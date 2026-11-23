@@ -633,3 +633,7 @@ CF_EXTERN_C_END
 
 #endif /* ! __COREFOUNDATION_CFBASE__ */
 
+
+#ifndef NSMakeCollectable
+#define NSMakeCollectable(_cf) ((id)(_cf))
+#endif

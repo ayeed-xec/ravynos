@@ -1,3 +1,5 @@
+#import <OpenGL/gl.h>
+#import <OpenGL/OpenGL.h>
 #import <Foundation/NSObject.h>
 #import <ApplicationServices/ApplicationServices.h>
 #import <CoreVideo/CoreVideo.h>

@@ -10,6 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #import <CoreFoundation/CFString.h>
 #import <CoreFoundation/CFStringEncodingExt.h>
+#import <CoreFoundation/CFStringEncodingConverter.h>
 #import <Foundation/NSMutableDictionary.h>
 #import <Foundation/NSNumber.h>
 #import <Foundation/NSData.h>
@@ -184,7 +185,7 @@ unichar *NSBytesToUnicode(const unsigned char *bytes,NSUInteger length,NSStringE
         if (resultLength) {
             *resultLength = unicodeLength;
         }
-        bcopy(unibuffer, data, sizeof(unichar) * unicodeLength);
+        memmove(data, unibuffer, sizeof(unichar) * unicodeLength);
         free(unibuffer);
     } else {
         static int unknownEncodingLogged = 0;
@@ -243,7 +244,7 @@ unsigned char *NSBytesFromUnicode(const unichar *characters,NSUInteger length,NS
         if (resultLength) {
             *resultLength = charLength;
         }
-        bcopy(buffer, data, sizeof(unsigned char) * charLength);
+        memmove(data, buffer, sizeof(unsigned char) * charLength);
         NSZoneFree(NULL, buffer);
     } else {
         static int unknownEncodingLogged = 0;

@@ -34,6 +34,7 @@ enum _NSPreferencePaneUnselectReply : NSUInteger {
     NSUnselectLater,
 };
 typedef enum _NSPreferencePaneUnselectReply NSPreferencePaneUnselectReply;
+typedef NSPreferencePaneUnselectReply NSUnselectTag;
 
 extern NSString * const NSPreferencePrefPaneIsAvailableNotification;
 extern NSString * const NSPreferencePaneDoUnselectNotification;
@@ -52,6 +53,13 @@ extern NSString * const NSPrefPaneHelpMenuAnchorKey;
 @interface NSPreferencePane : NSObject {
     NSMutableDictionary *_helpItemsDict;
     NSMenu *_help;
+    NSBundle *_bundle;
+    NSView *_mainView;
+    NSString *_mainNibName;
+    BOOL _selected;
+    NSUnselectTag _shouldUnselect;
+    BOOL _autoSaveTextFields;
+    NSWindow *_window;
 }
 
 @property(strong, readonly) NSBundle *bundle;

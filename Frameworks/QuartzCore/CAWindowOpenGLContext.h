@@ -1,5 +1,7 @@
 #import <QuartzCore/CARenderer.h>
 
+#import <OpenGL/gl.h>
+#import <OpenGL/OpenGL.h>
 @interface CAWindowOpenGLContext : NSObject {
     CGLContextObj _cglContext;
     unsigned int vbo;

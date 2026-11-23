@@ -26,6 +26,8 @@
 #import "CFODRecord.h"
 #import "CFOpenDirectoryPriv.h"
 
+void NSRequestConcreteImplementation(id self, SEL _cmd, Class cls);
+
 @interface NSODRecord : ODRecord
 @end
 @implementation NSODRecord

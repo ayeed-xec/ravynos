@@ -8,6 +8,7 @@
 
 #import "O2EXIFDecoder.h"
 #import "O2ImageSource.h"
+#import <strings.h>
 
 @implementation O2EXIFDecoder
 
@@ -640,7 +641,7 @@ static unsigned long _getLong(const unsigned char*data, size_t offset, bool bige
     if (length < 12) {
         return;
     }
-    if (bcmp(bytes, "JFIF\0", 5)) {
+    if (memcmp(bytes, "JFIF\0", 5)) {
         return;
     }
     BOOL bigendian = YES;
@@ -689,7 +690,7 @@ static unsigned long _getLong(const unsigned char*data, size_t offset, bool bige
     if (length < 6) {
         return;
     }
-    if (bcmp(bytes, "Exif\0\0", 6)) {
+    if (memcmp(bytes, "Exif\0\0", 6)) {
         return;
     }
     bytes += 6;

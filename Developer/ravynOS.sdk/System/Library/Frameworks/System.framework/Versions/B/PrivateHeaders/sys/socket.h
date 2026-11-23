@@ -91,6 +91,10 @@
  */
 
 #include <sys/_types/_gid_t.h>
+#include <sys/_types/_uid_t.h>
+#include <sys/_types/_u_int.h>
+#include <sys/_types/_u_char.h>
+#include <sys/_types/_u_short.h>
 #include <sys/_types/_off_t.h>
 #include <sys/_types/_pid_t.h>
 #include <sys/_types/_sa_family_t.h>
