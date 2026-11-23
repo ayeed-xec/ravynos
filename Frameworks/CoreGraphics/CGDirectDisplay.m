@@ -22,6 +22,7 @@
 
 #import <mach/mach.h>
 #import <sys/types.h>
+#import <mach/bootstrap.h>
 #import <sys/ipc.h>
 #import <sys/shm.h>
 #import <sys/mman.h>

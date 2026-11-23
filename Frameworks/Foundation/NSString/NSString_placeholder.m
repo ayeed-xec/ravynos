@@ -16,6 +16,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSRaiseException.h>
 
 #import "NSStringEncoder.h"
+#import <CoreFoundation/CFStringEncodingConverter.h>
 #import "NSString_placeholder.h"
 #import "NSString_cString.h"
 #import "NSString_unicode.h"

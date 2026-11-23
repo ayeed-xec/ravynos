@@ -598,3 +598,10 @@
 #pragma GCC error "Already found AvailabilityVersions version " __AVAILABILITY_FILE " from " __AVAILABILITY_VERSIONS_VERSION_STRING ", which is incompatible with AvailabilityInternal.h from Local. Mixing and matching Availability from different SDKs is not supported"
 #endif /* __AVAILABILITY_VERSIONS_VERSION_HASH */
 #endif /* __OPEN_SOURCE__ */
+
+#ifndef NS_DEPRECATED_MAC
+#define NS_DEPRECATED_MAC(_intro, _dep)
+#endif
+#ifndef NS_AVAILABLE_MAC
+#define NS_AVAILABLE_MAC(_v)
+#endif

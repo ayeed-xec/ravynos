@@ -105,7 +105,6 @@ test_node()
 	[node2 release];
 	node2 = nil;
 
-	[[NSGarbageCollector defaultCollector] collectExhaustively];
 }
 
 static void

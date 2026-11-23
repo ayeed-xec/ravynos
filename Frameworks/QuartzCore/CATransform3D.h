@@ -1,3 +1,5 @@
+#import <CoreGraphics/CGGeometry.h>
+#import <CoreGraphics/CoreGraphicsExport.h>
 
 #import <QuartzCore/CABase.h>
 

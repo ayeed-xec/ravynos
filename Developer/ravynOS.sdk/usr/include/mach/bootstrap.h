@@ -32,3 +32,11 @@
 #define _MACH_BOOTSTRAP_H_
 
 #endif /* _MACH_BOOTSTRAP_H_ */
+#ifndef __MACH_BOOTSTRAP_SHIM_PROTO__
+#define __MACH_BOOTSTRAP_SHIM_PROTO__
+#include <mach/mach.h>
+extern kern_return_t bootstrap_look_up(mach_port_t bp, const char *name, mach_port_t *sp);
+extern kern_return_t bootstrap_check_in(mach_port_t bp, const char *name, mach_port_t *sp);
+extern kern_return_t bootstrap_register(mach_port_t bp, const char *name, mach_port_t sp);
+#define bootstrap_port ((mach_port_t)0)
+#endif

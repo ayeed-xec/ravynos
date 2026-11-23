@@ -45,8 +45,11 @@ void NSIncrementExtraRefCount(id object) {
 }
 
 BOOL NSDecrementExtraRefCountWasZero(id object) {
-    BOOL destroy = objc_release(object);
-    return destroy;
+    if ([object retainCount] > 1) {
+        objc_release(object);
+        return NO;
+    }
+    return YES;
 }
 
 NSUInteger NSExtraRefCount(id object) {
@@ -78,7 +81,7 @@ id NSAllocateObject(Class class, NSUInteger extraBytes, NSZone *zone)
 
     /* Make sure our type is aligned with CoreFoundation */
     struct objc_object *base = (struct objc_object *)result;
-    base->bits = (uintptr_t)([result _cfTypeID]) << 8;
+    (void)base;
     return result;
 }
 
