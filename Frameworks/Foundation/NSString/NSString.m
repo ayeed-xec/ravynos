@@ -518,7 +518,7 @@ extern unichar *NSBytesToUnicode(const char *, NSUInteger, NSStringEncoding,
 }
 
 -(NSUInteger)length {
-    printf("NSString length stub\n");
+   NSInvalidAbstractInvocation();
    return 0;
 }
 

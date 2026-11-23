@@ -6,6 +6,7 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <Foundation/NSProcessInfo.h>
+#import <objc/runtime.h>
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSPathUtilities.h>
@@ -207,6 +208,13 @@ FOUNDATION_EXPORT void __NSInitializeProcess(int argc,const char *argv[]) {
    NSProcessInfoArgv=argv;
 #if !defined(APPLE_RUNTIME_4)
     OBJCInitializeProcess();
+#endif
+#if !defined(__APPLE__)
+    extern BOOL objc_registerSmallObjectClass_np(void *cls, unsigned long classId);
+    if(objc_registerSmallObjectClass_np(objc_getClass("NSConstantString_tiny"),4) == 0) {
+        fprintf(stderr, "Error during initialization: unable to register tiny string class");
+        abort();
+    }
 #endif
 #if defined(__APPLE__)
     Class cls = objc_getClass("__builtin_NSString");
