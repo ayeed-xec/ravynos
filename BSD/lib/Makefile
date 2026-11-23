@@ -1,4 +1,4 @@
-SUBDIR = bzip2 gzip libedit ncurses libutil
+SUBDIR = bzip2 libedit ncurses libutil
 
 .include <bsd.subdir.mk>
 

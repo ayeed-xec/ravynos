@@ -22,10 +22,10 @@ all: libintl
 		-DCMAKE_INSTALL_PREFIX=/usr \
 		-DLIBXML2_WITH_SAX1=ON \
 		-DLIBXML2_WITH_PYTHON=OFF \
-		-DIconv_LIBRARY=${.OBJDIR:H}/libiconv/lib/.libs/libiconv.2.dylib \
-		-DIconv_INCLUDE_DIR=${.OBJDIR:H}/libiconv/include \
-		-DLIBLZMA_LIBRARY=${.OBJDIR:H}/xz/src/liblzma/.libs/liblzma.5.dylib \
-		-DLIBLZMA_INCLUDE_DIR=${.CURDIR:H}/xz/src/liblzma/api \
+		-DIconv_LIBRARY=/usr/lib/x86_64-linux-gnu/libc.so \
+		-DIconv_INCLUDE_DIR=/usr/include \
+		-DLIBLZMA_LIBRARY=/usr/lib/x86_64-linux-gnu/liblzma.so \
+		-DLIBLZMA_INCLUDE_DIR=/usr/include \
 		-DLIBLZMA_HAS_AUTO_DECODER=ON -DLIBLZMA_HAS_EASY_ENCODER=ON \
 		-DLIBLZMA_HAS_LZMA_PRESET=ON \
 		-DZLIB_LIBRARY=${ROOT_BINARY_DIR}${ROOT_SOURCE_DIR}/Libraries/zlib/libz.a \
@@ -40,8 +40,8 @@ all: libintl
 libintl: ${.CURDIR:H}/gettext-tiny/Makefile
 	CC=${CC} CXX=${CXX} LD=${CC} AR=${AR} RANLIB=${RANLIB} \
 	NM=${NM} LIBTOOL=${LIBTOOL} \
-	LDFLAGS="-fuse-ld=${LD} --sysroot=${RAVYN_SDKROOT} -mmacos-version-min=${MACOS_VERSION_MIN} -L${.OBJDIR:H}/libiconv/lib/.libs/" \
-	CFLAGS="--sysroot=${RAVYN_SDKROOT} -mmacos-version-min=${MACOS_VERSION_MIN} -I${.OBJDIR:H}/libiconv/include" \
+	LDFLAGS="-fuse-ld=${LD} --sysroot=${RAVYN_SDKROOT} -mmacos-version-min=${MACOS_VERSION_MIN} -L/usr/lib/x86_64-linux-gnu" \
+	CFLAGS="--sysroot=${RAVYN_SDKROOT} -mmacos-version-min=${MACOS_VERSION_MIN} -I/usr/include" \
 	MAKEFLAGS="" ${GMAKE} LIBINTL=1 -C ${.CURDIR:H}/gettext-tiny
 	cp -fv ${.CURDIR:H}/gettext-tiny/libintl.a ${RAVYN_SDKROOT}/usr/lib
 	cp -fv ${.CURDIR:H}/gettext-tiny/msgfmt ${.CURDIR:H}/gettext-tiny/msgmerge \

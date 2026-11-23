@@ -1,4 +1,4 @@
-SUBDIR = libctf libdwarf libelf tools
+SUBDIR = libctf libelf tools
 
 .include <bsd.subdir.mk>
 
