@@ -1048,5 +1048,37 @@ static NSString *NSStringFromCellType(NSCellType type) {
 @end
 
 void NSDrawThreePartImage(NSRect frame,NSImage *startCap,NSImage *centerFill,NSImage *endCap,BOOL vertical,NSCompositingOperation operation,CGFloat alpha,BOOL flipped) {
-   NSUnimplementedFunction();
+   NSSize startSize=(startCap!=nil)?[startCap size]:NSMakeSize(0,0);
+   NSSize endSize=(endCap!=nil)?[endCap size]:NSMakeSize(0,0);
+   CGFloat length=(vertical?NSHeight(frame):NSWidth(frame));
+   CGFloat startLength=(vertical?startSize.height:startSize.width);
+   CGFloat endLength=(vertical?endSize.height:endSize.width);
+
+   if(startLength+endLength>length && startLength+endLength>0){
+    CGFloat scale=length/(startLength+endLength);
+
+    startLength*=scale;
+    endLength*=scale;
+   }
+
+   NSRect startRect;
+   NSRect endRect;
+   NSRect centerRect;
+
+   if(vertical){
+    startRect=NSMakeRect(frame.origin.x,NSMaxY(frame)-startLength,NSWidth(frame),startLength);
+    endRect=NSMakeRect(frame.origin.x,frame.origin.y,NSWidth(frame),endLength);
+    centerRect=NSMakeRect(frame.origin.x,frame.origin.y+endLength,NSWidth(frame),length-startLength-endLength);
+   }else{
+    startRect=NSMakeRect(frame.origin.x,frame.origin.y,startLength,NSHeight(frame));
+    endRect=NSMakeRect(NSMaxX(frame)-endLength,frame.origin.y,endLength,NSHeight(frame));
+    centerRect=NSMakeRect(frame.origin.x+startLength,frame.origin.y,length-startLength-endLength,NSHeight(frame));
+   }
+
+   if(startCap!=nil)
+    [startCap drawInRect:startRect fromRect:NSZeroRect operation:operation fraction:alpha];
+   if(centerFill!=nil)
+    [centerFill drawInRect:centerRect fromRect:NSZeroRect operation:operation fraction:alpha];
+   if(endCap!=nil)
+    [endCap drawInRect:endRect fromRect:NSZeroRect operation:operation fraction:alpha];
 }

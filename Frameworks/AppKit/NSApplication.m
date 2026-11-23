@@ -10,7 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <sys/param.h>
 #import <mach/mach.h>
 #import <servers/bootstrap.h>
-#import <Foundation/NSSocket_bsd.h>
+#import <Foundation/NSSocket.h>
 #import <Foundation/NSSelectInputSource.h>
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSWindow-Private.h>
@@ -494,7 +494,7 @@ static NSMenuItem *itemWithTag(NSMenu *root, int tag) {
         exit(-1);
     }
     _inputSource = [[NSSelectInputSource socketInputSourceWithSocket:
-            [[NSSocket_bsd socketWithDescriptor:_machEventPipe[0]] retain]] retain];
+            [[NSSocket socketWithDescriptor:_machEventPipe[0]] retain]] retain];
     [_inputSource setSelectEventMask:NSSelectReadEvent];
 
     //[NSRunLoop mainRunLoop];
@@ -2016,10 +2016,27 @@ int NSApplicationMain(int argc, const char *argv[]) {
 }
 
 void NSUpdateDynamicServices(void) {
-    NSUnimplementedFunction();
+    NSMenu *servicesMenu=[NSApp servicesMenu];
+
+    if(servicesMenu!=nil)
+        [servicesMenu update];
 }
 
 BOOL NSPerformService(NSString *itemName, NSPasteboard *pasteboard) {
-    NSUnimplementedFunction();
-    return NO;
+    NSMenu *servicesMenu=[NSApp servicesMenu];
+    NSMenuItem *item=(servicesMenu!=nil)?[servicesMenu itemWithTitle:itemName]:nil;
+
+    if(item==nil)
+        return NO;
+
+    SEL action=[item action];
+    id target=[item target];
+
+    if(target==nil)
+        target=[NSApp servicesProvider];
+
+    if(action==NULL || target==nil)
+        return NO;
+
+    return [NSApp sendAction:action to:target from:pasteboard];
 }
