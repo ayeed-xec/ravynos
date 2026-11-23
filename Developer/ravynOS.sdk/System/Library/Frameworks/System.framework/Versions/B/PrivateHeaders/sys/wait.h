@@ -76,11 +76,14 @@
  * [XSI] The type idtype_t shall be defined as an enumeration type whose
  * possible values shall include at least P_ALL, P_PID, and P_PGID.
  */
+#if defined(__GLIBC__)
+#else
 typedef enum {
 	P_ALL,
 	P_PID,
 	P_PGID
 } idtype_t;
+#endif
 
 /*
  * [XSI] The id_t and pid_t types shall be defined as described
@@ -106,6 +109,9 @@ typedef enum {
  *		well, or in future releases your stware may not compile
  *		without modification.
  */
+#if defined(__GLIBC__)
+#include_next <sys/wait.h>
+#else
 #include <sys/signal.h>         /* [XSI] for siginfo_t */
 #include <sys/resource.h>       /* [XSI] for struct rusage */
 
@@ -267,4 +273,5 @@ pid_t   wait3(int *, int, struct rusage *);
 pid_t   wait4(pid_t, int *, int, struct rusage *);
 #endif /* (!defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)) */
 __END_DECLS
+#endif
 #endif /* !_SYS_WAIT_H_ */

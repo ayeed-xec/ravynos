@@ -69,6 +69,10 @@
 #ifndef _SYS_SIGNAL_H_
 #define _SYS_SIGNAL_H_
 
+#if defined(__GLIBC__)
+#define _USER_SIGNAL_H
+#include_next <signal.h>
+#else
 #include <sys/cdefs.h>
 #include <sys/appleapiopts.h>
 #include <Availability.h>
@@ -155,6 +159,8 @@
 #include <sys/_types/_size_t.h>
 #include <sys/_types/_uid_t.h>
 
+#if defined(__GLIBC__)
+#else
 union sigval {
 	/* Members as suggested by Annex C of POSIX 1003.1b. */
 	int     sival_int;
@@ -172,8 +178,12 @@ struct sigevent {
 	void                    (*sigev_notify_function)(union sigval);   /* Notification function */
 	pthread_attr_t  *sigev_notify_attributes;       /* Notification attributes */
 };
+#endif
 
 
+#if defined(__GLIBC__)
+typedef struct __siginfo __darwin_siginfo_st;
+#else
 typedef struct __siginfo {
 	int     si_signo;               /* signal number */
 	int     si_errno;               /* errno association */
@@ -186,6 +196,7 @@ typedef struct __siginfo {
 	long    si_band;                /* band event for SIGPOLL */
 	unsigned long   __pad[7];       /* Reserved for Future Use */
 } siginfo_t;
+#endif
 
 
 /*
@@ -389,4 +400,5 @@ struct  sigstack {
 __BEGIN_DECLS
     void(*signal(int, void (*)(int)))(int);
 __END_DECLS
+#endif
 #endif  /* !_SYS_SIGNAL_H_ */

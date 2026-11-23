@@ -67,6 +67,7 @@ typedef __uint32_t      __darwin_ino_t;         /* [???] Used for inodes */
 #endif /* __DARWIN_64_BIT_INO_T */
 typedef __darwin_natural_t __darwin_mach_port_name_t; /* Used by mach */
 typedef __darwin_mach_port_name_t __darwin_mach_port_t; /* Used by mach */
+typedef __darwin_mach_port_t     mach_port_t;
 typedef __uint16_t      __darwin_mode_t;        /* [???] Some file attributes */
 typedef __int64_t       __darwin_off_t;         /* [???] Used for file sizes */
 typedef __int32_t       __darwin_pid_t;         /* [???] process and group IDs */

@@ -64,6 +64,9 @@
 #ifndef _SYS_TIME_H_
 #define _SYS_TIME_H_
 
+#if defined(__GLIBC__)
+#include <sys/select.h>
+#else
 #include <sys/cdefs.h>
 #include <sys/_types.h>
 #include <Availability.h>
@@ -206,3 +209,4 @@ __END_DECLS
 
 
 #endif /* !_SYS_TIME_H_ */
+#endif

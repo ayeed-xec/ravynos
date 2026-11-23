@@ -68,6 +68,11 @@
 #ifndef _UNISTD_H_
 #define	_UNISTD_H_
 
+#if defined(__GLIBC__)
+#include_next <unistd.h>
+#endif
+
+#if !defined(__GLIBC__)
 #include <_types.h>
 #include <sys/unistd.h>
 #include <Availability.h>
@@ -787,5 +792,7 @@ extern int optreset;
 
 __END_DECLS
 #endif /* __DARWIN_C_LEVEL >= __DARWIN_C_FULL */
+
+#endif
 
 #endif /* _UNISTD_H_ */

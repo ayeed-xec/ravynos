@@ -117,7 +117,8 @@ struct extern_proc {
 	char    *p_wmesg;        /* Reason for sleep. */
 	u_int   p_swtime;        /* Time swapped in or out. */
 	u_int   p_slptime;       /* Time since last blocked. */
-	struct  itimerval p_realtimer;  /* Alarm timer. */
+	struct  itimerval p_realtimer;
+#include <sys/time.h>
 	struct  timeval p_rtime;        /* Real time. */
 	u_quad_t p_uticks;              /* Statclock hits in user mode. */
 	u_quad_t p_sticks;              /* Statclock hits in system mode. */

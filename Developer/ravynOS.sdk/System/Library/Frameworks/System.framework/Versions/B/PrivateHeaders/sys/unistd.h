@@ -64,6 +64,9 @@
 #ifndef _SYS_UNISTD_H_
 #define _SYS_UNISTD_H_
 
+#if defined(__GLIBC__)
+#include_next <unistd.h>
+#else
 #include <sys/cdefs.h>
 
 /*
@@ -215,4 +218,5 @@ __END_DECLS
 
 #endif /* __DARWIN_C_LEVEL >= 200809L */
 
+#endif
 #endif /* !_SYS_UNISTD_H_ */

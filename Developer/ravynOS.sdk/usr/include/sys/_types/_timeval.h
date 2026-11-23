@@ -31,9 +31,12 @@
 #include <machine/types.h> /* __darwin_time_t */
 #include <sys/_types.h> /* __darwin_suseconds_t */
 
+#ifndef __DARWIN_STRUCT_TIMEVAL
+#define __DARWIN_STRUCT_TIMEVAL
 _STRUCT_TIMEVAL
 {
 	__darwin_time_t         tv_sec;         /* seconds */
 	__darwin_suseconds_t    tv_usec;        /* and microseconds */
 };
+#endif
 #endif /* _STRUCT_TIMEVAL */

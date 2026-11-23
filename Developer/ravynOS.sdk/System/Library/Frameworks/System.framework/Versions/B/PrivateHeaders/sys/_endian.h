@@ -105,6 +105,8 @@ __uint32_t      ntohl(__uint32_t);
 __uint32_t      htonl(__uint32_t);
 __END_DECLS
 
+#elif defined(__GLIBC__)
+
 #elif __DARWIN_BYTE_ORDER == __DARWIN_BIG_ENDIAN
 
 #define ntohl(x)        ((__uint32_t)(x))
