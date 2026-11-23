@@ -12,6 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSSet.h>
 #import <Foundation/NSRaise.h>
 #import <Foundation/NSZone.h>
+#import <Foundation/NSCoder.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -124,12 +125,35 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)encodeWithCoder: (NSCoder*) coder {
-   NSUnimplementedMethod();
+	if ([coder allowsKeyedCoding]) {
+		[coder encodeInteger: (NSInteger) _length forKey: @"NSIndexPathLength"];
+
+		for (NSUInteger i = 0; i < _length; i++)
+			[coder encodeInteger: (NSInteger) _indexes[i] forKey: [NSString stringWithFormat: @"NSIndexPathIndex%lu", (unsigned long) i]];
+	} else {
+		[coder encodeValueOfObjCType: @encode(NSUInteger) at: &_length];
+
+		for (NSUInteger i = 0; i < _length; i++)
+			[coder encodeValueOfObjCType: @encode(NSUInteger) at: &_indexes[i]];
+	}
 }
 
 - initWithCoder: (NSCoder*) coder {
-   NSUnimplementedMethod();
-   return nil;
+	if ([coder allowsKeyedCoding]) {
+		_length  = (NSUInteger) [coder decodeIntegerForKey: @"NSIndexPathLength"];
+		_indexes = NSZoneMalloc(NULL, _length * sizeof(NSUInteger));
+
+		for (NSUInteger i = 0; i < _length; i++)
+			_indexes[i] = (NSUInteger) [coder decodeIntegerForKey: [NSString stringWithFormat: @"NSIndexPathIndex%lu", (unsigned long) i]];
+	} else {
+		[coder decodeValueOfObjCType: @encode(NSUInteger) at: &_length];
+		_indexes = NSZoneMalloc(NULL, _length * sizeof(NSUInteger));
+
+		for (NSUInteger i = 0; i < _length; i++)
+			[coder decodeValueOfObjCType: @encode(NSUInteger) at: &_indexes[i]];
+	}
+
+	return self;
 }
 
 @end
