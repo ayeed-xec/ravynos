@@ -26,7 +26,7 @@ ${.OBJDIR}/tapi/Version.inc: ${.CURDIR}/llvm/tapi/include/tapi/Version.inc.in
 
 
 SUBDIR = gmake mig unifdef cctools/libstuff cctools/libmacho xar rpcgen \
-	 dtrace_ctf/libctf dtrace_ctf/libelf dtrace_ctf/libdwarf llvm \
+	 dtrace_ctf/libctf dtrace_ctf/libelf llvm \
 	 cctools dtrace_ctf/tools plktool xcbuild lzvndecode iig
 
 .include <bsd.subdir.mk>

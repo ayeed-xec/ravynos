@@ -1,4 +1,4 @@
-PATH=		${OBJTOP}/tmp/legacy/bin:/bin:/usr/bin:${MAKEOBJDIR}/../gperf/src
+PATH=		${OBJTOP}/tmp/legacy/bin:/bin:/usr/bin:/usr/bin
 .export PATH
 
 GMAKE=		${OBJTOP}/tmp/legacy/bin/gmake

@@ -9,12 +9,12 @@ RESOURCES = Info.plist
 LDFLAGS = -framework Onyx2D -framework CoreGraphics -framework Foundation \
 	-framework CoreFoundation -L${.OBJDIR}/libxml2 -lxml2 -lintl -lobjc
 
-SUBDIR = xz libiconv libxml2 #gperf .WAIT fontconfig
+SUBDIR = libxml2 #gperf .WAIT fontconfig
 #LINK_SUBDIR = fontconfig/src
 #LINK_EXCLUDE.fontconfig/src = fcarch.o
 
-${FRAMEWORK}: xz libiconv libxml2
-libxml2: xz libiconv
+${FRAMEWORK}: libxml2
+libxml2:
 
 clean:
 	rm -f ${.OBJDIR}/*.o ${.OBJDIR}/*.pico

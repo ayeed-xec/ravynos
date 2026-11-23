@@ -42,15 +42,13 @@ LDFLAGS+=	-L${.OBJDIR} \
 		${OBJTOP}/tmp/lib/libc.so.7
 #.export SYSROOT
 
-SUBDIR+=        libevdev .WAIT
+SUBDIR+=        .WAIT
 SUBDIR+=	mtdev .WAIT
 SUBDIR+=        libinput .WAIT
 SUBDIR+=	libxkbcommon
 
 ${MAKEOBJDIR}/Resources:
 	cp -fv ${.CURDIR}/libinput/quirks/* ${APP_DIR}/Contents/Resources/
-	${MAKE} -C ${.CURDIR}/libevdev tools
-	${MAKE} -C ${.CURDIR}/libevdev tools-install APP_DIR=${APP_DIR}
 	${MAKE} -C ${.CURDIR}/libinput tools
 	${MAKE} -C ${.CURDIR}/libinput tools-install APP_DIR=${APP_DIR}
 
