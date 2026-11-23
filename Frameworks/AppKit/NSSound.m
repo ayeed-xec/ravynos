@@ -65,27 +65,24 @@ static NSMutableDictionary* sSounds = nil;
 }
 
 -(BOOL)setName:(NSString *)name {
-   NSUnimplementedMethod();
-   return NO;
+   [_name release];
+   _name=[name copy];
+   return YES;
 }
 
 -(BOOL)play {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(BOOL)pause {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(BOOL)resume {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(BOOL)stop {
-   NSUnimplementedMethod();
    return NO;
 }
 

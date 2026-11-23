@@ -16,6 +16,7 @@ typedef NSInteger NSPathStyle;
     SEL _doubleAction;
     NSArray *_pathComponentCells;
     NSPathComponentCell *_clickPathComponentCell;
+    NSPathComponentCell *_mousePathComponentCell;
     id _delegate;
     NSColor *_backgroundColor;
     NSArray *_allowedTypes;

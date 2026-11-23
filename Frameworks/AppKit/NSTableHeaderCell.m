@@ -12,18 +12,43 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSTableHeaderCell
 
 - (NSRect)sortIndicatorRectForBounds:(NSRect)bounds {
-   NSUnimplementedMethod();
-   return bounds;
+   CGFloat indicatorHeight=NSHeight(bounds)-5.0;
+
+   return NSMakeRect(NSMaxX(bounds)-3.0-indicatorHeight,
+                     NSMinY(bounds)+2.5,
+                     indicatorHeight,
+                     indicatorHeight);
 }
 
 - (void)drawSortIndicatorWithFrame:(NSRect)frame inView:(NSView *)controlView ascending:(BOOL)ascending priority:(NSInteger)priority {
-   NSUnimplementedMethod();
+   NSRect        indicatorRect=[self sortIndicatorRectForBounds:frame];
+   NSBezierPath *triangle=[NSBezierPath bezierPath];
+
+   if(ascending){
+    [triangle moveToPoint:NSMakePoint(NSMidX(indicatorRect), NSMinY(indicatorRect))];
+    [triangle lineToPoint:NSMakePoint(NSMaxX(indicatorRect), NSMaxY(indicatorRect))];
+    [triangle lineToPoint:NSMakePoint(NSMinX(indicatorRect), NSMaxY(indicatorRect))];
+   }
+   else{
+    [triangle moveToPoint:NSMakePoint(NSMidX(indicatorRect), NSMaxY(indicatorRect))];
+    [triangle lineToPoint:NSMakePoint(NSMinX(indicatorRect), NSMinY(indicatorRect))];
+    [triangle lineToPoint:NSMakePoint(NSMaxX(indicatorRect), NSMinY(indicatorRect))];
+   }
+
+   [triangle closePath];
+
+   [[NSColor controlTextColor] set];
+   [triangle fill];
 }
 
 - (NSRect)titleRectForBounds:(NSRect)rect {
+   CGFloat maxWidth=NSMinX([self sortIndicatorRectForBounds:rect])-rect.origin.x;
+
    rect.origin.x   += 3.0;
    rect.origin.y   += 2.5;
    rect.size.width -= 6.0;
+   if(rect.size.width > maxWidth)
+    rect.size.width = (maxWidth > 0 ? maxWidth : 0);
    return rect;
 }
 

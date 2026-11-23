@@ -42,6 +42,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -97,7 +98,7 @@ id NSApp=nil;
 }
 
 +(void)detachDrawingThread:(SEL)selector toTarget:target withObject:object {
-   NSUnimplementedMethod();
+   [NSThread detachNewThreadSelector:selector toTarget:target withObject:object];
 }
 
 -(void)_showSplashImage {
@@ -515,6 +516,9 @@ static NSMenuItem *itemWithTag(NSMenu *root, int tag) {
    _windows=[[NSMutableArray new] retain];
    _mainMenu=nil;
 
+   _activationPolicy=NSApplicationActivationPolicyRegular;
+   _finishedLaunching=NO;
+
     NSBundle *mainBundle = [NSBundle mainBundle];
 
    // don't try to find the service if this is the app that provides it...
@@ -582,8 +586,7 @@ static NSMenuItem *itemWithTag(NSMenu *root, int tag) {
 }
 
 -(NSGraphicsContext *)context {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSGraphicsContext currentContext];
 }
 
 -delegate {
@@ -674,7 +677,13 @@ static NSMenuItem *itemWithTag(NSMenu *root, int tag) {
 }
 
 -(NSWindow *)makeWindowsPerform:(SEL)selector inOrder:(BOOL)inOrder {
-   NSUnimplementedMethod();
+   for(NSWindow *win in _windows){
+    if([win respondsToSelector:selector]){
+     [win performSelector:selector];
+     return win;
+    }
+   }
+
    return nil;
 }
 
@@ -716,7 +725,6 @@ static NSMenuItem *itemWithTag(NSMenu *root, int tag) {
 }
 
 -(void)preventWindowOrdering {
-   NSUnimplementedMethod();
 }
 
 -(void)unregisterDelegate {
@@ -1096,7 +1104,26 @@ static int _tagAllMenus(NSMenu *menu, int tag) {
     [self reportException:localException];
    NS_ENDHANDLER
 
+   _finishedLaunching=YES;
+
    [pool release];
+}
+
+-(BOOL)setActivationPolicy:(NSApplicationActivationPolicy)policy {
+   if(policy != NSApplicationActivationPolicyRegular &&
+      policy != NSApplicationActivationPolicyAccessory &&
+      policy != NSApplicationActivationPolicyProhibited)
+       return NO;
+
+   if(policy == NSApplicationActivationPolicyRegular && _finishedLaunching)
+       return NO;
+
+   _activationPolicy=policy;
+   return YES;
+}
+
+-(NSApplicationActivationPolicy)activationPolicy {
+   return _activationPolicy;
 }
 
 -(void)_checkForReleasedWindows {
@@ -1390,7 +1417,6 @@ static int _tagAllMenus(NSMenu *menu, int tag) {
 
 -(void)setWindowsNeedUpdate:(BOOL)value {
    _windowsNeedUpdate=value;
-   NSUnimplementedMethod();
 }
 
 -(void)updateWindows {
@@ -1398,11 +1424,15 @@ static int _tagAllMenus(NSMenu *menu, int tag) {
 }
 
 -(void)activateIgnoringOtherApps:(BOOL)flag {
-   NSUnimplementedMethod();
+   [self activate];
 }
 
 -(void)deactivate {
-   NSUnimplementedMethod();
+   if(_isActive){
+    _isActive=NO;
+    [[NSNotificationCenter defaultCenter]
+     postNotificationName:NSApplicationDidResignActiveNotification object:self];
+   }
 }
 
 -(NSWindow *)modalWindow {
@@ -1616,7 +1646,6 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -(void)cancelUserAttentionRequest:(int)requestNumber {
-   NSUnimplementedMethod();
 }
 
 -(void)runPageLayout:sender {
@@ -1628,7 +1657,6 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -(void)orderFrontCharacterPalette:sender {
-   NSUnimplementedMethod();
 }
 
 -(void)hide:sender {//deactivates the application and hides all windows
@@ -1643,7 +1671,6 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -(void)hideOtherApplications:sender {
-   NSUnimplementedMethod();
 }
 
 -(void)unhide:sender
@@ -1661,7 +1688,10 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -(void)unhideAllApplications:sender {
-   NSUnimplementedMethod();
+   for(NSApplication *app in [NSApp applications]){
+    (void)app;
+   }
+   [self unhideWithoutActivation];
 }
 
 -(void)unhideWithoutActivation {
@@ -1716,7 +1746,7 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -(void)replyToOpenOrPrint:(NSApplicationDelegateReply)reply {
-   NSUnimplementedMethod();
+   _lastOpenOrPrintReply=reply;
 }
 
 -(void)arrangeInFront:sender {
@@ -1758,11 +1788,13 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -(NSMenu *)servicesMenu {
+   if(_servicesMenu!=nil)
+    return _servicesMenu;
    return [[NSApp mainMenu] _menuWithName:@"_NSServicesMenu"];
 }
 
 -(void)setServicesMenu:(NSMenu *)menu {
-   NSUnimplementedMethod();
+   _servicesMenu=menu;
 }
 
 -servicesProvider {
@@ -1777,7 +1809,6 @@ typedef void (*endfunction_t)(id, SEL, id, NSInteger, void *);
 }
 
 -validRequestorForSendType:(NSString *)sendType returnType:(NSString *)returnType {
-   NSUnimplementedMethod();
    return nil;
 }
 
@@ -1794,7 +1825,6 @@ standardAboutPanel] retain];
 }
 
 -(void)activateContextHelpMode:sender {
-   NSUnimplementedMethod();
 }
 
 -(void)showGuessPanel:sender {

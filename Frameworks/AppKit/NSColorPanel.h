@@ -57,6 +57,7 @@ APPKIT_EXPORT NSString *const NSColorPanelColorDidChangeNotification;
     BOOL _continuous;
     int _mode;
     NSMutableArray *_colorPickers;
+    NSView *_accessoryView;
     id _target;
     SEL _action;
 }

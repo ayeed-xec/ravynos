@@ -20,6 +20,8 @@
 @end
 
 @interface NSPathControl : NSControl {
+    NSDragOperation _dragSourceOperationMaskForLocal;
+    NSDragOperation _dragSourceOperationMaskForNonLocal;
 }
 
 - (NSPathStyle)pathStyle;
@@ -42,6 +44,7 @@
 - (void)setDelegate:(id<NSPathControlDelegate>)delegate;
 
 - (void)setDraggingSourceOperationMask:(NSDragOperation)mask forLocal:(BOOL)isLocal;
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal;
 
 - (NSMenu *)menu;
 - (void)setMenu:(NSMenu *)menu;

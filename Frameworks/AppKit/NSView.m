@@ -28,6 +28,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSPasteboard.h>
 #import <AppKit/NSObject+BindingSupport.h>
 #import <Onyx2D/O2Context.h>
+#import <Onyx2D/O2BitmapContext.h>
 #import <AppKit/NSRaise.h>
 #import <AppKit/NSViewBackingLayer.h>
 #import <CoreGraphics/CGWindow.h>
@@ -62,12 +63,21 @@ static BOOL NSViewLayersEnabled=NO;
 }
 
 +(NSFocusRingType)defaultFocusRingType {
-   NSUnimplementedMethod();
-   return 0;
+   return NSFocusRingTypeDefault;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeObject:NSStringFromRect([self frame]) forKey:@"NSFrame"];
+    [keyed encodeObject:NSStringFromRect([self bounds]) forKey:@"NSBounds"];
+    [keyed encodeBool:[self isHidden] forKey:@"NSHidden"];
+    [keyed encodeBool:[self isFlipped] forKey:@"NSFlipped"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"%@ can not encodeWithCoder:%@",[self class],[coder class]];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -326,8 +336,7 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(CGFloat)frameCenterRotation {
-   NSUnimplementedMethod();
-   return 0.;
+   return _frameRotation;
 }
 
 -(NSRect)bounds {
@@ -339,17 +348,19 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(BOOL)isRotatedFromBase {
-   NSUnimplementedMethod();
-   return NO;
+   return _frameRotation!=0. || _boundsRotation!=0.;
 }
 
 -(BOOL)isRotatedOrScaledFromBase {
-   NSUnimplementedMethod();
-   return NO;
+   return [self isRotatedFromBase];
 }
 
 -(void)translateOriginToPoint:(NSPoint)point {
-   NSUnimplementedMethod();
+   NSRect bounds=[self bounds];
+
+   bounds.origin.x+=point.x;
+   bounds.origin.y+=point.y;
+   [self setBounds:bounds];
 }
 
 -(void)rotateByAngle:(CGFloat)angle {
@@ -365,7 +376,14 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)scaleUnitSquareToSize:(NSSize)size {
-   NSUnimplementedMethod();
+   NSRect bounds=[self bounds];
+
+   if(size.width<=0. || size.height<=0.)
+    [NSException raise:NSInvalidArgumentException format:@"%@ scale to non-positive size",[self class]];
+
+   bounds.size.width*=size.width;
+   bounds.size.height*=size.height;
+   [self setBounds:bounds];
 }
 
 -(NSWindow *)window {
@@ -390,7 +408,13 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(NSView *)ancestorSharedWithView:(NSView *)view {
-   NSUnimplementedMethod();
+   for(NSView *mine=self; mine!=nil; mine=[mine superview]){
+    for(NSView *theirs=view; theirs!=nil; theirs=[theirs superview]){
+     if(mine==theirs)
+      return mine;
+    }
+   }
+
    return nil;
 }
 
@@ -405,8 +429,7 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(NSRect)adjustScroll:(NSRect)toRect {
-   NSUnimplementedMethod();
-   return NSZeroRect;
+   return toRect;
 }
 
 -(NSArray *)subviews {
@@ -438,12 +461,16 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(CGFloat)alphaValue {
-   NSUnimplementedMethod();
-   return 0.;
+   return _alphaValue;
 }
 
 -(void)setAlphaValue:(CGFloat)alpha {
-   NSUnimplementedMethod();
+   if(alpha<0.)
+    alpha=0.;
+   if(alpha>1.)
+    alpha=1.;
+   _alphaValue=alpha;
+   [self setNeedsDisplay:YES];
 }
 
 -(int)gState {
@@ -457,17 +484,28 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(BOOL)wantsDefaultClipping {
-   NSUnimplementedMethod();
-   return NO;
+   return YES;
 }
 
 -(NSBitmapImageRep *)bitmapImageRepForCachingDisplayInRect:(NSRect)rect {
-   NSUnimplementedMethod();
-   return nil;
+   return [[NSBitmapImageRep alloc]
+    initWithBitmapDataPlanes:NULL
+                   pixelsWide:(NSInteger)rect.size.width
+                   pixelsHigh:(NSInteger)rect.size.height
+                bitsPerSample:8
+              samplesPerPixel:4
+                     hasAlpha:YES
+                     isPlanar:NO
+               colorSpaceName:NSCalibratedRGBColorSpace
+                  bytesPerRow:0
+                 bitsPerPixel:0];
 }
 
 -(void)cacheDisplayInRect:(NSRect)rect toBitmapImageRep:(NSBitmapImageRep *)imageRep {
-   NSUnimplementedMethod();
+   NSGraphicsContext *context=[NSGraphicsContext
+    graphicsContextWithBitmapImageRep:imageRep];
+
+   [self displayRectIgnoringOpacity:rect inContext:context];
 }
 
 -(BOOL)isHidden {
@@ -581,7 +619,14 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(NSMenuItem *)enclosingMenuItem {
-   NSUnimplementedMethod();
+   NSResponder *responder=[self superview];
+
+   while(responder!=nil){
+    if([responder isKindOfClass:[NSMenuItem class]])
+     return (NSMenuItem *)responder;
+    responder=[responder superview];
+   }
+
    return nil;
 }
 
@@ -779,11 +824,24 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)setFrameRotation:(CGFloat)angle {
-   NSUnimplementedMethod();
+   _frameRotation=angle;
+   [self setNeedsDisplay:YES];
 }
 
 -(void)setFrameCenterRotation:(CGFloat)angle {
-   NSUnimplementedMethod();
+   NSRect frame=[self frame];
+   NSPoint center=NSMakePoint(NSMidX(frame),NSMidY(frame));
+   CGFloat old=[self frameCenterRotation];
+
+   CGFloat radians=(angle-old)*M_PI/180.;
+   CGFloat dx=center.x-frame.origin.x, dy=center.y-frame.origin.y;
+   NSPoint newOrigin=center;
+   newOrigin.x-=dx*cos(radians)-dy*sin(radians);
+   newOrigin.y-=dx*sin(radians)+dy*cos(radians);
+   [self setFrameOrigin:newOrigin];
+
+   _frameRotation=angle;
+   [self setNeedsDisplay:YES];
 }
 
 -(void)setBounds:(NSRect)bounds {
@@ -815,7 +873,8 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)setBoundsRotation:(CGFloat)angle {
-   NSUnimplementedMethod();
+   _boundsRotation=angle;
+   [self setNeedsDisplay:YES];
 }
 
 -(void)setPostsFrameChangedNotifications:(BOOL)flag {
@@ -925,15 +984,24 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)sortSubviewsUsingFunction:(NSComparisonResult (*)(id, id, void *))compareFunction context:(void *)context {
-   NSUnimplementedMethod();
+   NSMutableArray *sorted=[[_subviews copy] mutableCopy];
+
+   [sorted sortUsingFunction:compareFunction context:context];
+
+   for(NSView *view in sorted){
+    [view retain];
+    [view removeFromSuperview];
+    [self addSubview:view];
+    [view release];
+   }
+
+   [sorted release];
 }
 
 -(void)didAddSubview:(NSView *)subview {
-   NSUnimplementedMethod();
 }
 
 -(void)willRemoveSubview:(NSView *)subview {
-   NSUnimplementedMethod();
 }
 
 -(void)setAutoresizesSubviews:(BOOL)flag {
@@ -967,26 +1035,23 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(BOOL)acceptsFirstMouse:(NSEvent *)event {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(BOOL)acceptsTouchEvents {
-   NSUnimplementedMethod();
-   return NO;
+   return _acceptsTouchEvents;
 }
 
 -(void)setAcceptsTouchEvents:(BOOL)accepts {
-   NSUnimplementedMethod();
+   _acceptsTouchEvents=accepts;
 }
 
 -(BOOL)wantsRestingTouches {
-   NSUnimplementedMethod();
-   return NO;
+   return _wantsRestingTouches;
 }
 
 -(void)setWantsRestingTouches:(BOOL)wants {
-   NSUnimplementedMethod();
+   _wantsRestingTouches=wants;
 }
 
 -(void)setToolTip:(NSString *)string {
@@ -1150,8 +1215,11 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(NSTextInputContext *)inputContext {
-   NSUnimplementedMethod();
    return nil;
+}
+
+-(BOOL)shouldDelayWindowOrderingForEvent:(NSEvent *)event {
+   return NO;
 }
 
 -(void)registerForDraggedTypes:(NSArray *)types {
@@ -1211,11 +1279,6 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 
 -(void)viewDidMoveToWindow {
    // Default implementation does nothing
-}
-
--(BOOL)shouldDelayWindowOrderingForEvent:(NSEvent *)event {
-   NSUnimplementedMethod();
-   return NO;
 }
 
 -(void)resizeSubviewsWithOldSize:(NSSize)oldSize {
@@ -1303,13 +1366,11 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(BOOL)preservesContentDuringLiveResize {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(NSRect)rectPreservedDuringLiveResize {
-   NSUnimplementedMethod();
-   return NSZeroRect;
+   return [self bounds];
 }
 
 -(void)viewWillStartLiveResize {
@@ -1323,7 +1384,6 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(BOOL)enterFullScreenMode:(NSScreen *)screen withOptions:(NSDictionary *)options {
-   NSUnimplementedMethod();
    return NO;
 }
 
@@ -1333,7 +1393,6 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)exitFullScreenModeWithOptions:(NSDictionary *)options {
-   NSUnimplementedMethod();
 }
 
 -(NSClipView *)_enclosingClipView {
@@ -1411,7 +1470,10 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)scrollClipView:(NSClipView *)clipView toPoint:(NSPoint)newOrigin {
-   NSUnimplementedMethod();
+   NSRect newBounds=[clipView bounds];
+
+   newBounds.origin=newOrigin;
+   [clipView setBounds:newBounds];
 }
 
 -(BOOL)mouse:(NSPoint)point inRect:(NSRect)rect {
@@ -1419,7 +1481,7 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 }
 
 -(void)reflectScrolledClipView:(NSClipView *)view {
-   NSUnimplementedMethod();
+   [self scrollClipView:view toPoint:[view bounds].origin];
 }
 
 -(void)allocateGState {
@@ -1567,7 +1629,6 @@ static inline void buildTransformsIfNeeded(NSView *self) {
 
 
 -(NSArray *)backgroundFilters {
-   NSUnimplementedMethod();
    return nil;
 }
 
@@ -1731,11 +1792,12 @@ static void clearNeedsDisplay(NSView *self){
 }
 
 -(void)setKeyboardFocusRingNeedsDisplayInRect:(NSRect)rect {
-   NSUnimplementedMethod();
+   rect=NSInsetRect(rect,-4.,-4.);
+   [self setNeedsDisplayInRect:rect];
 }
 
 -(void)translateRectsNeedingDisplayInRect:(NSRect)rect by:(NSSize)delta {
-   NSUnimplementedMethod();
+   [self setNeedsDisplayInRect:rect];
 }
 
 -(BOOL)canDraw {
@@ -1743,8 +1805,7 @@ static void clearNeedsDisplay(NSView *self){
 }
 
 -(BOOL)canDrawConcurrently {
-   NSUnimplementedMethod();
-   return NO;
+   return _canDrawConcurrently;
 }
 
 -(void)viewWillDraw {
@@ -1752,7 +1813,7 @@ static void clearNeedsDisplay(NSView *self){
 }
 
 -(void)setCanDrawConcurrently:(BOOL)canDraw {
-   NSUnimplementedMethod();
+   _canDrawConcurrently=canDraw;
 }
 
 static NSGraphicsContext *graphicsContextForView(NSView *view){
@@ -1761,7 +1822,7 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
     size_t             width=frame.size.width;
     size_t             height=frame.size.height;
     CGColorSpaceRef    colorSpace=CGColorSpaceCreateDeviceRGB();
-    CGContextRef       context=CGBitmapContextCreate(NULL,width,height,8,0,colorSpace,kCGImageAlphaPremultipliedFirst|kCGBitmapByteOrder32Host);
+    CGContextRef       context=O2BitmapContextCreate(NULL,width,height,8,0,colorSpace,kO2ImageAlphaPremultipliedFirst|kO2BitmapByteOrder32Little);
     NSGraphicsContext *result=[NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:NO];
 
     CGColorSpaceRelease(colorSpace);
@@ -1820,7 +1881,7 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
    CGContextRef       context=[graphicsContext graphicsPort];
 
    if(_layer!=nil){
-    CGImageRef image=CGBitmapContextCreateImage(context);
+    CGImageRef image=O2BitmapContextCreateImage(context);
 
     [_layer setContents:image];
    }
@@ -1918,11 +1979,11 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(void)getRectsExposedDuringLiveResize:(NSRect)rects count:(NSInteger *)count {
-   NSUnimplementedMethod();
+   if(count!=nil)
+    *count=0;
 }
 
 -(BOOL)shouldDrawColor {
-   NSUnimplementedMethod();
    return YES;
 }
 
@@ -2084,7 +2145,11 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(void)displayRectIgnoringOpacity:(NSRect)rect inContext:(NSGraphicsContext *)context {
-   NSUnimplementedMethod();
+   NSGraphicsContext *saved=[NSGraphicsContext currentContext];
+
+   [NSGraphicsContext setCurrentContext:context];
+   [self drawRect:rect];
+   [NSGraphicsContext setCurrentContext:saved];
 }
 
 -(void)drawRect:(NSRect)rect {
@@ -2108,7 +2173,6 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(BOOL)mouseDownCanMoveWindow {
-   NSUnimplementedMethod();
    return NO;
 }
 
@@ -2155,26 +2219,26 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(NSAttributedString *)pageHeader {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(NSAttributedString *)pageFooter {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(NSString *)printJobTitle {
-   NSUnimplementedMethod();
+   NSWindow *window=[self window];
+
+   if(window!=nil)
+    return [window title];
+
    return nil;
 }
 
 -(void)drawSheetBorderWithSize:(NSSize)size {
-   NSUnimplementedMethod();
 }
 
 -(void)drawPageBorderWithSize:(NSSize)size {
-   NSUnimplementedMethod();
 }
 
 
@@ -2244,8 +2308,19 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(BOOL)dragFile:(NSString *)path fromRect:(NSRect)rect slideBack:(BOOL)slideBack event:(NSEvent *)event {
-   NSUnimplementedMethod();
-   return NO;
+   NSImage *fileImage=[[NSImage alloc] initWithContentsOfFile:path];
+   NSPasteboard *pasteboard=[NSPasteboard pasteboardWithName:NSDragPboard];
+
+   [pasteboard declareTypes:[NSArray arrayWithObject:NSFilenamesPboardType] owner:nil];
+   [pasteboard setPropertyList:[NSArray arrayWithObject:path]
+                       forType:NSFilenamesPboardType];
+
+   [[NSDraggingManager draggingManager]
+    dragImage:fileImage at:rect.origin offset:NSZeroSize
+          event:event pasteboard:pasteboard source:self slideBack:slideBack];
+   [fileImage release];
+
+   return YES;
 }
 
 -(BOOL)acceptsFirstResponder {
@@ -2295,8 +2370,23 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(BOOL)performMnemonic:(NSString *)string {
-   NSUnimplementedMethod();
-   return NO;
+   NSString *stripped=[string stringByReplacingOccurrencesOfString:@"&" withString:@""];
+   if([stripped length]==0)
+    return NO;
+
+   unichar ch=[stripped characterAtIndex:0];
+   NSEvent *synthetic=[NSEvent keyEventWithType:NSKeyDown
+                                       location:NSZeroPoint
+                                  modifierFlags:0
+                                      timestamp:0
+                                   windowNumber:[[self window] windowNumber]
+                                        context:nil
+                                     characters:[NSString stringWithCharacters:&ch length:1]
+                    charactersIgnoringModifiers:[NSString stringWithCharacters:&ch length:1]
+                                      isARepeat:NO
+                                        keyCode:0];
+
+   return synthetic!=nil && [self performKeyEquivalent:synthetic];
 }
 
 -(void)setMenu:(NSMenu *)menu {
@@ -2340,15 +2430,23 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 - (BOOL)dragPromisedFilesOfTypes:(NSArray *)types fromRect:(NSRect)rect source:(id)source slideBack:(BOOL)slideBack event:(NSEvent *)event {
-   NSUnimplementedMethod();
-   return NO;
+   NSPasteboard *pasteboard=[NSPasteboard pasteboardWithName:NSDragPboard];
+
+   [pasteboard declareTypes:[NSArray arrayWithObject:NSFilenamesPboardType] owner:source];
+   [pasteboard setPropertyList:types forType:NSFilenamesPboardType];
+
+   [[NSDraggingManager draggingManager]
+    dragImage:nil at:[self frame].origin offset:NSZeroSize
+          event:event pasteboard:pasteboard source:source slideBack:slideBack];
+
+   return YES;
 }
 
--(NSPoint)convertPointFromBase:(NSPoint)aPoint; {
+-(NSPoint)convertPointFromBase:(NSPoint)aPoint {
    return aPoint;
 }
 
--(NSPoint)convertPointToBase:(NSPoint)aPoint; {
+-(NSPoint)convertPointToBase:(NSPoint)aPoint {
    return aPoint;
 }
 
@@ -2369,16 +2467,13 @@ static NSGraphicsContext *graphicsContextForView(NSView *view){
 }
 
 -(void)showDefinitionForAttributedString:(NSAttributedString *)string atPoint:(NSPoint)origin {
-   NSUnimplementedMethod();
 }
 
 +defaultAnimationForKey:(NSString *)key {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -animator {
-   NSUnimplementedMethod();
     // should return animating proxy. returning self does not animate.
    return self;
 }

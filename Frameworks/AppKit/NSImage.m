@@ -422,8 +422,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(BOOL)isValid {
-   NSUnimplementedMethod();
-   return 0;
+   return [_representations count]>0;
 }
 
 -(NSArray *)representations {
@@ -615,7 +614,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)cancelIncrementalLoad {
-   NSUnimplementedMethod();
 }
 
 -(NSData *)TIFFRepresentation {
@@ -773,11 +771,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)dissolveToPoint:(NSPoint)point fraction:(float)fraction {
-   NSUnimplementedMethod();
+   [self compositeToPoint:point
+                operation:NSCompositeSourceOver
+                   fraction:fraction];
 }
 
 -(void)dissolveToPoint:(NSPoint)point fromRect:(NSRect)rect fraction:(float)fraction {
-   NSUnimplementedMethod();
+   [self compositeToPoint:point
+                  fromRect:rect
+                operation:NSCompositeSourceOver
+                   fraction:fraction];
 }
 
 -(void)drawAtPoint:(NSPoint)point fromRect:(NSRect)source operation:(NSCompositingOperation)operation fraction:(float)fraction {

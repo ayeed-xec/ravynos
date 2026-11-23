@@ -31,15 +31,26 @@
    [_backgroundColor release];
    [_allowedTypes release];
    [_placeholder release];
+   [_mousePathComponentCell release];
    [super dealloc];
 }
 
 - (void)mouseEntered:(NSEvent *)event withFrame:(NSRect)frame inView:(NSView *)view {
-	NSUnimplementedMethod();
+	NSPoint point=[view convertPoint:[event locationInWindow] fromView:nil];
+
+	[_mousePathComponentCell release];
+	_mousePathComponentCell=[[self pathComponentCellAtPoint:point withFrame:frame inView:view] retain];
+
+	[view setNeedsDisplay: YES];
 }
 
 - (void)mouseExited:(NSEvent *)event withFrame:(NSRect)frame inView:(NSView *)view {
-	NSUnimplementedMethod();
+	if(_mousePathComponentCell!=nil){
+		[_mousePathComponentCell release];
+		_mousePathComponentCell=nil;
+
+		[view setNeedsDisplay: YES];
+	}
 }
 
 - (NSArray *)allowedTypes {

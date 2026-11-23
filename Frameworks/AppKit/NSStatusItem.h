@@ -43,6 +43,10 @@ typedef enum NSStatusItemBehavior : NSUInteger {
     BOOL _highlightMode;
     BOOL _enabled;
     NSInteger _actionMask;
+    BOOL _visible;
+    NSString *_toolTip;
+    enum NSStatusItemBehavior _behavior;
+    NSStatusItemAutosaveName _autosaveName;
 #ifdef WIN32
     int _trayIconID;
     HICON _trayIcon;

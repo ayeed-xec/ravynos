@@ -258,11 +258,13 @@ static NSLock *_cacheLock=nil;
 }
 
 +(void)setUserFont:(NSFont *)value {
-   NSUnimplementedMethod();
+   [[NSUserDefaults standardUserDefaults]
+    setObject:[value fontName] forKey:@"NSUserFont"];
 }
 
 +(void)setUserFixedPitchFont:(NSFont *)value {
-   NSUnimplementedMethod();
+   [[NSUserDefaults standardUserDefaults]
+    setObject:[value fontName] forKey:@"NSUserFixedPitchFont"];
 }
 
 +(NSArray *)preferredFontNames
@@ -409,8 +411,12 @@ static NSLock *_cacheLock=nil;
 }
 
 +(NSFont *)fontWithDescriptor:(NSFontDescriptor *)descriptor size:(float)size textTransform:(NSAffineTransform *)transform {
-   NSUnimplementedMethod();
-   return 0;
+   NSString *family=[descriptor objectForKey:NSFontFamilyAttribute];
+
+   if(family==nil)
+    return nil;
+
+   return [NSFont fontWithName:family size:(size==0)?12.0:size];
 }
 
 -copyWithZone:(NSZone *)zone {
@@ -442,8 +448,7 @@ static NSLock *_cacheLock=nil;
 }
 
 -(NSFontRenderingMode)renderingMode {
-   NSUnimplementedMethod();
-   return 0;
+   return NSFontDefaultRenderingMode;
 }
 
 -(NSCharacterSet *)coveredCharacterSet {
@@ -519,8 +524,7 @@ arrayWithArray:[_name componentsSeparatedByString:blank]];
 }
 
 -(NSFont *)printerFont {
-   NSUnimplementedMethod();
-   return nil;
+   return self;
 }
 
 -(NSFont *)screenFont {
@@ -528,8 +532,7 @@ arrayWithArray:[_name componentsSeparatedByString:blank]];
 }
 
 -(NSFont *)screenFontWithRenderingMode:(NSFontRenderingMode)mode {
-   NSUnimplementedMethod();
-   return nil;
+   return self;
 }
 
 -(NSRect)boundingRectForFont {
@@ -537,8 +540,9 @@ arrayWithArray:[_name componentsSeparatedByString:blank]];
 }
 
 -(NSRect)boundingRectForGlyph:(NSGlyph)glyph {
-   NSUnimplementedMethod();
-   return NSMakeRect(0,0,0,0);
+   NSRect bounding=[self boundingRectForFont];
+
+   return bounding;
 }
 
 -(NSMultibyteGlyphPacking)glyphPacking {
@@ -550,7 +554,6 @@ arrayWithArray:[_name componentsSeparatedByString:blank]];
 }
 
 -(NSGlyph)glyphWithName:(NSString *)name {
-   NSUnimplementedMethod();
    return 0;
 }
 
@@ -683,7 +686,10 @@ arrayWithArray:[_name componentsSeparatedByString:blank]];
 }
 
 -(void)getBoundingRects:(NSRect *)rects forGlyphs:(const NSGlyph *)glyphs count:(unsigned)count {
-   NSUnimplementedMethod();
+   NSRect bounding=[self boundingRectForFont];
+
+   for(unsigned i=0;i<count;i++)
+    rects[i]=bounding;
 }
 
 -(unsigned)getGlyphs:(NSGlyph *)glyphs forCharacters:(unichar *)characters length:(unsigned)length {

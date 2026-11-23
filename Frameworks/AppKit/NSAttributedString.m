@@ -10,6 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSFont.h>
 #import <AppKit/NSColor.h>
 #import <AppKit/NSParagraphStyle.h>
+#import <AppKit/NSPasteboard.h>
 #import <AppKit/NSStringDrawer.h>
 #import <AppKit/NSTextAttachment.h>
 #import <AppKit/NSRichTextReader.h>
@@ -21,6 +22,9 @@ NSString * const NSParagraphStyleAttributeName=@"NSParagraphStyleAttributeName";
 NSString * const NSForegroundColorAttributeName=@"NSForegroundColorAttributeName";
 NSString * const NSBackgroundColorAttributeName=@"NSBackgroundColorAttributeName";
 NSString * const NSUnderlineStyleAttributeName=@"NSUnderlineStyleAttributeName";
+NSString * const NSDocumentTypeDocumentAttribute=@"DocumentType";
+NSString * const NSPlainTextDocumentType=@"NSPlainText";
+NSString * const NSRTFTextDocumentType=@"NSRTF";
 NSString * const NSUnderlineColorAttributeName=@"NSUnderlineColorAttributeName";
 NSString * const NSAttachmentAttributeName=@"NSAttachmentAttributeName";
 NSString * const NSKernAttributeName=@"NSKernAttributeName";
@@ -54,27 +58,31 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 }
 
 -initWithData:(NSData *)data options:(NSDictionary *)options documentAttributes:(NSDictionary **)attributes error:(NSError **)error {
-   NSUnimplementedMethod();
-   return nil;
+   NSAttributedString *string=[NSRichTextReader attributedStringWithData:data];
+
+   if(string==nil)
+    return nil;
+
+   return [self initWithAttributedString:string];
 }
 
 -initWithDocFormat:(NSData *)werd documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
+   [self release];
    return nil;
 }
 
 -initWithHTML:(NSData *)html baseURL:(NSURL *)url documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
+   [self release];
    return nil;
 }
 
 -initWithHTML:(NSData *)html documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
+   [self release];
    return nil;
 }
 
 -initWithHTML:(NSData *)html options:(NSDictionary *)options documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
+   [self release];
    return nil;
 }
 
@@ -97,41 +105,69 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 }
 
 -initWithRTFD:(NSData *)rtfd documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
-   return nil;
+   NSAttributedString *string=[NSRichTextReader attributedStringWithData:rtfd];
+   if(string==nil){
+    [self release];
+    return nil;
+   }
+   return [self initWithAttributedString:string];
 }
 
 -initWithRTFDFileWrapper:(NSFileWrapper *)wrapper documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
-   return nil;
+   NSData *rtfd=[[wrapper regularFileContents] retain];
+   NSAttributedString *result=[self initWithRTFD:rtfd documentAttributes:attributes];
+   [rtfd release];
+   return result;
 }
 
 -initWithURL:(NSURL *)url documentAttributes:(NSDictionary **)attributes {
-   NSUnimplementedMethod();
-   return nil;
+   NSAttributedString *string=[NSRichTextReader attributedStringWithContentsOfFile:[url path]];
+   if(string==nil){
+    [self release];
+    return nil;
+   }
+   return [self initWithAttributedString:string];
 }
 
 -initWithURL:(NSURL *)url options:(NSDictionary *)options documentAttributes:(NSDictionary **)attributes error:(NSError **)error {
-   NSUnimplementedMethod();
-   return nil;
+   NSAttributedString *string=[NSRichTextReader attributedStringWithContentsOfFile:[url path]];
+   if(string==nil)
+    return nil;
+   return [self initWithAttributedString:string];
 }
 
 #pragma mark -
 #pragma mark Retrieving Font Attribute Information
 
 -(BOOL)containsAttachments {
-	NSUnimplementedMethod();
-	return NO;
+   NSRange full=NSMakeRange(0,[self length]);
+   NSRange attachment=[self string] != nil
+    ? [[self string] rangeOfString:@"\uFFFC" options:0 range:full]
+    : NSMakeRange(NSNotFound,0);
+
+   return attachment.location!=NSNotFound;
 }
 
 -(NSDictionary *)fontAttributesInRange:(NSRange)range {
-	NSUnimplementedMethod();
-	return nil;
+   NSDictionary *attrs=[self attributesAtIndex:range.location effectiveRange:NULL];
+
+   if(attrs!=nil && [attrs objectForKey:NSFontAttributeName]!=nil)
+    return [NSDictionary dictionaryWithObject:[attrs objectForKey:NSFontAttributeName]
+                                       forKey:NSFontAttributeName];
+
+   return [NSDictionary dictionary];
 }
 
 -(NSDictionary *)rulerAttributesInRange:(NSRange)range {
-	NSUnimplementedMethod();
-	return nil;
+   NSDictionary *attrs=[self attributesAtIndex:range.location effectiveRange:NULL];
+   NSMutableDictionary *result=[NSMutableDictionary dictionary];
+
+   for(NSString *key in attrs){
+    if([key isEqualToString:NSParagraphStyleAttributeName])
+     [result setObject:[attrs objectForKey:key] forKey:key];
+   }
+
+   return result;
 }
 
 #pragma mark -
@@ -172,13 +208,21 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 }
 
 -(unsigned)lineBreakBeforeIndex:(unsigned)index withinRange:(NSRange)range {
-	NSUnimplementedMethod();
-	return 0;
+   NSString *string=[self string];
+   unsigned i=index;
+
+   while(i>range.location){
+    unichar ch=[string characterAtIndex:i-1];
+    if(ch==' '||ch=='\t'||ch=='\n')
+     return i-1;
+    i--;
+   }
+
+   return range.location;
 }
 
 -(unsigned)lineBreakByHyphenatingBeforeIndex:(unsigned)index withinRange:(NSRange)range {
-	NSUnimplementedMethod();
-	return 0;
+   return NSNotFound;
 }
 
 /* as usual, the documentation says one thing and the system behaves differently, this is the way i think it should work... (dwy 5/11/2003) */
@@ -259,31 +303,31 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 #pragma mark Calculating Ranges
 
 -(int)itemNumberInTextList:(NSTextList *)list atIndex:(unsigned)index {
-   NSUnimplementedMethod();
    return 0;
 }
 
 -(NSRange)rangeOfTextBlock:(NSTextBlock *)block atIndex:(unsigned)index {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   return NSMakeRange(NSNotFound,0);
 }
 
 -(NSRange)rangeOfTextList:(NSTextList *)list atIndex:(unsigned)index {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   return NSMakeRange(NSNotFound,0);
 }
 
 -(NSRange)rangeOfTextTable:(NSTextTable *)table atIndex:(unsigned)index {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   return NSMakeRange(NSNotFound,0);
 }
 
 #pragma mark -
 #pragma mark Generating Data
 
 -(NSFileWrapper *)RTFDFileWrapperFromRange:(NSRange)range documentAttributes:(NSDictionary *)attributes {
-   NSUnimplementedMethod();
-   return nil;
+   NSData *rtf=[self RTFFromRange:range documentAttributes:attributes];
+   NSFileWrapper *wrapper=[[NSFileWrapper alloc] initRegularFileWithContents:rtf];
+
+   [wrapper setPreferredFilename:@"document.rtf"];
+
+   return [wrapper autorelease];
 }
 
 -(NSData *)RTFDFromRange:(NSRange)range documentAttributes:(NSDictionary *)attributes {
@@ -296,18 +340,27 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 
 
 -(NSData *)dataFromRange:(NSRange)range documentAttributes:(NSDictionary *)attributes error:(NSError **)error {
-   NSUnimplementedMethod();
-   return 0;
+   NSString *docType=[attributes objectForKey:NSDocumentTypeDocumentAttribute];
+
+   if([docType isEqualToString:NSPlainTextDocumentType]){
+    NSString *plain=[[self string] substringWithRange:range];
+    return [plain dataUsingEncoding:NSUTF8StringEncoding];
+   }
+
+   return [self RTFFromRange:range documentAttributes:attributes];
 }
 
 -(NSData *)docFormatFromRange:(NSRange)range documentAttributes:(NSDictionary *)attributes {
-   NSUnimplementedMethod();
-   return 0;
+   return nil;
 }
 
 -(NSFileWrapper *)fileWrapperFromRange:(NSRange)range documentAttributes:(NSDictionary *)attributes error:(NSError **)error {
-   NSUnimplementedMethod();
-   return nil;
+   NSData *rtf=[self RTFFromRange:range documentAttributes:attributes];
+   NSFileWrapper *wrapper=[[NSFileWrapper alloc] initRegularFileWithContents:rtf];
+
+   [wrapper setPreferredFilename:@"document.rtf"];
+
+   return [wrapper autorelease];
 }
 
 #pragma mark -
@@ -342,8 +395,10 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 #pragma mark Getting the Bounding Rectangle of Rendered Strings
 
 -(NSRect)boundingRectWithSize:(NSSize)size options:(NSStringDrawingOptions)options {
-	NSUnimplementedMethod();
-	return NSMakeRect(0,0,0,0);
+   NSStringDrawer* drawer = [NSStringDrawer sharedStringDrawer];
+   NSSize drawn=[drawer sizeOfAttributedString: self inSize: size];
+
+   return NSMakeRect(0, 0, drawn.width, drawn.height);
 }
 
 #pragma mark -
@@ -351,37 +406,31 @@ NSString * const NSSpellingStateAttributeName=@"NSSpellingStateAttributeName"; /
 
 + (NSArray*)textTypes
 {
-	NSUnimplementedMethod();
-	return nil;
+	return [NSArray arrayWithObjects:NSRTFPboardType, NSPasteboardTypeString, nil];
 }
 
 + (NSArray*)textUnfilteredTypes
 {
-	NSUnimplementedMethod();
-	return nil;
+	return [self textTypes];
 }
 
 #pragma mark -
 #pragma mark Deprecated in 10.5
 
 +(NSArray *)textFileTypes {
-	NSUnimplementedMethod();
-	return nil;
+	return [NSArray arrayWithObjects:@"rtf",@"txt",@"rtfd",nil];
 }
 
 +(NSArray *)textPasteboardTypes {
-	NSUnimplementedMethod();
-	return nil;
+	return [self textTypes];
 }
 
 +(NSArray *)textUnfilteredFileTypes {
-	NSUnimplementedMethod();
-	return nil;
+	return [self textFileTypes];
 }
 
 +(NSArray *)textUnfilteredPasteboardTypes {
-	NSUnimplementedMethod();
-	return nil;
+	return [self textUnfilteredTypes];
 }
 
 
