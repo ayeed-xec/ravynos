@@ -50,6 +50,8 @@
 #include <CFNetwork/CFNetworkDefs.h>
 #endif
 
+#include <ConditionalMacros.h>
+
 #ifndef __COREFOUNDATION__
 #include <CoreFoundation/CoreFoundation.h>
 #endif

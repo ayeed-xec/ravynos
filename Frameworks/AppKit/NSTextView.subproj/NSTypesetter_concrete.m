@@ -8,6 +8,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 // Original - Christopher Lloyd <cjwl@objc.net>
 #import <sys/param.h>
+#include <string.h>
 #import "NSTypesetter_concrete.h"
 #import <AppKit/NSLayoutManager.h>
 #import <AppKit/NSTextContainer.h>

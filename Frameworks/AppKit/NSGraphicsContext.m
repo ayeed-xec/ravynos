@@ -11,6 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSBitmapImageRep-Private.h>
 #import <AppKit/NSRaise.h>
 #import <ApplicationServices/ApplicationServices.h>
+#import <Onyx2D/O2BitmapContext.h>
 #import <QuartzCore/CIContext.h>
 
 @class NSColor;
@@ -69,7 +70,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return nil;
    }
    
-   _graphicsPort=CGBitmapContextCreate([imageRep bitmapData],[imageRep pixelsWide],[imageRep pixelsHigh],[imageRep bitsPerSample],[imageRep bytesPerRow],colorSpace,[imageRep CGBitmapInfo]);
+   _graphicsPort=O2BitmapContextCreate([imageRep bitmapData],[imageRep pixelsWide],[imageRep pixelsHigh],[imageRep bitsPerSample],[imageRep bytesPerRow],colorSpace,[imageRep CGBitmapInfo]);
    
    if(_graphicsPort==nil){
     [self dealloc];

@@ -32,6 +32,7 @@ SOFTWARE.*/
 #import <Foundation/NSRaise.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+#include <stdio.h>
 #import "forwarding.h"
 
 #include <CoreFoundation/CFRuntime.h>

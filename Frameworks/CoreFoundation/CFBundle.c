@@ -84,6 +84,7 @@ CONST_STRING_DECL(kCFBundleIdentifierKey, "CFBundleIdentifier")
 CONST_STRING_DECL(kCFBundleVersionKey, "CFBundleVersion")
 CONST_STRING_DECL(kCFBundleDevelopmentRegionKey, "CFBundleDevelopmentRegion")
 CONST_STRING_DECL(kCFBundleLocalizationsKey, "CFBundleLocalizations")
+CONST_STRING_DECL(kCFBundleNameKey, "CFBundleName")
 
 // Private CFBundle Info plist keys, possible candidates for public constants
 CONST_STRING_DECL(_kCFBundleAllowMixedLocalizationsKey, "CFBundleAllowMixedLocalizations")

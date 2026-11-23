@@ -1,9 +1,6 @@
 #import <Foundation/CFSSLHandler.h>
 #import <CoreFoundation/CFString.h>
 
-// Just gonna leave this here temporarily until we have CFNetwork built
-extern const CFStringRef kCFStreamPropertySSLSettings = CFSTR("kCFStreamPropertySSLSettings");
-
 @implementation CFSSLHandler
 
 -initWithProperties:(CFDictionaryRef )properties {

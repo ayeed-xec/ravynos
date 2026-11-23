@@ -23,6 +23,7 @@
 
 // Original - Christopher Lloyd <cjwl@objc.net>
 #import <AppKit/NSScreen.h>
+#import <CoreGraphics/CGDirectDisplay.h>
 #import <AppKit/NSDisplay.h>
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSWindow.h>
