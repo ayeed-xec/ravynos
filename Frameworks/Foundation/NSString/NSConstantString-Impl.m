@@ -32,15 +32,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 @implementation NSConstantString(Impl)
 
-static BOOL storageIsASCII(NSConstantString *self){
-    return (self->_length & 0x40000000) ? YES : NO;
-}
-
 static inline NSUInteger lengthOfBytes(NSConstantString *self){
-    return self->_length & 0x0fffffff;
-}
-
-static inline NSUInteger lengthInUnicode(NSConstantString *self){
     return self->_length & 0x0fffffff;
 }
 
@@ -74,17 +66,22 @@ static inline NSUInteger lengthInUnicode(NSConstantString *self){
 }
 
 -(NSUInteger)length {
-   return lengthInUnicode(self);
+   NSUInteger length = 0;
+   const char *bytes = self->_bytes;
+
+   for (NSUInteger i = 0; bytes[i] != 0; i++) {
+    if ((bytes[i] & 0xC0) != 0x80)
+     length++;
+   }
+
+   return length;
 }
 
 -(NSUInteger)lengthOfBytesUsingEncoding:(NSStringEncoding)encoding {
     switch (encoding) {
         case NSUTF8StringEncoding:
-            if(self->_length & 0x40000000 != 0) // ASCII string
-	        return self->_length;
-	    return NSConvertUTF16toUTF8(self->_bytes,self->_length,NULL);
         case NSASCIIStringEncoding:
-            return lengthOfBytes(self);
+	    return lengthOfBytes(self);
         default:
             NSUnimplementedMethod();
             return 0;
@@ -92,34 +89,55 @@ static inline NSUInteger lengthInUnicode(NSConstantString *self){
 }
 
 -(unichar)characterAtIndex:(NSUInteger)location {
-   NSUInteger length=lengthInUnicode(self);
+   NSUInteger length = [self length];
+   const char *bytes = self->_bytes;
+   unichar result;
 
    if(location>=length)
     NSRaiseException(NSRangeException,self,_cmd,@"index %d beyond length %d",location,length);
 
-   if(storageIsASCII(self))
-    return ((uint8_t *)_bytes)[location];
-   else {
-    return ((unichar *)_bytes)[location];
+   if(((unsigned char)bytes[0] & 0xC0) == 0xC0) {
+    NSUInteger i = 0;
+
+    for(NSUInteger u = 0; u < location; u++) {
+     do {
+      i++;
+     } while((bytes[i] & 0xC0) == 0x80);
+    }
+
+    NSUInteger width = 1;
+
+    while((bytes[i + width] & 0xC0) == 0x80)
+     width++;
+
+    switch(width) {
+        case 2:
+         result = ((bytes[i] & 0x1F) << 6) | (bytes[i + 1] & 0x3F);
+         break;
+        case 3:
+         result = ((bytes[i] & 0x0F) << 12) | ((bytes[i + 1] & 0x3F) << 6) | (bytes[i + 2] & 0x3F);
+         break;
+        default:
+         result = '?';
+         break;
+    }
    }
+   else {
+    result = (unsigned char)bytes[location];
+   }
+
+   return result;
 }
 
 -(void)getCharacters:(unichar *)buffer {
-   NSUInteger i,length=lengthInUnicode(self);
+   NSUInteger i,length=[self length];
 
-   if(storageIsASCII(self)){
-    for(i=0;i<length;i++)
-     buffer[i]=((uint8_t *)_bytes)[i];
-   }
-   else {
-    for(i=0;i<length;i++)
-     buffer[i]=((unichar *)_bytes)[i];
-   }
-
+   for(i=0;i<length;i++)
+    buffer[i]=[self characterAtIndex:i];
 }
 
 -(void)getCharacters:(unichar *)buffer range:(NSRange)range {
-   NSUInteger length=lengthInUnicode(self);
+   NSUInteger length=[self length];
 
    if(NSMaxRange(range)>length){
     NSRaiseException(NSRangeException,self,_cmd,@"range %@ beyond length %d",NSStringFromRange(range),length);
@@ -127,24 +145,12 @@ static inline NSUInteger lengthInUnicode(NSConstantString *self){
 
    NSInteger i,loc=range.location,len=range.length;
 
-   if(storageIsASCII(self)){
-    for(i=0;i<len;i++)
-     buffer[i]=((uint8_t *)_bytes)[loc+i];
-   }
-   else {
-    for(i=0;i<len;i++)
-     buffer[i]=((unichar *)_bytes)[loc+i];
-   }
+   for(i=0;i<len;i++)
+    buffer[i]=[self characterAtIndex:loc+i];
 }
 
 -(NSUInteger)hash {
-   NSUInteger length=lengthInUnicode(self);
-
-   if(storageIsASCII(self))
-    return NSStringHashASCII(_bytes,MIN(length,NSHashStringLength));
-   else {
-    return NSStringHashUnicode(_bytes,MIN(length,NSHashStringLength));
-   }
+   return NSStringHashASCII(_bytes,MIN([self length],NSHashStringLength));
 }
 
 @end

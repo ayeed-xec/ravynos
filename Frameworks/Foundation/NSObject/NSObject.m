@@ -74,6 +74,212 @@ BOOL NSObjectIsKindOfClass(id object,Class kindOf) {
 +(NSInvocation *)invocationWithMethodSignature:(NSMethodSignature *)signature arguments:(void *)arguments;
 @end
 
+/* From libobjc2's objc-arc.h (OBJC_NONPORTABLE API) */
+extern size_t object_getRetainCount_np(id obj);
+extern id objc_retain_fast_np(id obj);
+extern void objc_release_fast_np(id obj);
+extern id objc_autorelease(id obj);
+
+/* The root class implementation. Under the gnustep-2.0 ABI only a main
+ * @implementation emits the class metadata (._OBJC_CLASS_NSObject and
+ * friends); categories on NSObject merely reference it, so without this
+ * every Foundation object file has undefined class symbols and the
+ * framework cannot link. libobjc2 does not provide NSObject itself. */
+@implementation NSObject
+
++(void)load {
+}
+
++(instancetype)new {
+    return [[self alloc] init];
+}
+
+-(instancetype)init {
+    return self;
+}
+
++(id)copyWithZone:(NSZone *)zone {
+    [self doesNotRecognizeSelector:_cmd];
+    return nil;
+}
+
++(id)mutableCopyWithZone:(NSZone *)zone {
+    [self doesNotRecognizeSelector:_cmd];
+    return nil;
+}
+
+-(id)copy {
+    return [self copyWithZone:NULL];
+}
+
+-(id)mutableCopy {
+    return [self mutableCopyWithZone:NULL];
+}
+
++(Class)class {
+    return self;
+}
+
+-(Class)class {
+    return object_getClass(self);
+}
+
++(Class)superclass {
+    return class_getSuperclass(self);
+}
+
+-(Class)superclass {
+    return class_getSuperclass(object_getClass(self));
+}
+
+-(instancetype)self {
+    return self;
+}
+
++(NSUInteger)hash {
+    return (NSUInteger)(uintptr_t)self >> 4;
+}
+
+-(NSUInteger)hash {
+    return (NSUInteger)(uintptr_t)self >> 4;
+}
+
++(BOOL)isEqual:(id)other {
+    return self==other;
+}
+
+-(BOOL)isEqual:(id)other {
+    return self==other;
+}
+
+-(BOOL)isProxy {
+    return NO;
+}
+
+-(BOOL)isKindOfClass:(Class)aClass {
+    Class class=object_getClass(self);
+
+    while(class) {
+        if(class == aClass)
+            return YES;
+        class = class_getSuperclass(class);
+    }
+    return NO;
+}
+
+-(BOOL)isMemberOfClass:(Class)aClass {
+    return object_getClass(self) == aClass;
+}
+
++(BOOL)isSubclassOfClass:(Class)aClass {
+    Class class=self;
+
+    while(class) {
+        if(class == aClass)
+            return YES;
+        class = class_getSuperclass(class);
+    }
+    return NO;
+}
+
++(BOOL)instancesRespondToSelector:(SEL)aSelector {
+    return class_getInstanceMethod(self,aSelector) != NULL;
+}
+
++(BOOL)conformsToProtocol:(Protocol *)protocol {
+    Class class=self;
+
+    while(class) {
+        if(class_conformsToProtocol(class,protocol))
+            return YES;
+        class = class_getSuperclass(class);
+    }
+    return NO;
+}
+
+-(BOOL)conformsToProtocol:(Protocol *)protocol {
+    return [[self class] conformsToProtocol:protocol];
+}
+
+-(BOOL)respondsToSelector:(SEL)aSelector {
+    return class_getInstanceMethod(object_getClass(self),aSelector) != NULL;
+}
+
++(NSMethodSignature *)instanceMethodSignatureForSelector:(SEL)aSelector {
+    Method method=class_getInstanceMethod(self,aSelector);
+
+    if(method == NULL)
+        return nil;
+    return [NSMethodSignature signatureWithObjCTypes:method_getTypeEncoding(method)];
+}
+
++(IMP)instanceMethodForSelector:(SEL)aSelector {
+    IMP imp=class_getMethodImplementation(self,aSelector);
+
+    if(imp == NULL)
+        [self doesNotRecognizeSelector:aSelector];
+    return imp;
+}
+
+-(IMP)methodForSelector:(SEL)aSelector {
+    IMP imp=class_getMethodImplementation(object_getClass(self),aSelector);
+
+    if(imp == NULL)
+        [self doesNotRecognizeSelector:aSelector];
+    return imp;
+}
+
+-(void)doesNotRecognizeSelector:(SEL)aSelector {
+    [NSException raise:NSInvalidArgumentException
+        format:@"%s does not recognize selector %s",
+        object_getClassName(self),sel_getName(aSelector)];
+}
+
+-(id)forwardingTargetForSelector:(SEL)aSelector {
+    return nil;
+}
+
+-(instancetype)retain {
+    /* Call the runtime refcount primitive directly: objc_retain() would
+     * dispatch back to -retain for non-ARC classes and recurse forever. */
+    objc_retain_fast_np(self);
+    return self;
+}
+
+-(oneway void)release {
+    /* libobjc2 sends -dealloc when the reference count reaches zero */
+    objc_release_fast_np(self);
+}
+
+-(NSUInteger)retainCount {
+    return object_getRetainCount_np(self);
+}
+
+-(instancetype)autorelease {
+    objc_autorelease(self);
+    return self;
+}
+
+-(void)dealloc {
+    NSDeallocateObject(self);
+}
+
+-(void)finalize {
+}
+
+-(struct _NSZone *)zone {
+    return NSDefaultMallocZone();
+}
+
+-(NSString *)description {
+    return [NSString stringWithFormat:@"<%@: %p>",[self className],self];
+}
+
++(NSString *)description {
+    return NSStringFromClass(self);
+}
+
+@end
 
 @implementation NSObject (Foundation)
 +(NSObject *)allocWithZone: (NSZone *)zone {

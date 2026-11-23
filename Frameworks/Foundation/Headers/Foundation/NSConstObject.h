@@ -41,6 +41,8 @@
 #else
 #if defined(__FreeBSD__)
 #define NS_DECLARE_CLASS_SYMBOL(className) extern const struct objc_class NS_CLASS_SYMBOL(className) __asm__("._OBJC_CLASS_" #className)
+#elif defined(GNUSTEP_2_RUNTIME)
+#define NS_DECLARE_CLASS_SYMBOL(className) extern const struct objc_class NS_CLASS_SYMBOL(className) __asm__("._OBJC_CLASS_" #className)
 #else
 #define NS_DECLARE_CLASS_SYMBOL(className) extern const struct objc_class NS_CLASS_SYMBOL(className)
 #endif // __FreeBSD__
