@@ -23,6 +23,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import "NSDarwinString.h"
 #import "NSString_cString.h"
 
+#ifndef __WINDOWS__
+#include <unistd.h>
+#include <sys/utsname.h>
+#endif
+
 @implementation NSProcessInfo
 
 int                 NSProcessInfoArgc=0;
@@ -54,28 +59,57 @@ const char * const *NSProcessInfoArgv=NULL;
 }
 
 -(NSUInteger)processorCount {
-   NSUnimplementedMethod();
-   return 0;
+#ifdef __WINDOWS__
+   SYSTEM_INFO systemInfo;
+
+   GetSystemInfo(&systemInfo);
+
+   return systemInfo.dwNumberOfProcessors;
+#else
+   long count=sysconf(_SC_NPROCESSORS_CONF);
+
+   return (count>0)?count:1;
+#endif
 }
 
 -(NSUInteger)activeProcessorCount {
-   NSUnimplementedMethod();
-   return 0;
+#ifdef __WINDOWS__
+   return [self processorCount];
+#else
+   long count=sysconf(_SC_NPROCESSORS_ONLN);
+
+   return (count>0)?count:[self processorCount];
+#endif
 }
 
 -(uint64_t)physicalMemory {
-   NSUnimplementedMethod();
+#ifdef __WINDOWS__
+   MEMORYSTATUSEX memoryStatus;
+
+   memoryStatus.dwLength=sizeof(memoryStatus);
+   if(GlobalMemoryStatusEx(&memoryStatus))
+    return memoryStatus.ullTotalPhys;
+
    return 0;
+#else
+   long pages=sysconf(_SC_PHYS_PAGES);
+   long pageSize=sysconf(_SC_PAGESIZE);
+
+   if(pages>0 && pageSize>0)
+    return (uint64_t)pages*(uint64_t)pageSize;
+
+   return 0;
+#endif
 }
 
 -(NSUInteger)operatingSystem {
-   NSUnimplementedMethod();
-   return 0;
+   // ravynOS is a Darwin-compatible system; the host build reports MACH semantics.
+   return NSMACHOperatingSystem;
 }
 
 -(NSString *)operatingSystemName {
-   NSUnimplementedMethod();
-   return 0;
+   // Per Apple docs this returns the constant name "NSMACHOperatingSystem" on Darwin-like systems.
+   return @"NSMACHOperatingSystem";
 }
 
 -(NSString *)operatingSystemVersionString {
@@ -137,8 +171,12 @@ const char * const *NSProcessInfoArgv=NULL;
 			break;
 	}
 #else
-    NSUnimplementedMethod();
-    return 0;
+    struct utsname systemInfo;
+
+    if(uname(&systemInfo)==0)
+     return [NSString stringWithFormat:@"Version %s (%s)",systemInfo.release,systemInfo.version];
+
+    return @"Version 0.0 (Unknown)";
 #endif
 }
 

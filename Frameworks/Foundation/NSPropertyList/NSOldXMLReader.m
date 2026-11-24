@@ -118,10 +118,10 @@ enum {
 
 -(void)entityRef:(NSString *)entityRef {
    NSOldXMLElement *element=[_stack lastObject];
-   NSString   *contents=[_entityRefContents objectForKey:self];
+   NSString   *contents=[_entityRefContents objectForKey:entityRef];
 
    if(contents!=nil)
-    [element addContent:contents];
+    [element addContent:[contents copy]];
 }
 
 -(void)sTag:(NSString *)sTag {

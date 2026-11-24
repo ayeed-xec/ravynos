@@ -90,6 +90,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    return [[self stringValue] intValue];
 }
 
+-(long long)longLongValue {
+   return [[self stringValue] longLongValue];
+}
+
+-(double)doubleValue {
+   return [[self stringValue] doubleValue];
+}
+
 -(unsigned)unsignedIntValue {
    return [[self stringValue] intValue];
 }

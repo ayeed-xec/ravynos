@@ -320,6 +320,18 @@ static NSMapTable *pathToObject=NULL;
     [MyProgram.app/Resources]
 
  */
+// Returns YES when path is a bundle container that carries resources,
+// i.e. it has a Resources or Contents/Resources directory.
+static BOOL NSBundlePathHasResourcesLayout(NSString *path)
+{
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    if ([fm fileExistsAtPath:[[path stringByAppendingPathComponent:@"Contents"] stringByAppendingPathComponent:@"Resources"]])
+        return YES;
+
+    return [fm fileExistsAtPath:[path stringByAppendingPathComponent:@"Resources"]];
+}
+
 + (NSString *)bundlePathFromModulePath:(NSString *)path
 {
     path = [path stringByStandardizingPath];
@@ -346,6 +358,11 @@ static NSMapTable *pathToObject=NULL;
                 result = check;
             } else {
                 result = [[directory stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+                if (!NSBundlePathHasResourcesLayout(result)) {
+                    // Not inside any bundle layout: treat the executable itself
+                    // as the main bundle path (command-line tool behavior).
+                    result = path;
+                }
             }
         }
     } else {
@@ -370,6 +387,12 @@ static NSMapTable *pathToObject=NULL;
                     result = check;
                 } else {
                     result = [[directory stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+                    if (!NSBundlePathHasResourcesLayout(result)) {
+                        // Not inside any bundle layout: treat the executable
+                        // itself as the main bundle path (command-line tool
+                        // behavior).
+                        result = path;
+                    }
                 }
             }
         }

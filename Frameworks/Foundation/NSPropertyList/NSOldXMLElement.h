@@ -35,8 +35,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 - (NSString *)stringValue;
 - (int)intValue;
+- (long long)longLongValue;
 - (unsigned)unsignedIntValue;
 - (float)floatValue;
+- (double)doubleValue;
 - (NSRect)rectValue;
 - (NSSize)sizeValue;
 
