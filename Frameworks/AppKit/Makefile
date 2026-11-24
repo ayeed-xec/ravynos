@@ -242,6 +242,7 @@ SRCS = \
     NSWindowController.m \
     NSWindowScripting.m \
     NSWorkspace.m \
+    WindowServer.backend/WSBackend.m \
     _NSRuleEditorViewSliceHolder.m \
     nib.subproj/NSButtonImageSource.m \
     nib.subproj/NSClassSwapper.m \
