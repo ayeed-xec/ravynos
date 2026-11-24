@@ -181,7 +181,24 @@ OSStatus	VerifyHeader	(FCB				*filePtr,
 	forkSize = (u_int64_t)totalNodes * (u_int64_t)header->nodeSize;
 	
 	if ( forkSize > (u_int64_t)filePtr->fcbEOF )
-		return fsBTInvalidHeaderErr;
+	{
+		/*
+		 * A B-tree header record can claim more nodes than the fork's logical
+		 * EOF covers when records were extended in place inside the file's
+		 * already-allocated extents without growing the fork: the volume-header
+		 * EOF stays behind totalNodes * nodeSize by a fraction of a node.  The
+		 * extra nodes are still backed by real extents, so accept the header as
+		 * long as the file's allocated extent coverage (ff_blocks allocation
+		 * blocks) can hold every node.  Fail only when the tree extends beyond
+		 * space the fork actually has allocated, so genuine corruption (e.g. a
+		 * bogus totalNodes) is still rejected.
+		 */
+		u_int64_t	allocatedSize = (u_int64_t)filePtr->ff_blocks *
+					       (u_int64_t)FCBTOVCB(filePtr)->blockSize;
+
+		if ( forkSize > allocatedSize )
+			return fsBTInvalidHeaderErr;
+	}
 	
 	if ( header->freeNodes >= totalNodes )
 		return fsBTInvalidHeaderErr;

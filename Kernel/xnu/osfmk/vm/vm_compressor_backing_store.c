@@ -97,6 +97,7 @@ extern clock_sec_t      dont_trim_until_ts;
 clock_sec_t             vm_swapfile_last_failed_to_create_ts = 0;
 clock_sec_t             vm_swapfile_last_successful_create_ts = 0;
 int                     vm_swapfile_can_be_created = FALSE;
+boolean_t               vm_swapfile_creation_disabled = FALSE;
 boolean_t               delayed_trim_handling_in_progress = FALSE;
 
 boolean_t               hibernate_in_progress_with_pinned_swap = FALSE;
@@ -703,7 +704,9 @@ vm_swapfile_create_thread(void)
 
 		if (vm_swap_create_file() == FALSE) {
 			vm_swapfile_last_failed_to_create_ts = sec;
-			HIBLOG("vm_swap_create_file failed @ %lu secs\n", (unsigned long)sec);
+			if (vm_swapfile_creation_disabled == FALSE) {
+				HIBLOG("vm_swap_create_file failed @ %lu secs\n", (unsigned long)sec);
+			}
 		} else {
 			vm_swapfile_last_successful_create_ts = sec;
 		}
@@ -1255,6 +1258,10 @@ vm_swap_create_file()
 	boolean_t       swap_file_pin = FALSE;
 	struct swapfile *swf = NULL;
 
+	if (vm_swapfile_creation_disabled == TRUE) {
+		return FALSE;
+	}
+
 	/*
 	 * make sure we've got all the info we need
 	 * to potentially pin a swap file... we could
@@ -1300,6 +1307,17 @@ vm_swap_create_file()
 	vm_swapfile_open(swf->swp_path, &swf->swp_vp);
 
 	if (swf->swp_vp == NULL) {
+		if (vm_swapfile_creation_disabled == FALSE) {
+			/*
+			 * The bsd-side vm_swapfile_open already logged the errno.
+			 * The failure is deterministic (no swap directory on the
+			 * root filesystem), so log it once and skip the retry
+			 * spam from here on.
+			 */
+			vm_swapfile_creation_disabled = TRUE;
+			HIBLOG("vm_swap: compressor swap disabled: could not create swap file \"%s\" (see the vm_swapfile_open error above); further creation attempts are skipped silently\n",
+			       swf->swp_path);
+		}
 		if (swap_file_reuse == FALSE) {
 			kfree(swf->swp_path, swf->swp_pathlen);
 			kfree(swf, sizeof *swf);

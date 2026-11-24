@@ -8,9 +8,21 @@ CFLAGS="-I/usr/include/x86_64-linux-gnu/GNUstep -fobjc-runtime=gcc -fconstant-st
 LIBS="-lobjc -lgnustep-base -lgnustep-gui"
 
 status=0
-for t in stubreplacements cellroundtrip; do
+held=""
+for t in stubreplacements cellroundtrip foundation-cli; do
     clang $CFLAGS "Tests/$t.m" -o "/tmp/ravynos-tests-$t" $LIBS
-    echo "== $t =="
-    "/tmp/ravynos-tests-$t" || status=1
+    if "/tmp/ravynos-tests-$t" > "/tmp/ravynos-tests-$t.out" 2>&1; then
+        held="$held /tmp/ravynos-tests-$t.out"
+    else
+        status=1
+        echo "== $t =="
+        cat "/tmp/ravynos-tests-$t.out"
+    fi
 done
+if [ $status -eq 0 ]; then
+    for out in $held; do
+        echo "== $(basename "$out" .out | sed 's/ravynos-tests-//') =="
+        cat "$out"
+    done
+fi
 exit $status

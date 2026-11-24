@@ -105,6 +105,10 @@ thread_quantum_expire(
 	ast_t                           preempt;
 	uint64_t                        ctime;
 
+	if (processor == NULL || thread == NULL) {
+		return;
+	}
+
 	assert(processor == current_processor());
 	assert(thread == current_thread());
 
