@@ -604,8 +604,7 @@ static NSComparisonResult compareWithOptions(NSString *self,NSString *other,NSSt
 }
 
 -(NSComparisonResult)compare:(NSString *)other options:(NSStringCompareOptions)options range:(NSRange)range locale:(NSLocale *)locale {
-   NSUnimplementedMethod();
-   return 0;
+   return compareWithOptions(self,other,options,range);
 }
 
 -(NSComparisonResult)compare:(NSString *)other options:(NSStringCompareOptions)options range:(NSRange)range {
@@ -626,12 +625,10 @@ static NSComparisonResult compareWithOptions(NSString *self,NSString *other,NSSt
 }
 
 -(NSComparisonResult)localizedCompare:(NSString *)other {
-   NSUnimplementedMethod();
-   return 0;
+   return [self compare:other options:0 range:NSMakeRange(0,[self length]) locale:[NSLocale currentLocale]];
 }
 -(NSComparisonResult)localizedCaseInsensitiveCompare:(NSString *)other {
-   NSUnimplementedMethod();
-   return 0;
+   return [self compare:other options:NSCaseInsensitiveSearch range:NSMakeRange(0,[self length]) locale:[NSLocale currentLocale]];
 }
 
 -(NSUInteger)hash {
@@ -809,8 +806,7 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
 }
 
 -(NSRange)rangeOfString:(NSString *)string options:(NSStringCompareOptions)options range:(NSRange)range locale:(NSLocale *)locale {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   return [self rangeOfString:string options:options range:range];
 }
 
 -(NSRange)rangeOfString:(NSString *)pattern options:(NSStringCompareOptions)options range:(NSRange)range {

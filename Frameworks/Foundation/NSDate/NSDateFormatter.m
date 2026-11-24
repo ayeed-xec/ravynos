@@ -136,9 +136,9 @@ NSWeekDayNameArray];
 -(NSString *)stringForObjectValue:(id)object {
 
    if([object isKindOfClass:[NSDate class]])
-    return NSStringWithDateFormatLocale([object timeIntervalSinceReferenceDate], _dateFormat10_0, _locale, _tz);
+    return NSStringWithDateFormatLocale([object timeIntervalSinceReferenceDate], NSNormalizedDateFormatString(_dateFormat10_0), _locale, _tz);
    if([object isKindOfClass:[NSCalendarDate class]]) 
-    return NSStringWithDateFormatLocale([object timeIntervalSinceReferenceDate], _dateFormat10_0, _locale, [object timeZone]);
+    return NSStringWithDateFormatLocale([object timeIntervalSinceReferenceDate], NSNormalizedDateFormatString(_dateFormat10_0), _locale, [object timeZone]);
 
    return nil;
 }
@@ -153,7 +153,7 @@ NSWeekDayNameArray];
 }
 
 -(BOOL)getObjectValue:(id *)object forString:(NSString *)string errorDescription:(NSString **)error {
-    *object = NSDateWithStringDateFormatLocale(string, _dateFormat10_0, _locale, _tz);
+    *object = NSDateWithStringDateFormatLocale(string, NSNormalizedDateFormatString(_dateFormat10_0), _locale, _tz);
     if (*object == nil) {
 // FIX localization
        if(error!=NULL)
@@ -839,6 +839,10 @@ NSDate *NSDateWithStringDateFormatLocale(NSString *string, NSString *format, NSD
                         return NSDateWithStringDateFormatLocale(string, [locale objectForKey:NSTimeDateFormatString], locale, timeZone);
 
                     case 'd':
+                        days = NSReadIntegerInString(string, [NSCharacterSet decimalDigitCharacterSet], currentPosition, 2, &currentPosition);
+                        break;
+
+                    case 'e':
                         days = NSReadIntegerInString(string, [NSCharacterSet decimalDigitCharacterSet], currentPosition, 2, &currentPosition);
                         break;
 

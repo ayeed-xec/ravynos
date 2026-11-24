@@ -63,12 +63,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)proxyType {
-   NSUnimplementedMethod();
-   return nil;
+   if(!_isProxy)
+    return nil;
+
+   if([_protocol isEqualToString:@"socks"])
+    return @"NSURLProxyTypeSOCKS";
+
+   return @"NSURLProxyTypeHTTP";
 }
 
 -(BOOL)receivesCredentialsSecurely {
-   NSUnimplementedMethod();
+   if([_authenticationMethod isEqualToString:@"NSURLAuthenticationMethodClientCertificate"] ||
+      [_authenticationMethod isEqualToString:@"NSURLAuthenticationMethodServerTrust"] ||
+      [_authenticationMethod isEqualToString:@"NSURLAuthenticationMethodNTLM"] ||
+      [_authenticationMethod isEqualToString:@"NSURLAuthenticationMethodNegotiate"])
+    return YES;
+
+   if([_protocol isEqualToString:@"https"])
+    return YES;
+
    return NO;
 }
 

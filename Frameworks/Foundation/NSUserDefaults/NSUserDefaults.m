@@ -204,8 +204,7 @@ NSString * const NSUserDefaultsDidChangeNotification=@"NSUserDefaultsDidChangeNo
 }
 
 -initWithUser:(NSString *)user {
-   NSUnimplementedMethod();
-   return nil;
+   return [self init];
 }
 
 static NSUserDefaults* stdUserDefaults = nil;
@@ -220,7 +219,10 @@ static NSUserDefaults* stdUserDefaults = nil;
 }
 
 +(void)resetStandardUserDefaults {
-   NSUnimplementedMethod();
+   @synchronized(self) {
+    [stdUserDefaults release];
+    stdUserDefaults=nil;
+   }
 }
 
 + (BOOL)standardUserDefaultsAvailable
@@ -229,11 +231,47 @@ static NSUserDefaults* stdUserDefaults = nil;
 }
 
 -(void)addSuiteNamed:(NSString *)name {
-   NSUnimplementedMethod();
+   if([name length]==0)
+    return;
+
+   if([name isEqualToString:NSGlobalDomain]||[name isEqualToString:NSRegistrationDomain])
+    return;
+
+   if([_domains objectForKey:name]!=nil)
+    return;
+
+   NSPersistantDomain *domain=[[[NSPlatform currentPlatform] persistantDomainClass] persistantDomainWithName:name];
+
+   [_domains setObject:domain forKey:name];
+
+   NSMutableArray *list=[[_searchList mutableCopy] autorelease];
+   NSUInteger      index=[list indexOfObject:NSRegistrationDomain];
+
+   if(index==NSNotFound)
+    [list addObject:name];
+   else
+    [list insertObject:name atIndex:index];
+
+   [self setSearchList:list];
 }
 
 -(void)removeSuiteNamed:(NSString *)name {
-   NSUnimplementedMethod();
+   if([name length]==0)
+    return;
+
+   if([name isEqualToString:NSGlobalDomain]||[name isEqualToString:NSRegistrationDomain])
+    return;
+
+   if([_domains objectForKey:name]==nil)
+    return;
+
+   [_domains removeObjectForKey:name];
+
+   NSMutableArray *list=[[_searchList mutableCopy] autorelease];
+
+   [list removeObject:name];
+
+   [self setSearchList:list];
 }
 
 -(NSArray *)searchList {
@@ -288,9 +326,23 @@ static NSUserDefaults* stdUserDefaults = nil;
 }
 
 
+-(BOOL)domainIsVolatile:(id)domain {
+   return ![domain isKindOfClass:objc_lookUpClass("NSPersistantDomain")];
+}
+
 -(NSArray *)volatileDomainNames {
-   NSUnimplementedMethod();
-   return nil;
+   NSMutableArray *result=[NSMutableArray array];
+   NSArray        *names=[_domains allKeys];
+   NSUInteger      i, count=[names count];
+
+   for(i=0;i<count;i++){
+    NSString *name=[names objectAtIndex:i];
+
+    if([self domainIsVolatile:[_domains objectForKey:name]])
+     [result addObject:name];
+   }
+
+   return result;
 }
 
 -(NSArray *)persistentDomainNames {
@@ -298,8 +350,12 @@ static NSUserDefaults* stdUserDefaults = nil;
 }
 
 -(NSDictionary *)volatileDomainForName:(NSString *)name {
-   NSUnimplementedMethod();
-   return nil;
+   id domain=[_domains objectForKey:name];
+
+   if(domain==nil || ![self domainIsVolatile:domain])
+    return nil;
+
+   return [NSDictionary dictionaryWithDictionary:domain];
 }
 
 -(NSDictionary *)persistentDomainForName:(NSString *)name {
@@ -321,21 +377,76 @@ static NSUserDefaults* stdUserDefaults = nil;
 
 -(void)setVolatileDomain:(NSDictionary *)domain
   forName:(NSString *)name {
-   NSUnimplementedMethod();
+   if([name length]==0 || domain==nil)
+    return;
+
+   [_domains setObject:[NSMutableDictionary dictionaryWithDictionary:domain] forKey:name];
+
+   [_dictionaryRep release];
+   _dictionaryRep=nil;
 }
 
 -(void)setPersistentDomain:(NSDictionary *)domain
    forName:(NSString *)name {
-   NSUnimplementedMethod();
+   if([name length]==0 || domain==nil)
+    return;
+
+   NSPersistantDomain *persistant=[[[NSPlatform currentPlatform] persistantDomainClass] persistantDomainWithName:name];
+   NSArray            *oldKeys=[persistant allKeys];
+   NSArray            *newKeys=[domain allKeys];
+   NSUInteger          i, count=[oldKeys count];
+
+   for(i=0;i<count;i++){
+    NSString *key=[oldKeys objectAtIndex:i];
+
+    if([newKeys indexOfObject:key]==NSNotFound)
+     [persistant removeObjectForKey:key];
+   }
+
+   for(i=0,count=[newKeys count];i<count;i++){
+    NSString *key=[newKeys objectAtIndex:i];
+
+    [persistant setObject:[domain objectForKey:key] forKey:key];
+   }
+
+   [_domains setObject:persistant forKey:name];
+
+   [_dictionaryRep release];
+   _dictionaryRep=nil;
 }
 
 
 -(void)removeVolatileDomainForName:(NSString *)name {
-   NSUnimplementedMethod();
+   if([name length]==0)
+    return;
+
+   if(![self domainIsVolatile:[_domains objectForKey:name]])
+    return;
+
+   [_domains removeObjectForKey:name];
+
+   [_dictionaryRep release];
+   _dictionaryRep=nil;
 }
 
 -(void)removePersistentDomainForName:(NSString *)name {
-   NSUnimplementedMethod();
+   if([name length]==0)
+    return;
+
+   id domain=[_domains objectForKey:name];
+
+   if(domain!=nil && ![self domainIsVolatile:domain]){
+    NSArray   *keys=[domain allKeys];
+    NSUInteger i, count=[keys count];
+
+    for(i=0;i<count;i++)
+     [domain removeObjectForKey:[keys objectAtIndex:i]];
+   }
+
+   [_domains removeObjectForKey:name];
+
+   [_dictionaryRep release];
+   _dictionaryRep=nil;
 }
 
 -(BOOL)synchronize {
@@ -487,13 +598,20 @@ static NSUserDefaults* stdUserDefaults = nil;
 }
 
 -(BOOL)objectIsForcedForKey:(NSString *)key {
-   NSUnimplementedMethod();
-   return 0;
+   if([key length]==0)
+    return NO;
+
+   return [[_domains objectForKey:NSArgumentDomain] objectForKey:key]!=nil;
 }
 
 -(BOOL)objectIsForcedForKey:(NSString *)key inDomain:(NSString *)domain {
-   NSUnimplementedMethod();
-   return 0;
+   if([key length]==0 || [domain length]==0)
+    return NO;
+
+   if([[_domains objectForKey:domain] objectForKey:key]==nil)
+    return NO;
+
+   return [[_domains objectForKey:NSArgumentDomain] objectForKey:key]!=nil;
 }
 
 @end

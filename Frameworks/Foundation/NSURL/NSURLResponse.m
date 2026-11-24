@@ -6,6 +6,7 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <Foundation/NSURLResponse.h>
+#import <Foundation/NSCoder.h>
 #import <Foundation/NSURL.h>
 #import <Foundation/NSRaise.h>
 
@@ -31,12 +32,28 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
-   return nil;
+   [super init];
+
+   if([coder containsValueForKey:@"NSURL.URL"])
+    _url=[[coder decodeObjectForKey:@"NSURL.URL"] retain];
+
+   if([coder containsValueForKey:@"NSURL.MIMEType"])
+    _mimeType=[[coder decodeObjectForKey:@"NSURL.MIMEType"] retain];
+
+   if([coder containsValueForKey:@"NSURL.expectedContentLength"])
+    _expectedContentLength=[coder decodeIntegerForKey:@"NSURL.expectedContentLength"];
+
+   if([coder containsValueForKey:@"NSURL.textEncodingName"])
+    _encoding=[[coder decodeObjectForKey:@"NSURL.textEncodingName"] retain];
+
+   return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeObject:_url forKey:@"NSURL.URL"];
+   [coder encodeObject:_mimeType forKey:@"NSURL.MIMEType"];
+   [coder encodeInt64:(int64_t)_expectedContentLength forKey:@"NSURL.expectedContentLength"];
+   [coder encodeObject:_encoding forKey:@"NSURL.textEncodingName"];
 }
 
 
@@ -59,8 +76,39 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)suggestedFilename {
-   NSUnimplementedMethod();
-   return nil;
+   NSString *name=[[_url path] lastPathComponent];
+
+   if([name length]==0)
+    return nil;
+
+   if([[name pathExtension] length]>0)
+    return name;
+
+   NSString *extension=nil;
+
+   if([_mimeType isEqualToString:@"text/html"])
+    extension=@"html";
+   else if([_mimeType isEqualToString:@"text/plain"])
+    extension=@"txt";
+   else if([_mimeType isEqualToString:@"application/pdf"])
+    extension=@"pdf";
+   else if([_mimeType isEqualToString:@"image/gif"])
+    extension=@"gif";
+   else if([_mimeType isEqualToString:@"image/jpeg"])
+    extension=@"jpg";
+   else if([_mimeType isEqualToString:@"image/png"])
+    extension=@"png";
+   else if([_mimeType isEqualToString:@"application/zip"])
+    extension=@"zip";
+   else if([_mimeType isEqualToString:@"application/x-tar"])
+    extension=@"tar";
+   else if([_mimeType isEqualToString:@"application/x-gzip"])
+    extension=@"gz";
+
+   if(extension!=nil)
+    name=[name stringByAppendingFormat:@".%@",extension];
+
+   return name;
 }
 
 
