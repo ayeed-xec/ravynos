@@ -30,6 +30,18 @@ SOFTWARE. */
 
 #define MENU_BAR_HEIGHT 24  // exclude from visibleFrame height
 
+static NSMutableDictionary *_NSDisplayPasteboards=nil;
+static id _NSDisplayCurrentCursor=nil;
+static BOOL _NSDisplayCursorHidden=NO;
+static NSUInteger _NSDisplayLastModifierFlags=0;
+
+static NSMutableDictionary *NSDisplayPasteboards(void) {
+    if(_NSDisplayPasteboards==nil)
+        _NSDisplayPasteboards=[[NSMutableDictionary alloc] init];
+
+    return _NSDisplayPasteboards;
+}
+
 @implementation NSDisplay
 
 +(void)initialize {
@@ -95,13 +107,28 @@ SOFTWARE. */
 -(uint32_t)depth { return _depth; }
 
 -(NSPasteboard *)pasteboardWithName:(NSString *)name {
-   NSUnimplementedMethod();
-   return nil;
+   if(name==nil)
+       name=NSGeneralPboard;
+
+   NSPasteboard *board=[NSDisplayPasteboards() objectForKey:name];
+
+   if(board==nil) {
+       board=[[NSPasteboard alloc] _initWithName:name];
+
+       [NSDisplayPasteboards() setObject:board forKey:name];
+       [board release];
+   }
+
+   return board;
 }
 
 -(NSDraggingManager *)draggingManager {
-   NSUnimplementedMethod();
-   return nil;
+   static id manager=nil;
+
+   if(manager==nil)
+       manager=[[NSDraggingManager alloc] init];
+
+   return manager;
 }
 
 -(NSColor *)colorWithName:(NSString *)colorName {
@@ -139,8 +166,11 @@ SOFTWARE. */
 }
 
 -(void)_addSystemColor:(NSColor *) result forName:(NSString *)colorName {
-   NSUnimplementedMethod();
- }
+   NSColorList *list=[NSColorList colorListNamed:@"System"];
+
+   if(list!=nil)
+      [list setColor:result forKey:colorName];
+}
 
 
 -(NSTimeInterval)textCaretBlinkInterval {
@@ -148,21 +178,24 @@ SOFTWARE. */
 }
 
 -(void)hideCursor {
-   NSUnimplementedMethod();
+   _NSDisplayCursorHidden=YES;
 }
 
 -(void)unhideCursor {
-   NSUnimplementedMethod();
+   _NSDisplayCursorHidden=NO;
 }
 
 // Arrow, IBeam, HorizontalResize, VerticalResize
 -(id)cursorWithName:(NSString *)name {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSCursor cursorNamed:name];
 }
 
 -(void)setCursor:(id)cursor {
-   NSUnimplementedMethod();
+   if(cursor==_NSDisplayCurrentCursor)
+      return;
+
+   [_NSDisplayCurrentCursor release];
+   _NSDisplayCurrentCursor=[cursor retain];
 }
 
 -(NSEvent *)nextEventMatchingMask:(unsigned)mask untilDate:(NSDate *)untilDate inMode:(NSString *)mode dequeue:(BOOL)dequeue {
@@ -251,7 +284,7 @@ SOFTWARE. */
 }
 
 -(void)beep {
-   NSUnimplementedMethod();
+   [NSSound beep];
 }
 
 -(NSSet *)allFontFamilyNames {
@@ -345,28 +378,23 @@ SOFTWARE. */
 
 
 -(int)runModalPageLayoutWithPrintInfo:(NSPrintInfo *)printInfo {
-   NSUnimplementedMethod();
-	return 0;
+   return NSOKButton;
 }
 
 -(int)runModalPrintPanelWithPrintInfoDictionary:(NSMutableDictionary *)attributes {
-   NSUnimplementedMethod();
-   return 0;
+   return NSOKButton;
 }
 
 -(O2Context *)graphicsPortForPrintOperationWithView:(NSView *)view printInfo:(NSPrintInfo *)printInfo pageRange:(NSRange)pageRange {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(int)savePanel:(NSSavePanel *)savePanel runModalForDirectory:(NSString *)directory file:(NSString *)file {
-   NSUnimplementedMethod();
-   return 0;
+   return [savePanel runModalForDirectory:directory file:file];
 }
 
 -(int)openPanel:(NSOpenPanel *)openPanel runModalForDirectory:(NSString *)directory file:(NSString *)file types:(NSArray *)types {
-   NSUnimplementedMethod();
-   return 0;
+   return [openPanel runModalForDirectory:directory file:file types:types];
 }
 
 -(NSPoint)mouseLocation {
@@ -374,8 +402,7 @@ SOFTWARE. */
 }
 
 -(NSUInteger)currentModifierFlags {
-   NSUnimplementedMethod();
-   return 0;
+   return _NSDisplayLastModifierFlags;
 }
 
 @end

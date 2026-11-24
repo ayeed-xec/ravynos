@@ -56,12 +56,45 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 }
 
 +(void)getTIFFCompressionTypes:(const NSTIFFCompression **)types count:(int *)count {
-   NSUnimplementedMethod();
+   static NSTIFFCompression all[]={
+       NSTIFFCompressionNone,
+       NSTIFFCompressionCCITTFAX3,
+       NSTIFFCompressionCCITTFAX4,
+       NSTIFFCompressionLZW,
+       NSTIFFCompressionJPEG,
+       NSTIFFCompressionNEXT,
+       NSTIFFCompressionPackBits,
+       NSTIFFCompressionOldJPEG
+   };
+
+   if(types!=NULL)
+       *types=all;
+
+   if(count!=NULL)
+       *count=(int)(sizeof(all)/sizeof(all[0]));
 }
 
 +(NSString *)localizedNameForTIFFCompressionType:(NSTIFFCompression)type {
-   NSUnimplementedMethod();
-   return nil;
+   switch(type) {
+   case NSTIFFCompressionNone:
+       return @"No compression";
+   case NSTIFFCompressionCCITTFAX3:
+       return @"CCITT Group 3 fax";
+   case NSTIFFCompressionCCITTFAX4:
+       return @"CCITT Group 4 fax";
+   case NSTIFFCompressionLZW:
+       return @"LZW";
+   case NSTIFFCompressionJPEG:
+       return @"JPEG";
+   case NSTIFFCompressionNEXT:
+       return @"NeXT";
+   case NSTIFFCompressionPackBits:
+       return @"PackBits";
+   case NSTIFFCompressionOldJPEG:
+       return @"Old-style JPEG";
+   default:
+       return @"Unknown";
+   }
 }
 
 +(NSData *)TIFFRepresentationOfImageRepsInArray:(NSArray *)array {
@@ -83,7 +116,23 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 }
 
 +(NSData *)representationOfImageRepsInArray:(NSArray *)array usingType:(NSBitmapImageFileType)type properties:(NSDictionary *)properties {
-   NSUnimplementedMethod();
+   for(NSImageRep *rep in array) {
+      if([rep isKindOfClass:[NSBitmapImageRep class]]) {
+         NSBitmapImageRep *bitmap=(NSBitmapImageRep *)rep;
+
+         switch(type) {
+         case NSTIFFFileType:
+            return [bitmap TIFFRepresentationUsingCompression:NSTIFFCompressionNone factor:0.0];
+         case NSPNGFileType:
+            return [bitmap representationUsingType:NSPNGFileType properties:properties];
+         case NSJPEGFileType:
+            return [bitmap representationUsingType:NSJPEGFileType properties:properties];
+         default:
+            return nil;
+         }
+      }
+   }
+
    return nil;
 }
 
@@ -203,8 +252,7 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 }
 
 -initForIncrementalLoad {
-   NSUnimplementedMethod();
-   return nil;
+   return [self initWithBitmapDataPlanes:NULL pixelsWide:0 pixelsHigh:0 bitsPerSample:0 samplesPerPixel:0 hasAlpha:NO isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:0 bitsPerPixel:0];
 }
 
 -initWithFocusedViewRect:(NSRect)rect {
@@ -395,8 +443,26 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 
 
 -(int)incrementalLoadFromData:(NSData *)data complete:(BOOL)complete {
-   NSUnimplementedMethod();
-   return 0;
+   if(data==nil || [data length]==0)
+       return 0;
+
+   NSBitmapImageRep *loaded=[[NSBitmapImageRep alloc] initWithData:data];
+
+   if(loaded==nil)
+       return -1;
+
+   int loadedWidth=[loaded pixelsWide];
+   int loadedHeight=[loaded pixelsHigh];
+
+   if(loadedWidth==0 || loadedHeight==0) {
+       [loaded release];
+       return -1;
+   }
+
+   [self setSize:NSMakeSize([self pixelsWide],[self pixelsHigh])];
+   [loaded release];
+
+   return complete ? 1 : 0;
 }
 
 
@@ -448,7 +514,32 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 
 -(void)getPixel:(NSUInteger[])pixel atX:(NSInteger)x y:(NSInteger)y
 {
-   NSUnimplementedMethod();
+   NSAssert(x>=0 && x<[self pixelsWide],@"x out of bounds");
+   NSAssert(y>=0 && y<[self pixelsHigh],@"y out of bounds");
+
+   [self createBitmapIfNeeded];
+
+   if(_isPlanar) {
+       int i;
+
+       for(i=0;i<_samplesPerPixel;i++) {
+           unsigned char *plane=_bitmapPlanes[i];
+
+           pixel[i]=plane[_bytesPerPlane*y+x];
+       }
+   } else {
+       if(_bitsPerPixel/_samplesPerPixel!=8) {
+           [NSException raise:NSInternalInconsistencyException format:@"unsupported bits per sample %d",_bitsPerPixel/_samplesPerPixel];
+       }
+
+       unsigned char *bits=_bitmapPlanes[0]+_bytesPerRow*y+(x*_bitsPerPixel)/8;
+
+       int i;
+
+       for(i=0;i<_samplesPerPixel;i++) {
+           pixel[i]=bits[i];
+       }
+   }
 }
 
 -(void)setPixel:(NSUInteger[])pixel atX:(NSInteger)x y:(NSInteger)y
@@ -459,10 +550,16 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
    [self createBitmapIfNeeded];
 
     if(_isPlanar) {
-        NSUnimplementedMethod();
+        int i;
+
+        for(i=0;i<_samplesPerPixel;i++) {
+            unsigned char *plane=_bitmapPlanes[i];
+
+            plane[_bytesPerPlane*y+x]=(unsigned char)pixel[i];
+        }
     } else {
         if(_bitsPerPixel/_samplesPerPixel!=8) {
-            NSUnimplementedMethod();
+            [NSException raise:NSInternalInconsistencyException format:@"unsupported bits per sample %d",_bitsPerPixel/_samplesPerPixel];
         }
         unsigned char *bits=_bitmapPlanes[0]+_bytesPerRow*y+(x*_bitsPerPixel)/8;
 
@@ -475,7 +572,19 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 }
 
 -(NSColor *)colorAtX:(NSInteger)x y:(NSInteger)y {
-   NSUnimplementedMethod();
+   NSUInteger pixel[5];
+
+   [self getPixel:pixel atX:x y:y];
+
+   if(_samplesPerPixel>=3)
+       return [NSColor colorWithDeviceRed:pixel[0]/255.0 green:pixel[1]/255.0 blue:pixel[2]/255.0 alpha:_samplesPerPixel>=4 ? pixel[3]/255.0 : 1.0];
+
+   if(_samplesPerPixel==2)
+       return [NSColor colorWithDeviceWhite:pixel[0]/255.0 alpha:pixel[1]/255.0];
+
+   if(_samplesPerPixel==1)
+       return [NSColor colorWithDeviceWhite:pixel[0]/255.0 alpha:1.0];
+
    return nil;
 }
 
@@ -544,20 +653,50 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
 }
 
 -(void)colorizeByMappingGray:(float)gray toColor:(NSColor *)color blackMapping:(NSColor *)blackMapping whiteMapping:(NSColor *)whiteMapping {
-   NSUnimplementedMethod();
+   NSInteger width=[self pixelsWide];
+   NSInteger height=[self pixelsHigh];
+
+   for(NSInteger y=0;y<height;y++) {
+      for(NSInteger x=0;x<width;x++) {
+         NSColor *original=[self colorAtX:x y:y];
+         if(original==nil)
+             continue;
+
+         CGFloat red=0, green=0, blue=0, alpha=0;
+
+         [original getRed:&red green:&green blue:&blue alpha:&alpha];
+
+         CGFloat white=(red+green+blue)/3.0;
+
+         NSColor *mapped;
+
+         if(white<=gray)
+             mapped=[blackMapping colorWithAlphaComponent:white/gray];
+         else
+             mapped=[whiteMapping colorWithAlphaComponent:(1.0-white)/(1.0-gray)];
+
+         [self setColor:mapped atX:x y:y];
+      }
+   }
 }
 
 -(void)getCompression:(NSTIFFCompression *)compression factor:(float *)factor {
-   NSUnimplementedMethod();
+   if(compression!=NULL)
+       *compression=NSTIFFCompressionNone;
+
+   if(factor!=NULL)
+       *factor=0.0;
 }
 
 -(void)setCompression:(NSTIFFCompression)compression factor:(float)factor {
-   NSUnimplementedMethod();
 }
 
 -(BOOL)canBeCompressedUsing:(NSTIFFCompression)compression {
-   NSUnimplementedMethod();
-   return NO;
+   return compression==NSTIFFCompressionNone ||
+          compression==NSTIFFCompressionCCITTFAX3 ||
+          compression==NSTIFFCompressionLZW ||
+          compression==NSTIFFCompressionJPEG ||
+          compression==NSTIFFCompressionPackBits;
 }
 
 -(NSData *)representationUsingType:(NSBitmapImageFileType)type properties:(NSDictionary *)properties {
@@ -634,7 +773,7 @@ NSString* NSImageCompressionFactor = @"NSImageCompressionFactor";
     return CGImageRetain(_cgImage);
 
    if(_isPlanar)
-    NSUnimplementedMethod();
+    [NSException raise:NSInternalInconsistencyException format:@"createCGImageIfNeeded does not support planar formats"];
 
   CGDataProviderRef provider=CGDataProviderCreateWithData(NULL,_bitmapPlanes[0],_bytesPerRow*_pixelsHigh,NULL);
 
