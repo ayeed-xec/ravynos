@@ -3,6 +3,10 @@
 #import <string.h>
 #include <Block_private.h>
 #include <Block.h>
+extern void *_NSConcreteMallocBlock[32];
+extern void *_NSConcreteAutoBlock[32];
+extern void *_NSConcreteFinalizingBlock[32];
+extern void *_NSConcreteWeakBlockVariable[32];
 #include <objc/objc-class.h>
 
 /* Copyright (c) 2011 Tobias Platen
@@ -17,7 +21,7 @@
 
 static void init_block_class(void* nsblock,char* class)
 {
-	memcpy(nsblock,objc_getClass(class),sizeof(struct objc_class));
+	memcpy(nsblock,objc_getClass(class),class_getInstanceSize(objc_getClass(class)));
 	//TODO support objective_c garbage collection
 }
 

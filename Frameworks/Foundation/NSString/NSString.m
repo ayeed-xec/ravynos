@@ -873,6 +873,13 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
    return [self rangeOfString:string options:0];
 }
 
+-(BOOL)containsString:(NSString *)string {
+   if(string==nil)
+    return NO;
+
+   return [self rangeOfString:string].location!=NSNotFound;
+}
+
 -(NSRange)rangeOfCharacterFromSet:(NSCharacterSet *)set
                           options:(NSStringCompareOptions)options range:(NSRange)range {
     NSRange  result=NSMakeRange(NSNotFound,0);

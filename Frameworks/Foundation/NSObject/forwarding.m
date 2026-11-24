@@ -8,8 +8,23 @@
 #include <stdio.h>
 
 #define NSABISizeofRegisterReturn 8
+#if defined(__x86_64__)
 #define NSABIasm_jmp_objc_msgSend __asm__("jmp _objc_msgSend")
 #define NSABIasm_jmp_objc_msgSend_stret __asm__("jmp _objc_msgSend_stret")
+#else
+/* aarch64: b _objc_msgSend; the arm64 branch/ret ABI makes the tail call valid */
+#define NSABIasm_jmp_objc_msgSend __asm__("b _objc_msgSend")
+#define NSABIasm_jmp_objc_msgSend_stret __asm__("b _objc_msgSend")
+#endif
+/* SysV x86-64 caller-saved regs the tail-jump may have disturbed.
+ * aarch64: x0-x17 are caller-saved; a bare compiler barrier suffices. */
+#if defined(__x86_64__)
+#define NSABIForwardClobberAsm asm volatile("" ::: "memory", "rdx", "rcx", "r8", "r9")
+#elif defined(__aarch64__) || defined(__arm64__)
+#define NSABIForwardClobberAsm asm volatile("" ::: "memory")
+#else
+#define NSABIForwardClobberAsm asm volatile("" ::: "memory")
+#endif
 
 static void OBJCRaiseException(const char *name,const char *format,...) {
     va_list arguments;
@@ -103,7 +118,7 @@ void NSObjCForward(id object,SEL selector,...){
    __fastForward(object, selector);
 
    // Erect a barrier here by telling clang we clobbered the regs
-   asm volatile("" ::: "memory", "rdx", "rcx", "r8", "r9");
+   NSABIForwardClobberAsm;
 
    va_list arguments;
    va_start(arguments,selector);
@@ -116,7 +131,7 @@ void NSObjCForward_stret(void *returnValue,id object,SEL selector,...){
    __fastForward(object, selector);
 
    // Erect a barrier here by telling clang we clobbered the regs
-   asm volatile("" ::: "memory", "rdx", "rcx", "r8", "r9");
+   NSABIForwardClobberAsm;
 
    va_list arguments;
    va_start(arguments,selector);

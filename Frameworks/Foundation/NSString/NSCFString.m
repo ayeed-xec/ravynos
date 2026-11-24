@@ -40,7 +40,7 @@ NSString *NSCFStringNewWithCharacters(NSZone *zone, const unichar *characters,
 {
     NSUInteger reslen;
     char *bytes = NSUnicodeToUTF8(characters, length, YES, &reslen, NULL, YES);
-    NSString *string = NSCFStringNewWithBytes(zone, (const char *)bytes, reslen);
+    NSString *string = NSCFStringNewWithBytes(zone, (const char *)bytes, reslen - 1);
     return string;
 }
 
@@ -245,7 +245,16 @@ NSUInteger NSGetCFStringWithMaxLength(const unichar *characters,
 }
 
 -(NSUInteger)hash {
-    return CFStringHashNSString(self);
+    NSRange range={0,[self length]};
+
+    if(range.length>NSHashStringLength)
+     range.length=NSHashStringLength;
+
+    unichar unicode[NSHashStringLength];
+
+    [self getCharacters:unicode range:range];
+
+    return NSStringHashUnicode(unicode,range.length);
 }
 
 @end

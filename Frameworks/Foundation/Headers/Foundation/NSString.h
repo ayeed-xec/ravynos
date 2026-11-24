@@ -232,7 +232,7 @@ FOUNDATION_EXPORT const NSUInteger NSMaximumStringLength;
 @interface NSConstantString : NSString {
 @package
 	unsigned flags;
-	unsigned long _length;
+	unsigned _length;
 	unsigned size;
 	unsigned hash;
 	const char *_bytes;

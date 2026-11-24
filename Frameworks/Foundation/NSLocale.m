@@ -58,6 +58,9 @@ static NSLocale *_sharedCurrentLocale = nil;
        localeIdentifier=[self performSelector:@selector(_platformCurrentLocaleIdentifier)];
       else
        localeIdentifier=@"en_US";
+
+      if(localeIdentifier==nil)
+       localeIdentifier=@"en_US";
        
       _sharedCurrentLocale = [[NSLocale alloc] initWithLocaleIdentifier:localeIdentifier];
    }

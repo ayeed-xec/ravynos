@@ -75,6 +75,8 @@ void __NSPopExceptionFrame(NSExceptionFrame *frame) {
 static void defaultHandler(id exception) {
     fprintf(stderr, "*** Uncaught exception of type %s\n",
             object_getClassName(exception));
+    extern void NSPrintUncaughtException(id exception);
+    NSPrintUncaughtException(exception);
     __builtin_trap();
 }
 

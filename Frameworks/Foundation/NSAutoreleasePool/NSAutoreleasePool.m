@@ -6,8 +6,6 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
-#include <runtime/objc-internal.h>
-
 #import <Foundation/NSZone.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSException.h>
@@ -19,12 +17,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSAutoreleasePool
 
 -init {
-    _pool=objc_autoreleasePoolPush();
-   return self;
+    self = [super init];
+    _objects = [NSMutableArray new];
+    _previousPool = NSThreadCurrentPool();
+    NSThreadSetCurrentPool(self);
+    return self;
 }
 
 -(void)dealloc {
-    objc_autoreleasePoolPop(_pool);
+    NSThreadSetCurrentPool(_previousPool);
+    for(id object in _objects)
+        [object release];
+    [_objects release];
    [super dealloc];
 }
 
@@ -41,9 +45,31 @@ id NSAutorelease(id object){
    return nil;
 }
 
+-autorelease {
+   [NSException raise:NSInvalidArgumentException format:@"-[NSAutoreleasePool autorelease] not allowed"];
+   return nil;
+}
+
 // indicate this class is ARC compatible
 -(void)_ARCCompatibleAutoreleasePool {
-    printf("ARCCompatibleAutoreleasePool\n");
+}
+
++(id)new {
+    return [[self alloc] init];
+}
+
++(void)addObject:(id)anObject {
+    NSAutoreleasePool *pool = NSThreadCurrentPool();
+
+    if(pool == nil) {
+        fprintf(stderr, "*** autorelease called with no pool in place - object leaked\n");
+        return;
+    }
+    [pool addObject:anObject];
+}
+
+-(void)addObject:(id)anObject {
+    [_objects addObject:anObject];
 }
 
 @end

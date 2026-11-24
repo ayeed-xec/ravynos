@@ -13,10 +13,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSArray_placeholder
 
 
++allocWithZone:(NSZone *)zone {
+   if(self==objc_lookUpClass("NSArray"))
+    return NSAllocateObject([NSArray_placeholder class],0,NULL);
+
+   return NSAllocateObject(self,0,zone);
+}
+
 - initWithObjects:(id *)objects count:(NSUInteger)count
 {
-    NSDeallocateObject(self);
-    return (NSArray_placeholder *)NSArray_concreteNew(NULL, objects, count);
+    /* The placeholder was allocated unsized, so build a real concrete
+     * array: the placeholder's own +alloc reference is consumed here and
+     * +arrayWithObjects:count: autoreleases the returned object. */
+    NSArray_concrete *concrete = NSArray_concreteNew([self zone], objects, count);
+
+    [self release];
+    return concrete;
 }
 
 

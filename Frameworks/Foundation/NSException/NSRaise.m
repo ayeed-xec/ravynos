@@ -27,6 +27,14 @@ void NSRaiseException(NSString *name,id self,SEL cmd,NSString *fmt,...) {
    [NSException raise:name format:@"%@ %@",where,why];
 }
 
+/* Called when no @catch block claims the exception: print it here so the
+ * reason is never lost to a bare abort(). */
+void NSPrintUncaughtException(id exception) {
+    fprintf(stderr, "*** Uncaught exception %s: %s\n",
+            [[exception name] UTF8String],
+            [[exception reason] UTF8String]);
+}
+
 void NSCLogThreadId(){
 #ifdef WINDOWS
    fprintf(stderr,"threadId=%p:tick=%d:",GetCurrentThreadId(),GetTickCount());

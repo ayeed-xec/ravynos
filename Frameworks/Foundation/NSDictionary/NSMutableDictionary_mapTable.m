@@ -86,12 +86,20 @@ static void objectReleaseCallBack(CFAllocatorRef allocator,const void *value) {
    CFRelease(value);
 }
 
+static CFHashCode objectHashCallBack(const void *value) {
+   return (CFHashCode)[(id)value hash];
+}
+
+static BOOL objectEqualCallBack(const void *value1, const void *value2) {
+   return [(id)value1 isEqual:(id)value2];
+}
+
 static CFDictionaryKeyCallBacks objectKeyCallBacks={
- 0,objectCopyCallBack,objectReleaseCallBack,CFCopyDescription,CFEqual,CFHash,
+ 0,objectCopyCallBack,objectReleaseCallBack,CFCopyDescription,objectEqualCallBack,objectHashCallBack,
 };
 
 static CFDictionaryValueCallBacks objectValueCallbacks={
- 0,objectRetainCallBack,objectReleaseCallBack,CFCopyDescription,CFEqual
+ 0,objectRetainCallBack,objectReleaseCallBack,CFCopyDescription,objectEqualCallBack
 };
 
 const void *defaultRetainCallBack(CFAllocatorRef allocator,const void *value) {

@@ -32,8 +32,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 @implementation NSConstantString(Impl)
 
-static inline NSUInteger lengthOfBytes(NSConstantString *self){
-    return self->_length & 0x0fffffff;
+/* clang emits constant-string objects in exactly this layout (see the
+ * struct comment above): 8 bytes of runtime header, then the fields.
+ * Accessing the fields through the class's ivar offsets would read the
+ * header-based layout instead, which is 8 bytes further back. */
+typedef struct {
+    Class isa;
+    uint32_t flags;
+    uint32_t length;
+    uint32_t size;
+    uint32_t hash;
+    const char *data;
+} NSConstantStringObject;
+
+static inline NSConstantStringObject *NSConstantStringObjectFromObject(id object){
+    return object;
+}
+
+static inline uint32_t constantStringLength(NSConstantStringObject *object){
+    return object->length & 0x0fffffff;
+}
+
+static inline const char *constantStringBytes(NSConstantStringObject *object){
+    return object->data;
 }
 
 
@@ -66,22 +87,16 @@ static inline NSUInteger lengthOfBytes(NSConstantString *self){
 }
 
 -(NSUInteger)length {
-   NSUInteger length = 0;
-   const char *bytes = self->_bytes;
-
-   for (NSUInteger i = 0; bytes[i] != 0; i++) {
-    if ((bytes[i] & 0xC0) != 0x80)
-     length++;
-   }
-
-   return length;
+   /* Clang's gnustep-2.0 constant strings store the length and are not
+    * NUL-terminated, so use the field instead of scanning the bytes. */
+   return constantStringLength(NSConstantStringObjectFromObject(self));
 }
 
 -(NSUInteger)lengthOfBytesUsingEncoding:(NSStringEncoding)encoding {
     switch (encoding) {
         case NSUTF8StringEncoding:
         case NSASCIIStringEncoding:
-	    return lengthOfBytes(self);
+	    return constantStringLength(NSConstantStringObjectFromObject(self));
         default:
             NSUnimplementedMethod();
             return 0;
@@ -89,8 +104,9 @@ static inline NSUInteger lengthOfBytes(NSConstantString *self){
 }
 
 -(unichar)characterAtIndex:(NSUInteger)location {
-   NSUInteger length = [self length];
-   const char *bytes = self->_bytes;
+   NSConstantStringObject *object = NSConstantStringObjectFromObject(self);
+   NSUInteger length = constantStringLength(object);
+   const char *bytes = constantStringBytes(object);
    unichar result;
 
    if(location>=length)
@@ -150,7 +166,8 @@ static inline NSUInteger lengthOfBytes(NSConstantString *self){
 }
 
 -(NSUInteger)hash {
-   return NSStringHashASCII(_bytes,MIN([self length],NSHashStringLength));
+   return NSStringHashASCII(constantStringBytes(NSConstantStringObjectFromObject(self)),
+     MIN([self length],NSHashStringLength));
 }
 
 @end
