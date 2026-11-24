@@ -19,7 +19,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSRaise.h>
 #import "NSKeyValueBinding/NSObject+BindingSupport.h"
 
-@implementation NSDocument
+@implementation NSDocument {
+    BOOL _fileNameExtensionWasHiddenInLastRunSavePanel;
+    NSString *_fileTypeFromLastRunSavePanel;
+}
 
 static int untitled_document_number = 0;
 
@@ -103,6 +106,8 @@ static int untitled_document_number = 0;
       _untitledNumber=untitled_document_number++;
       _hasUndoManager=YES;
       _activeEditors=[NSMutableArray new];
+      _fileNameExtensionWasHiddenInLastRunSavePanel=NO;
+      _fileTypeFromLastRunSavePanel=nil;
     }
   return self;
 }
@@ -166,6 +171,7 @@ static int untitled_document_number = 0;
   [_printInfo release];
   [_undoManager release];
   [_activeEditors release];
+  [_fileTypeFromLastRunSavePanel release];
 
   [super dealloc];
 }
@@ -284,8 +290,10 @@ static int untitled_document_number = 0;
 }
 
 -(BOOL)hasUnautosavedChanges {
-   NSUnimplementedMethod();
-   return 0;
+   // Every edit since the last save is unsaved and therefore unautosaved:
+   // autosaving only happens through autosaveDocumentWithDelegate:, which
+   // runs an explicit write of the autosaved-contents URL.
+   return [self isDocumentEdited];
 }
 
 -(NSString *)autosavingFileType {
@@ -392,8 +400,14 @@ static int untitled_document_number = 0;
      break;
 
     case NSChangeReadOtherContents:
+     // The document was opened from contents that were not its own; it
+     // starts out unedited regardless of how it got here.
+     _changeCount=0;
+     break;
+
     case NSChangeAutosaved:
-     NSUnimplementedMethod();
+     // An autosave persisted the current edits, but the document stays
+     // edited until the real save happens, so the count is left alone.
      break;
    }
 

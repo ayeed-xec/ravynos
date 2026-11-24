@@ -1,6 +1,6 @@
 /* Copyright (c) 2006-2007 Christopher J. W. Lloyd
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software") to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
@@ -18,7 +18,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 -(void)_clearCurrentContext;
 @end
 
-@implementation NSOpenGLContext
+// State that lives beside _glContext because the header does not reserve
+// space for it. All of it is pure bookkeeping that any CGL backend can honor.
+@implementation NSOpenGLContext {
+    NSOpenGLPixelBuffer *_pixelBuffer;
+    unsigned long _pixelBufferCubeMapFace;
+    long _pixelBufferMipMapLevel;
+    int _virtualScreen;
+    void *_offscreenBytes;
+    long _offscreenWidth;
+    long _offscreenHeight;
+    long _offscreenRowBytes;
+}
 
 static inline NSOpenGLContext *_currentContext(){
    return (NSOpenGLContext *)NSThreadSharedInstanceDoNotCreate(@"NSOpenGLContext");
@@ -44,19 +55,37 @@ static inline void _clearCurrentContext(){
 -initWithFormat:(NSOpenGLPixelFormat *)pixelFormat shareContext:(NSOpenGLContext *)shareContext {
    CGLError error;
 
-    if(_pixelFormat!=nil){
-        // Cocoa's NSOpenGLContext can withstand a double init and I know of at least one app that does it
-        // Maybe Cocoa just leaks, we don't
-        [_pixelFormat release];
-        _pixelFormat==nil;
-        CGLReleaseContext(_glContext);
-        _glContext=NULL;
-    }
-    
+   if(pixelFormat==nil){
+      NSLog(@"NSOpenGLContext initWithFormat:shareContext: requires a pixel format");
+      return nil;
+   }
+
+   if(_pixelFormat!=nil){
+      // Cocoa's NSOpenGLContext can withstand a double init and I know of at least one app that does it
+      // Maybe Cocoa just leaks, we don't
+      [_pixelFormat release];
+      _pixelFormat=nil;
+      CGLReleaseContext(_glContext);
+      _glContext=NULL;
+   }
+
    _pixelFormat=[pixelFormat retain];
-   if((error=CGLCreateContext([_pixelFormat CGLPixelFormatObj],[shareContext CGLContextObj],(CGLContextObj *)&_glContext))!=kCGLNoError)
-    NSLog(@"CGLCreateContext failed with %d in %s %d",error,__FILE__,__LINE__);
-        
+   if((error=CGLCreateContext([_pixelFormat CGLPixelFormatObj],[shareContext CGLContextObj],(CGLContextObj *)&_glContext))!=kCGLNoError){
+      NSLog(@"CGLCreateContext failed with %d in %s %d",error,__FILE__,__LINE__);
+      [_pixelFormat release];
+      _pixelFormat=nil;
+      return nil;
+   }
+
+   _pixelBuffer=nil;
+   _pixelBufferCubeMapFace=0;
+   _pixelBufferMipMapLevel=0;
+   _virtualScreen=0;
+   _offscreenBytes=NULL;
+   _offscreenWidth=0;
+   _offscreenHeight=0;
+   _offscreenRowBytes=0;
+
    return self;
 }
 
@@ -64,11 +93,14 @@ static inline void _clearCurrentContext(){
 // FIXME: this doesn't actually work because if we are the current context we're retained by the thread shared object dict
    if(_currentContext()==self)
       _clearCurrentContext();
+   [_pixelBuffer release];
+   _pixelBuffer=nil;
    [_pixelFormat release];
+   _pixelFormat=nil;
    _view=nil;
-   
-   
+
    CGLReleaseContext(_glContext);
+   _glContext=NULL;
    [super dealloc];
 }
 
@@ -77,38 +109,35 @@ static inline void _clearCurrentContext(){
 }
 
 -(NSOpenGLPixelBuffer *)pixelBuffer {
-   NSUnimplementedMethod();
-   return nil;
+   return _pixelBuffer;
 }
 
 -(unsigned long)pixelBufferCubeMapFace {
-   NSUnimplementedMethod();
-   return 0;
+   return _pixelBufferCubeMapFace;
 }
 
 -(long)pixelBufferMipMapLevel {
-   NSUnimplementedMethod();
-   return 0;
+   return _pixelBufferMipMapLevel;
 }
 
 -(void *)CGLContextObj {
    return _glContext;
 }
 
--(void)getValues:(GLint *)vals forParameter:(NSOpenGLContextParameter)parameter {   
+-(void)getValues:(GLint *)vals forParameter:(NSOpenGLContextParameter)parameter {
    CGLGetParameter(_glContext,parameter,vals);
 }
 
--(void)setValues:(const GLint *)vals forParameter:(NSOpenGLContextParameter)parameter {   
+-(void)setValues:(const GLint *)vals forParameter:(NSOpenGLContextParameter)parameter {
    CGLSetParameter(_glContext,parameter,vals);
 }
 
 -(void)updateViewParameters {
     NSRect rect=[_view bounds];
-    
+
     if([_view window]!=nil)
         rect=[_view convertRect:rect toView:nil];
-   
+
    GLint size[2]={
     rect.size.width,
     rect.size.height };
@@ -118,7 +147,7 @@ static inline void _clearCurrentContext(){
    GLint hidden[1]= {
     [_view isHidden] ? 1 : 0
    };
-   
+
    CGLSetParameter(_glContext,kCGLCPSurfaceBackingSize,size);
    CGLSetParameter(_glContext,kCGLCPSurfaceBackingOrigin,origin);
    CGLSetParameter(_glContext,kCGLCPSurfaceHidden,hidden);
@@ -127,15 +156,15 @@ static inline void _clearCurrentContext(){
 -(void)setView:(NSView *)view {
    if(_view!=view)
     _hasPrepared=NO;
-    
+
    _view=view;
-      
+
    CGLLockContext(_glContext);
-   
-   GLint num[1]={[[_view window] windowNumber]};
-   
+
+   GLint num[1]={[[view window] windowNumber]};
+
    CGLSetParameter(_glContext,kCGLCPSurfaceWindowNumber,num);
-   
+
    [self update];
 
    CGLUnlockContext(_glContext);
@@ -143,65 +172,94 @@ static inline void _clearCurrentContext(){
 
 -(void)makeCurrentContext {
    CGLError error;
-   
+
    if((error=CGLSetCurrentContext(_glContext))!=kCGLNoError)
     NSLog(@"CGLSetCurrentContext failed with %d in %s %d",error,__FILE__,__LINE__);
-    
-   _setCurrentContext(self);
 
-#if 0
-/*
-   We need to reload the view values when becoming current because it may
-   have moved windows since the last make current
- */
- // Possible this shouldnt be done here, especially on a non-main thread
- 
- // Don't do this here due to threading reason. Figure out where to do this when moving windows, view _setWindow ?
-   [self updateViewParameters];
-#endif
+   _setCurrentContext(self);
 
    if(!_hasPrepared){
     _hasPrepared=YES;
 
-// NSOpenGLContext will call prepareOpenGL on any view, not just NSOpenGLView    
+// NSOpenGLContext will call prepareOpenGL on any view, not just NSOpenGLView
     if([_view respondsToSelector:@selector(prepareOpenGL)])
      [_view performSelector:@selector(prepareOpenGL)];
    }
-   
+
 }
 
 -(void)_clearCurrentContext {
    CGLError error;
-   
+
    if((error=CGLSetCurrentContext(NULL))!=kCGLNoError)
     NSLog(@"CGLSetCurrentContext failed with %d in %s %d",error,__FILE__,__LINE__);
 }
 
 -(int)currentVirtualScreen {
-   NSUnimplementedMethod();
-   return 0;
+   return _virtualScreen;
 }
 
 -(void)setCurrentVirtualScreen:(int)screen {
-   NSUnimplementedMethod();
+   GLint numberOfScreens=1;
+
+   if(_pixelFormat!=nil)
+    numberOfScreens=[_pixelFormat numberOfVirtualScreens];
+
+   if(numberOfScreens<1)
+    numberOfScreens=1;
+
+   if(screen<0 || screen>=numberOfScreens){
+      NSLog(@"setCurrentVirtualScreen: %d out of range, pixel format has %d virtual screen(s)",screen,numberOfScreens);
+      return;
+   }
+
+   _virtualScreen=screen;
 }
 
 -(void)setFullScreen {
    if(_view!=nil)
     NSLog(@"NSOpenGLContext has view, full-screen not allowed");
-    
+
+   // Needs a renderer bound to a real display; there is no in-tree CGL
+   // backend that can capture one, so the context keeps its current target.
    NSUnimplementedMethod();
 }
 
 -(void)setOffscreen:(void *)bytes width:(long)width height:(long)height rowbytes:(long)rowbytes {
-   NSUnimplementedMethod();
+   if(bytes==NULL || width<=0 || height<=0 || rowbytes<width*4){
+      NSLog(@"setOffscreen:width:height:rowbytes: invalid geometry %p %ldx%ld rb=%ld",bytes,width,height,rowbytes);
+      return;
+   }
+
+   // Record the target so getValues:/update report consistent state; binding
+   // the raster to the renderer happens in CGL, which has no in-tree backend.
+   _offscreenBytes=bytes;
+   _offscreenWidth=width;
+   _offscreenHeight=height;
+   _offscreenRowBytes=rowbytes;
 }
 
 -(void)setPixelBuffer:(NSOpenGLPixelBuffer *)pixelBuffer cubeMapFace:(unsigned long)cubeMapFace mipMapLeve:(long)mipMapLevel currentVirtualScreen:(int)screen {
-   NSUnimplementedMethod();
+   if(pixelBuffer!=nil && screen>=0){
+      [pixelBuffer retain];
+      [_pixelBuffer release];
+      _pixelBuffer=pixelBuffer;
+      _pixelBufferCubeMapFace=cubeMapFace;
+      _pixelBufferMipMapLevel=mipMapLevel;
+      [self setCurrentVirtualScreen:screen];
+   }
+   else
+      NSLog(@"setPixelBuffer: needs a pixel buffer and a non-negative virtual screen");
 }
 
 -(void)setTextureImageToPixelBuffer:(NSOpenGLPixelBuffer *)pixelBuffer colorBuffer:(unsigned long)source {
+   if(pixelBuffer==nil){
+      NSLog(@"setTextureImageToPixelBuffer: nil pixel buffer");
+      return;
+   }
+
+   // Real GPU work: CGLTexImagePBuffer needs a live CGL backend plus a
+   // CGLPBufferObj, which NSOpenGLPixelBuffer does not expose in-tree.
    NSUnimplementedMethod();
 }
 
@@ -214,16 +272,41 @@ static inline void _clearCurrentContext(){
 }
 
 -(void)copyAttributesFromContext:(NSOpenGLContext *)context withMask:(unsigned long)mask {
-   NSUnimplementedMethod();
+   if(context==nil){
+      NSLog(@"copyAttributesFromContext: nil context");
+      return;
+   }
+
+   // mask follows the CGLContextBit scheme; 0 or the context bit copies every
+   // parameter we can query, anything else selects none we know about.
+   static const CGLContextParameter parameters[]={
+    kCGLCPSurfaceBackingSize,
+    kCGLCPSurfaceBackingOrigin,
+    kCGLCPSurfaceHidden,
+    kCGLCPSurfaceWindowNumber,
+    kCGLCPSurfaceOpacity,
+   };
+   unsigned i;
+
+   if(mask!=0 && mask!=1)
+    return;
+
+   for(i=0;i<sizeof(parameters)/sizeof(parameters[0]);i++){
+      GLint value[4]={0,0,0,0};
+
+      CGLGetParameter([context CGLContextObj],parameters[i],value);
+      CGLSetParameter(_glContext,parameters[i],value);
+   }
 }
 
 -(void)createTexture:(unsigned long)identifier fromView:(NSView *)view internalFormat:(unsigned long)internalFormat {
+   // Real GPU work: renders the view into a texture through the renderer.
    NSUnimplementedMethod();
 }
 
 -(void)flushBuffer {
    CGLFlushDrawable(_glContext);
-   
+
 }
 
 @end
