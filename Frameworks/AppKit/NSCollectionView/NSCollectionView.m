@@ -116,8 +116,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSCollectionViewItem *)newItemForRepresentedObject:object {
-   NSUnimplementedMethod();
-   return nil;
+   NSCollectionViewItem *item=[[NSCollectionViewItem alloc] init];
+
+   [item setRepresentedObject:object];
+   return [item autorelease];
 }
 
 @end

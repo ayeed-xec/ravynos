@@ -98,7 +98,7 @@ static inline const char *constantStringBytes(NSConstantStringObject *object){
         case NSASCIIStringEncoding:
 	    return constantStringLength(NSConstantStringObjectFromObject(self));
         default:
-            NSUnimplementedMethod();
+            [NSException raise:NSInvalidArgumentException format:@"unsupported string encoding %i",encoding];
             return 0;
     }
 }

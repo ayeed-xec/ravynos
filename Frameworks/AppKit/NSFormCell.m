@@ -20,7 +20,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSFormCell
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [super encodeWithCoder:coder];
+
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeDouble:_titleWidth forKey:@"NSTitleWidth"];
+    [keyed encodeObject:_titleCell forKey:@"NSTitleCell"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -48,7 +58,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -initTextCell:(NSString *)value {
    [super initTextCell:value];
-   NSUnimplementedMethod();
+   _titleCell=[[NSTextFieldCell alloc] initTextCell:@""];
+   _titleWidth=0;
    return self;
 }
 

@@ -119,12 +119,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   NSString *type=[coder decodeObjectForKey:@"NSObjCType"];
+   NSData *bytes=[coder decodeObjectForKey:@"NSValueBytes"];
+
+   self=[[NSValue valueWithBytes:[bytes bytes] objCType:[type UTF8String]] retain];
    return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   const char *type=[self objCType];
+   NSUInteger size,alignment;
+   unsigned char *buffer;
+   NSData *data;
+
+   NSGetSizeAndAlignment(type,&size,&alignment);
+   buffer=malloc(size);
+   [self getValue:buffer];
+   data=[NSData dataWithBytes:buffer length:size];
+   free(buffer);
+
+   [coder encodeObject:[NSString stringWithUTF8String:type] forKey:@"NSObjCType"];
+   [coder encodeObject:data forKey:@"NSValueBytes"];
 }
 
 -nonretainedObjectValue {

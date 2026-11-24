@@ -13,6 +13,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @interface NSImageView : NSControl {
     id _target;
     SEL _action;
+    BOOL _allowsCutCopyPaste;
 }
 
 - (BOOL)allowsCutCopyPaste;

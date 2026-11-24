@@ -64,7 +64,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)setImage:(NSImage *)value {
-   NSUnimplementedMethod();
+   value=[value retain];
+   [_image release];
+   _image=value;
 }
 
 -(void)setAlternateImage:(NSImage *)value {

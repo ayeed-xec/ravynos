@@ -38,8 +38,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             return _length;
             
         default:
-            NSUnimplementedMethod();
-            NSLog(@"For encoding: %i", encoding);
+            [NSException raise:NSInvalidArgumentException format:@"unsupported string encoding %i",encoding];
             return 0;
     }
 }

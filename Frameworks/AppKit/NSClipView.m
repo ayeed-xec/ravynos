@@ -18,7 +18,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSClipView
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [super encodeWithCoder:coder];
+
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+    unsigned         flags=0;
+
+    if(_drawsBackground)
+     flags|=0x04;
+
+    [keyed encodeInt:flags forKey:@"NScvFlags"];
+    [keyed encodeObject:_backgroundColor forKey:@"NSBGColor"];
+    [keyed encodeObject:_docView forKey:@"NSDocView"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -99,7 +114,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    value=[value retain];
    [_documentCursor release];
    _documentCursor=value;
-   NSUnimplementedMethod();
 }
 
 -(void)setDocumentView:(NSView *)view {
@@ -129,8 +143,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSRect)documentRect {
-   NSUnimplementedMethod();
-   return NSMakeRect(0,0,0,0);
+   if(_docView!=nil)
+    return [_docView frame];
+
+   return [self bounds];
 }
 
 -(NSRect)documentVisibleRect {

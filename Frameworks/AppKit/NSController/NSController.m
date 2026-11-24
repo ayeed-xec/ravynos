@@ -47,12 +47,10 @@ BOOL NSIsControllerMarker(id object)
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
    return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
 }
 
 -(BOOL)commitEditing {

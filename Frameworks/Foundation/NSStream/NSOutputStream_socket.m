@@ -74,7 +74,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return [NSData dataWithBytes:&value length:sizeof(value)];
    }
 
-   NSUnimplementedMethod();
    return nil;
 }
 
@@ -82,7 +81,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    if([key isEqualToString:(NSString *)kCFStreamPropertySSLSettings])
     return [_socket setSSLProperties:(CFDictionaryRef)property];
 
-   NSUnimplementedMethod();
    return NO;
 }
 

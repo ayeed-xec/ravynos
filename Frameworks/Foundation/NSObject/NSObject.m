@@ -382,9 +382,7 @@ extern void objc_setForwardHandler(id fwd, id fwd_stret);
 
 + (void)poseAsClass:(Class)aClass
 {
-    NSAutoreleasePool * pool = [NSAutoreleasePool new];
-    NSUnimplementedMethod();
-    [pool release];
+    [NSException raise:NSInvalidArgumentException format:@"posing %@ as %@ is not supported by this Objective-C runtime",aClass,self];
 }
 
 -(uint32_t *)cfinfo {

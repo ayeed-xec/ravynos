@@ -67,7 +67,7 @@ static inline char characterAt(NSConstantString_tiny *self, NSUInteger location)
         case NSASCIIStringEncoding:
             return extractLength(self);
         default:
-            NSUnimplementedMethod();
+            [NSException raise:NSInvalidArgumentException format:@"unsupported string encoding %i",encoding];
             return 0;
     }
 }

@@ -258,7 +258,18 @@ static NSData *AddressDataForSocket(NSSocketNativeHandle handle) {
 }
 
 -(void)stream:(NSStream *)stream handleEvent:(NSStreamEvent)streamEvent {
-    NSUnimplementedMethod();
+    switch(streamEvent){
+       case NSStreamEventOpenCompleted:
+       case NSStreamEventHasBytesAvailable:
+       case NSStreamEventHasSpaceAvailable:
+          break;
+       case NSStreamEventEndEncountered:
+       case NSStreamEventErrorOccurred:
+          [self invalidate];
+          break;
+       default:
+          break;
+    }
 }
 
 -(void)dealloc {

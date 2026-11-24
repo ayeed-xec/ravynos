@@ -150,8 +150,20 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -(NSDictionary *)attributesAtIndex:(NSUInteger)location
    longestEffectiveRange:(NSRange *)range inRange:(NSRange)inRange {
-   NSUnimplementedMethod();
-   return nil;
+   NSDictionary *attrs=[self attributesAtIndex:location effectiveRange:range];
+
+   if(range!=NULL){
+      NSRange effective=*range;
+      NSUInteger start=MAX(effective.location,inRange.location);
+      NSUInteger end=MIN(NSMaxRange(effective),NSMaxRange(inRange));
+
+      while(start>inRange.location && [[self attributesAtIndex:start-1 effectiveRange:NULL] isEqualToDictionary:attrs])
+       start--;
+      while(end<NSMaxRange(inRange) && [[self attributesAtIndex:end effectiveRange:NULL] isEqualToDictionary:attrs])
+       end++;
+      *range=NSMakeRange(start,end-start);
+   }
+   return attrs;
 }
 
 -attribute:(NSString *)name atIndex:(NSUInteger)location effectiveRange:(NSRange *)range {
@@ -159,8 +171,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -attribute:(NSString *)name atIndex:(NSUInteger)location longestEffectiveRange:(NSRange *)range inRange:(NSRange)inRange {
-   NSUnimplementedMethod();
-   return nil;
+   return [[self attributesAtIndex:location longestEffectiveRange:range inRange:inRange] objectForKey:name];
 }
 
 -(NSAttributedString *)attributedSubstringFromRange:(NSRange)range {

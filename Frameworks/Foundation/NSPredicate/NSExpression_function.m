@@ -8,7 +8,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import "NSExpression_function.h"
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
+#import <Foundation/NSNumber.h>
 #import <Foundation/NSRaise.h>
+#import <math.h>
 
 @implementation NSExpression_function
 
@@ -34,7 +36,53 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -expressionValueWithObject:object context:(NSMutableDictionary *)context {
-   NSUnimplementedMethod();
+   NSMutableArray *values=[NSMutableArray array];
+   NSEnumerator *argEnum=[_arguments objectEnumerator];
+   NSExpression *argument;
+   NSString *name=[_name lowercaseString];
+
+   while((argument=[argEnum nextObject])!=nil){
+      id value=[argument expressionValueWithObject:object context:context];
+
+      [values addObject:value];
+   }
+
+   if([name isEqualToString:@"count:"]){
+      id collection=[values objectAtIndex:0];
+
+      return [[NSNumber numberWithUnsignedInteger:[collection count]] autorelease];
+   }
+   if([name isEqualToString:@"sum:"] || [name isEqualToString:@"average:"]
+    ||[name isEqualToString:@"min:"] || [name isEqualToString:@"max:"]){
+      id collection=[values objectAtIndex:0];
+      double total=0, best=0;
+      BOOL first=YES;
+      NSEnumerator *itemEnum=[collection objectEnumerator];
+      id item;
+
+      while((item=[itemEnum nextObject])!=nil){
+         double itemValue=[item doubleValue];
+
+         if(first || (itemValue>best && [name isEqualToString:@"max:"]))
+          best=itemValue;
+         if(first || (itemValue<best && [name isEqualToString:@"min:"]))
+          best=itemValue;
+         total+=itemValue;
+         first=NO;
+      }
+
+      if([name isEqualToString:@"sum:"])
+       return [[NSNumber numberWithDouble:total] autorelease];
+      if([name isEqualToString:@"average:"])
+       return [[NSNumber numberWithDouble:total/[collection count]] autorelease];
+      return [[NSNumber numberWithDouble:best] autorelease];
+   }
+   if([name isEqualToString:@"sqrt:"])
+    return [[NSNumber numberWithDouble:sqrt([[values objectAtIndex:0] doubleValue])] autorelease];
+   if([name isEqualToString:@"log:"])
+    return [[NSNumber numberWithDouble:log([[values objectAtIndex:0] doubleValue])] autorelease];
+
+   [NSException raise:NSInvalidArgumentException format:@"unsupported function %@",_name];
    return nil;
 }
 

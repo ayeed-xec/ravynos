@@ -12,6 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSRaiseException.h>
 
 #import "NSMutableArray_concrete.h"
+#import <Foundation/NSPropertyListReader.h>
 
 @implementation NSMutableArray_concrete
 
@@ -79,8 +80,12 @@ NSArray *NSMutableArray_concreteNewWithCapacity(NSZone *zone,NSUInteger capacity
 }
 
 -initWithContentsOfFile:(NSString *)path {
-   NSUnimplementedMethod();
-   return self;
+    id contents=[NSPropertyListReader arrayWithContentsOfFile:path];
+
+    if(contents==nil)
+     return nil;
+
+    return [self initWithArray:contents];
 }
 
 -initWithObjects:(id *)objects count:(NSUInteger)count {

@@ -267,12 +267,11 @@ static NSKeyObserver *addKeyPathObserverToObject(id object,NSString *path,NSKeyP
    addKeyPathObserverToObject(self,keyPath,keyPathObserver);
 
    if(options&NSKeyValueObservingOptionInitial){
-    NSUnimplementedMethod();
-#if 0
-// this is wrong, should generate a clean notification
-    [self willChangeValueForKey:key];
-    [self didChangeValueForKey:key];
-#endif
+    NSDictionary *change=[NSDictionary dictionaryWithObjectsAndKeys:
+        [NSNumber numberWithInteger:NSKeyValueChangeSetting],NSKeyValueChangeKindKey,
+        [self valueForKeyPath:keyPath],NSKeyValueChangeNewKey,nil];
+
+    [observer observeValueForKeyPath:keyPath ofObject:self change:change context:context];
    }
 	NSKeyValueDebugLog(kNSKeyValueDebugLevel2, @"self: %@ added keyPathObserver: %@ for observer: %@ keyPath: %@", self, keyPathObserver, observer, keyPath);
 }

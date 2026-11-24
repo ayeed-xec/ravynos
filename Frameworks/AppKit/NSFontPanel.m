@@ -94,7 +94,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    view=[view retain];
    [_accessoryView release];
    _accessoryView=view;
-   NSUnimplementedMethod();
 }
 
 -(BOOL)worksWhenModal {
@@ -102,7 +101,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)reloadDefaultFontFamilies {
-   NSUnimplementedMethod();
+   [_familyMatrix renewRows:[[NSFontManager sharedFontManager] availableFontFamilies].count columns:1];
+   [_familyMatrix setNeedsDisplay:YES];
 }
 
 -(NSString *)selectedFamilyName {

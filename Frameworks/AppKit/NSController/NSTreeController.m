@@ -11,16 +11,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSTreeController
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
-   return self;
+   return [super initWithCoder:coder];
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [super encodeWithCoder:coder];
 }
 
 -copyWithZone:(NSZone *)zone {
-   NSUnimplementedMethod();
    return [self retain];
 }
 

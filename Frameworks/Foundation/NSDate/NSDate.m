@@ -240,7 +240,33 @@ const NSTimeInterval NSTimeIntervalSince1970 = (NSTimeInterval)978307200.0;
 @implementation NSDate(NSCalendarDateExtras)
 
 + (id)dateWithNaturalLanguageString:(NSString *)string {
-   NSUnimplementedMethod();
+   static NSArray *formats=nil;
+
+   if([[string lowercaseString] isEqualToString:@"now"])
+    return [self date];
+
+   if(formats==nil)
+    formats=[[NSArray alloc] initWithObjects:
+        @"yyyy-MM-dd HH:mm:ss Z",
+        @"yyyy-MM-dd HH:mm:ss",
+        @"yyyy-MM-dd HH:mm",
+        @"yyyy-MM-dd",
+        @"MM/dd/yyyy HH:mm:ss",
+        @"MM/dd/yyyy",
+        @"yyyyMMdd HHmmss",
+        @"yyyyMMdd",
+        @"HH:mm:ss",
+        @"HH:mm",nil];
+
+   for(NSString *format in formats){
+      NSDateFormatter *formatter=[[NSDateFormatter alloc] initWithDateFormat:format allowNaturalLanguage:NO];
+      NSDate *date=[formatter dateFromString:string];
+
+      [formatter release];
+      if(date!=nil)
+       return date;
+   }
+   return nil;
 }
 
 @end

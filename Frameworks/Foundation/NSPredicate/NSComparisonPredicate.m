@@ -14,6 +14,63 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
 #import "NSExpression_operator.h"
+#import <regex.h>
+#import <ctype.h>
+
+static BOOL matchRegularExpressionPattern(NSString *pattern, NSString *string, NSUInteger options) {
+    regex_t regex;
+    int flags = REG_EXTENDED|REG_NOSUB;
+
+    if (options&NSCaseInsensitivePredicateOption)
+        flags |= REG_ICASE;
+
+    if (regcomp(&regex, [pattern UTF8String], flags) != 0)
+        return NO;
+
+    int result = regexec(&regex, [string UTF8String], 0, NULL, 0);
+    regfree(&regex);
+    return result == 0;
+}
+
+static BOOL globMatch(const char *pattern, const char *string, NSUInteger options) {
+    int fold = options&NSCaseInsensitivePredicateOption;
+
+    while (*pattern != '\0') {
+        if (*pattern == '*') {
+            pattern++;
+            if (*pattern == '\0')
+                return YES;
+            for (; *string != '\0'; string++)
+                if (globMatch(pattern, string, options))
+                    return YES;
+            return NO;
+        }
+        if (*string == '\0')
+            return NO;
+        if (*pattern == '?') {
+            pattern++;
+            string++;
+            continue;
+        }
+        {
+            int pc = *pattern, sc = *string;
+
+            if (fold) {
+                pc = tolower(pc);
+                sc = tolower(sc);
+            }
+            if (pc != sc)
+                return NO;
+        }
+        pattern++;
+        string++;
+    }
+    return *string == '\0';
+}
+
+static BOOL matchGlobPattern(NSString *pattern, NSString *string, NSUInteger options) {
+    return globMatch([pattern UTF8String], [string UTF8String], options);
+}
 
 @implementation NSComparisonPredicate
 
@@ -224,12 +281,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
      return ![leftResult isEqual:rightResult];
      
     case NSMatchesPredicateOperatorType:
-     NSUnimplementedMethod();
-     return YES;
+     return matchRegularExpressionPattern([rightResult description],[leftResult description],_options);
      
     case NSLikePredicateOperatorType:
-     NSUnimplementedMethod();
-     return YES;
+     return matchGlobPattern([rightResult description],[leftResult description],_options);
      
     case NSBeginsWithPredicateOperatorType:{
       NSRange range = NSMakeRange(0,[rightResult length]);

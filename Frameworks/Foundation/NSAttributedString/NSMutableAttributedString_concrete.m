@@ -98,7 +98,7 @@ static NSUInteger decodeFromData(NSData* data, NSUInteger offset, NSUInteger *va
 			return [self initWithAttributedString: attrStr];
 		}
 	} else {
-		NSUnimplementedMethod();
+		[NSException raise:NSInvalidArgumentException format:@"non-keyed decoding is not supported for %@", NSStringFromClass([self class])];
 	}
 	return self;
 }
@@ -131,8 +131,8 @@ static NSUInteger decodeFromData(NSData* data, NSUInteger offset, NSUInteger *va
 			[keyed encodeObject: data forKey: @"NSAttributeInfo"];
 		}
 	} else {
-		NSUnimplementedMethod();
-	}	
+		[NSException raise:NSInvalidArgumentException format:@"non-keyed encoding is not supported for %@", NSStringFromClass([self class])];
+	}
 }
 
 -(void)dealloc {

@@ -247,11 +247,11 @@ NSString * const NSRunLoopCommonModes=@"kCFRunLoopCommonModes";
 }
 
 -(void)addPort:(NSPort *)port forMode:(NSString *)mode {
-   NSUnimplementedMethod();
+    [port scheduleInRunLoop:self forMode:mode];
 }
 
 -(void)removePort:(NSPort *)port forMode:(NSString *)mode {
-   NSUnimplementedMethod();
+    [port removeFromRunLoop:self forMode:mode];
 }
 
 -(void)addInputSource:(NSInputSource *)source forMode:(NSString *)mode {

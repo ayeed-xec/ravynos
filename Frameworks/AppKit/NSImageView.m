@@ -70,8 +70,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)setAllowsCutCopyPaste:(BOOL)allow {
-   if(allow!=NO)
-    NSUnimplementedMethod();
+   _allowsCutCopyPaste=allow;
 }
 
 -(void)setAnimates:(BOOL)flag {

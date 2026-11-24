@@ -77,7 +77,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -(id)initWithCoder:(id)coder {
    if(![coder allowsKeyedCoding]) {
-      NSUnimplementedMethod();
+      [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
    }
    else {
       BOOL sharedInstance=[coder decodeBoolForKey:@"NSSharedInstance"];

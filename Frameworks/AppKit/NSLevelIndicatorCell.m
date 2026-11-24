@@ -92,13 +92,28 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(double)tickMarkValueAtIndex:(int)index {
-   NSUnimplementedMethod();
-   return 0;
+   int count=_numberOfTickMarks;
+
+   if(count<=0 || index<0 || index>=count)
+    return 0;
+   if(count==1)
+    return _minValue;
+   return _minValue+(_maxValue-_minValue)*(index/(double)(count-1));
 }
 
 -(NSRect)rectOfTickMarkAtIndex:(int)index {
-   NSUnimplementedMethod();
-   return NSZeroRect;
+   int count=_numberOfTickMarks;
+   NSRect bounds=[[self controlView] bounds];
+   double fraction;
+
+   if(count<=0 || index<0 || index>=count)
+    return NSZeroRect;
+   if(count==1)
+    fraction=0;
+   else
+    fraction=index/(double)(count-1);
+
+   return NSMakeRect(bounds.origin.x+bounds.size.width*fraction-0.5,bounds.origin.y,1.0,3.0);
 }
 
 @end

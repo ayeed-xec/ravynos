@@ -1460,12 +1460,14 @@ static NSPredicate *nextTopLevelPredicate(predicateScanner *scanner){
 @implementation NSPredicate
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   NSString *format=[coder decodeObjectForKey:@"NSPredicateFormat"];
+
+   self=[[NSPredicate predicateWithFormat:format] retain];
    return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeObject:[self predicateFormat] forKey:@"NSPredicateFormat"];
 }
 
 -copyWithZone:(NSZone *)zone {

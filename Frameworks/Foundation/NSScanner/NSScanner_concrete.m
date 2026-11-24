@@ -15,6 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSLocale.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSZone.h>
+#import <Foundation/NSDecimalNumber.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -336,8 +337,53 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(BOOL)scanDecimal:(NSDecimal *)valuep {
-    NSUnimplementedMethod();
-    return NO;
+    NSString *string=[self string];
+    NSUInteger scanLocation=[self scanLocation], length=[string length];
+    NSUInteger start=scanLocation, end=scanLocation;
+    BOOL seenDot=NO, seenExp=NO, seenExpSign=NO;
+
+    if(end<length){
+        unichar c=[string characterAtIndex:end];
+
+        if(c=='+' || c=='-')
+         end++;
+    }
+    while(end<length){
+        unichar c=[string characterAtIndex:end];
+
+        if(c>='0' && c<='9'){
+           seenExpSign=NO;
+           end++;
+           continue;
+        }
+        if(c=='.' && seenDot==NO && seenExp==NO){
+           seenDot=YES;
+           end++;
+           continue;
+        }
+        if((c=='e' || c=='E') && seenExp==NO && end>start){
+           seenExp=YES;
+           end++;
+           continue;
+        }
+        if((c=='+' || c=='-') && seenExp && seenExpSign==NO){
+           seenExpSign=YES;
+           end++;
+           continue;
+        }
+        break;
+    }
+
+    if(end==start || (end==start+1 && ([string characterAtIndex:start]=='+' || [string characterAtIndex:start]=='-' || [string characterAtIndex:start]=='.')))
+     return NO;
+
+    if(valuep!=NULL){
+        NSDecimalNumber *number=[NSDecimalNumber decimalNumberWithString:[string substringWithRange:NSMakeRange(start,end-start)]];
+
+        *valuep=number->_decimal;
+    }
+    [self setScanLocation:end];
+    return YES;
 }
 
 // The documentation appears to be wrong, it returns -1 on overflow.

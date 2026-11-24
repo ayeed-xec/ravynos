@@ -211,9 +211,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 	
 }
 
-- (void)_setContentArrayForMultipleSelection:(id)value 
-{
-	NSUnimplementedMethod();
+- (void)_setContentArrayForMultipleSelection:(id)value {
+	[self setContent:value];
 }
 
 - (void)_setContentArray:(id)value 
@@ -682,13 +681,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 - (NSArray*)automaticRearrangementKeyPaths
 {
-	NSUnimplementedMethod();
 	return nil;
 }
 
 - (void)didChangeArrangementCriteria
 {
-	NSUnimplementedMethod();
+	[self rearrangeObjects];
 }
 
 #pragma mark -

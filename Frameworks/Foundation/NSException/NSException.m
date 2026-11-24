@@ -146,12 +146,16 @@ id _NSRaiseException(id exception) {
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   NSString *name=[coder decodeObjectForKey:@"NSName"];
+   NSString *reason=[coder decodeObjectForKey:@"NSReason"];
+
+   self=[self initWithName:name reason:reason userInfo:nil];
    return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeObject:_name forKey:@"NSName"];
+   [coder encodeObject:_reason forKey:@"NSReason"];
 }
 
 -(void)raise {

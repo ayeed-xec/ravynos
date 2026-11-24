@@ -13,7 +13,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSNibConnector
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeObject:_source forKey:@"NSSource"];
+    [keyed encodeObject:_destination forKey:@"NSDestination"];
+    [keyed encodeObject:_label forKey:@"NSLabel"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {

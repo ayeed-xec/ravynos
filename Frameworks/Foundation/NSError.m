@@ -11,6 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSRaise.h>
 #import <Foundation/NSBundle.h>
 #import <Foundation/NSZone.h>
+#import <Foundation/NSCoder.h>
 
 NSString * const NSPOSIXErrorDomain=@"NSPOSIXErrorDomain";
 NSString * const NSOSStatusErrorDomain=@"NSOSStatusErrorDomain";
@@ -41,11 +42,17 @@ NSString * const NSRecoveryAttempterErrorKey=@"NSRecoveryAttempterErrorKey";
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeObject:_domain forKey:@"NSDomain"];
+   [coder encodeInteger:_code forKey:@"NSCode"];
+   [coder encodeObject:_userInfo forKey:@"NSUserInfo"];
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   NSString *domain=[coder decodeObjectForKey:@"NSDomain"];
+   NSInteger code=[coder decodeIntegerForKey:@"NSCode"];
+   NSDictionary *userInfo=[coder decodeObjectForKey:@"NSUserInfo"];
+
+   self=[self initWithDomain:domain code:code userInfo:userInfo];
    return self;
 }
 

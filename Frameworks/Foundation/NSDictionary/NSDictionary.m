@@ -438,8 +438,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)descriptionInStringsFileFormat {
-   NSUnimplementedMethod();
-   return nil;
+   NSMutableString *result=[NSMutableString string];
+   NSEnumerator *keyEnum=[self keyEnumerator];
+   id key;
+
+   while((key=[keyEnum nextObject])!=nil){
+      [result appendFormat:@"%@ = %@;\n",key,[self objectForKey:key]];
+   }
+   return result;
 }
 
 -(NSString *)descriptionWithLocale:locale {
@@ -447,8 +453,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)descriptionWithLocale:locale indent:(NSUInteger)indent {
-   NSUnimplementedMethod();
-   return [self description];
+   NSString *base=[self description];
+   NSMutableString *result=[NSMutableString string];
+   NSEnumerator *lineEnum=[base componentsSeparatedByString:@"\n"].objectEnumerator;
+   NSString *line;
+   NSUInteger i;
+
+   while((line=[lineEnum nextObject])!=nil){
+      for(i=0;i<indent;i++)
+       [result appendString:@" "];
+      [result appendString:line];
+      [result appendString:@"\n"];
+   }
+   return result;
 }
 
 

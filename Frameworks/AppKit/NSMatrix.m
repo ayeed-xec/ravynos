@@ -21,7 +21,26 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSMatrix
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [super encodeWithCoder:coder];
+
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeInt:_numberOfRows forKey:@"NSRows"];
+    [keyed encodeInt:_numberOfColumns forKey:@"NSColumns"];
+    [keyed encodeDouble:_intercellSpacing.width forKey:@"NSIntercellSpacingWidth"];
+    [keyed encodeDouble:_intercellSpacing.height forKey:@"NSIntercellSpacingHeight"];
+    [keyed encodeDouble:_cellSize.width forKey:@"NSCellWidth"];
+    [keyed encodeDouble:_cellSize.height forKey:@"NSCellHeight"];
+    [keyed encodeInt:_selectedIndex forKey:@"NSSelectedIndex"];
+    [keyed encodeInt:_keyCellIndex forKey:@"NSKeyCell"];
+    [keyed encodeInt:_mode forKey:@"NSMode"];
+    [keyed encodeBool:_selectionByRect forKey:@"NSSelectionByRect"];
+    [keyed encodeBool:_allowsEmptySelection forKey:@"NSAllowsEmptySelection"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {

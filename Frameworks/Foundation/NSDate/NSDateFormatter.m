@@ -166,8 +166,11 @@ NSWeekDayNameArray];
 
 -(BOOL)isPartialStringValid:(NSString *)partialString
    newEditingString:(NSString **)newString errorDescription:(NSString **)error {
-   NSUnimplementedMethod();
-   return NO;
+   if(newString!=NULL)
+    *newString=nil;
+   if(error!=NULL)
+    *error=nil;
+   return [self dateFromString:partialString]!=nil;
 }
 
 @end

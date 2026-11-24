@@ -12,13 +12,23 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSCollectionViewItem
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeObject:_representedObject forKey:@"NSRepresentedObject"];
+    [keyed encodeObject:_collectionView forKey:@"NSCollectionView"];
+   }
+   else {
+    [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
    if([coder allowsKeyedCoding]){
     NSKeyedUnarchiver *keyed=(NSKeyedUnarchiver *)coder;
 
+    _representedObject=[keyed decodeObjectForKey:@"NSRepresentedObject"];
+    _collectionView=[keyed decodeObjectForKey:@"NSCollectionView"];
    }
    else {
     [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
@@ -28,8 +38,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -copyWithZone:(NSZone *)zone {
-   NSUnimplementedMethod();
-   return nil;
+   NSCollectionViewItem *copy=[[[self class] allocWithZone:zone] init];
+
+   [copy setRepresentedObject:[self representedObject]];
+   copy->_collectionView=[[self collectionView] retain];
+   return copy;
 }
 
 -(NSCollectionView *)collectionView {

@@ -172,16 +172,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -(void)dequeueNotificationsMatching:(NSNotification *)note
                        coalesceMask:(NSUInteger)mask {
-   NSUnimplementedMethod();
+   NSMutableArray *queues[2]={_asapQueue,_idleQueue};
+   NSInteger q;
 
-   if(mask==(NSNotificationCoalescingOnName|NSNotificationCoalescingOnSender)){
+   for(q=0;q<2;q++){
+      NSInteger i;
 
-   }
-   else if(mask==NSNotificationCoalescingOnName){
+      for(i=[queues[q] count]-1;i>=0;i--){
+         NSNotification *candidate=[[queues[q] objectAtIndex:i] notification];
+         BOOL matches=YES;
 
-   }
-   else if(mask==NSNotificationCoalescingOnSender){
+         if(mask&NSNotificationCoalescingOnName && [candidate name]!=[note name])
+          matches=NO;
+         if(mask&NSNotificationCoalescingOnSender && [candidate object]!=[note object])
+          matches=NO;
 
+         if(matches)
+          [queues[q] removeObjectAtIndex:i];
+      }
    }
 }
 
