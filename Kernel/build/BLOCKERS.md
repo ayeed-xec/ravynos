@@ -49,6 +49,19 @@ Updated: 2026-11-24. Tool: clang 21.1.8 (Ubuntu), bison/flex present.
    xnu, osfmk, osfmk/i386, pexpert, iokit, libkern, libkern/libc,
    bsd, EXTERNAL_HEADERS, build/config-include, build/mig/shim,
    build/mig/gen.
+   Additional finding: some plain `<x.h>` includes resolve through
+   xnu's export-headers mechanism, not the source tree — e.g.
+   `startup.c` does `#include <debug.h>` which only works because
+   `osfmk/kern/Makefile` installs `kern/debug.h` into
+   `$(OBJROOT)/EXPORT_HDRS/osfmk` (a flattened dir on the include
+   path). The build driver must reproduce the export_hdrs install
+   step (walk each component Makefile's `EXPORT_FILES` /
+   `INSTALL_*_LIST`, copy into a flat dir) or add per-file shims.
+   Retested `osfmk/kern/startup.c` syntax with the new gen/config
+   paths: past the old `run_queue`/coalition failures, now stops at
+   this flattened-header resolution (`debug.h`, plus `NULL` needing
+   proper include order in kcdata.h) — progress confirmed, exact
+   remaining work is the export-headers step above.
 2. First kernel .c syntax attempt previously stopped at `debug.h`
    include resolution (osfmk/kern/startup.c); retest now that the
    generated headers and config-include exist.
