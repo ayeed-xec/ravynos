@@ -16,3 +16,6 @@
 - Extensions/IOPCIFamily (SPDX:APSL-1.1,SPDX:APSL-2.0)
 - Extensions/pthread (SPDX:APSL-2.0)
 - kext_tools (SPDX:APSL-2.0)
+
+* Imported from opensource.apple.com tarball: IONetworkingFamily-188
+- Extensions/IONetworkingFamily (SPDX:APSL-2.0)

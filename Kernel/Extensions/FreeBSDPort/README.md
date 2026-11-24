@@ -27,9 +27,24 @@ needed for modern em/igb drivers; revisit for e1000).
   (`vtnet/`, later `e1000/`), each registered in `Kernel/Extensions/`
   build like the existing families.
 
-## Prerequisite imports (not in this directory)
+## Status
 
-`IONetworkingFamily` and `IOPCIFamily` from Apple's open-source releases, into
-`Kernel/Extensions/`, mirroring how `IOHIDFamily`/`IOPCIFamily` entries sit
-there today. Packet path target: shim virtqueue interrupt handler feeds
-mbufs into the in-tree xnu `bsd` ifnet interface; TCP/IP needs no changes.
+- `shim/FreeBSD/net_kpi.h` — network KPI mappings: FreeBSD mbuf/if_t map
+  onto xnu's own `kpi_mbuf.h`/`kpi_interface.h` (real implementations, no
+  stubs); bus_space accessors map onto `IOMemoryMap` reads/writes; PCI
+  config accessors map onto `IOPCIDevice`.
+- `vtnet/` — FreeBSD 11.4 originals imported verbatim (BSD 2-clause):
+  `virtio.c`, `virtqueue.c`, `virtio_pci.c`, `if_vtnet.c` and their
+  headers (3968 lines in `if_vtnet.c` alone). Porting work = shadowing
+  their includes with the shim and registering the controller subclass;
+  packet path is shim virtqueue interrupt handler feeding mbufs through
+  IONetworkingFamily into the in-tree xnu `bsd` ifnet interface.
+
+## Prerequisite imports (now done)
+
+- `Kernel/Extensions/IONetworkingFamily` — imported from the Apple
+  opensource.apple.com tarball `IONetworkingFamily-188` (APSL-2.0); see
+  `Kernel/_PROVENANCE`.
+- `Kernel/Extensions/IOPCIFamily` — already in-tree from the PureDarwin
+  import.
+

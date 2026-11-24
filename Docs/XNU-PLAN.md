@@ -27,6 +27,22 @@ Order of work:
 4. Deliver packets into the existing xnu `bsd` ifnet path; DHCP + TCP then
    work with no userland changes.
 
+Status (2026-11-24): steps 1-3 imports done. IONetworkingFamily-188 imported
+from opensource.apple.com into `Kernel/Extensions/IONetworkingFamily`
+(IOPCIFamily was already in-tree from PureDarwin); provenance recorded in
+`Kernel/_PROVENANCE`. FreeBSDPort grew `shim/FreeBSD/net_kpi.h`: FreeBSD
+mbuf/if_t map onto xnu's own real KPIs (`bsd/sys/kpi_mbuf.h`,
+`bsd/net/kpi_interface.h`), bus_space onto IOMemoryMap, PCI config onto
+IOPCIDevice — no stubs. FreeBSD 11.4 virtio sources imported verbatim into
+`FreeBSDPort/vtnet/` (virtio.c, virtqueue.c, virtio_pci.c, if_vtnet.c
+[3968 lines], headers, bus interfaces). Shim include tree under
+`FreeBSDPort/shim/IOKit/network/` forwards `<IOKit/network/...>` to the
+imported sources. Compile status: includes resolve deep into the xnu tree;
+the remaining blocker for host syntax checks is `mach/clock.h`, a
+mig-generated header (from `osfmk/mach/clock.defs`) — no `mig` on this host.
+Next: run the xnu headers build to generate mach headers, then
+clang-syntax the shim + vtnet port, then wire the controller subclass.
+
 ## Workstream 2 — xnu performance
 
 - Host: this machine has no `/dev/kvm`, so QEMU runs TCG. Levers available:
