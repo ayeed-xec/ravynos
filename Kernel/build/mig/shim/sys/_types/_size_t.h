@@ -1,5 +1,6 @@
 #ifndef _MIG_SHIM_SIZE_T_H
 #define _MIG_SHIM_SIZE_T_H
 #include <stddef.h>
-typedef __darwin_size_t size_t_d;
+#include <stdint.h>
+typedef __SIZE_TYPE__ __darwin_size_t;
 #endif

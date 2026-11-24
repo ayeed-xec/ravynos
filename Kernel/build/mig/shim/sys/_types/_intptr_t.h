@@ -1,6 +1,5 @@
-#ifndef _MIG_SHIM_intptr_t_H
-#define _MIG_SHIM_intptr_t_H
-#include <stdint.h>
-typedef long __darwin_intptr_t;
-typedef __darwin_intptr_t intptr_t;
+#ifndef _MIG_SHIM_INTPTR_T_H
+#define _MIG_SHIM_INTPTR_T_H
+typedef long intptr_t;
+typedef unsigned long uintptr_t;
 #endif

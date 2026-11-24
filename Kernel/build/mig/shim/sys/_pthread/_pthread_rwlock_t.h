@@ -1,0 +1,5 @@
+#ifndef _MIG_SHIM_PTHREAD_RWLOCK_T_H
+#define _MIG_SHIM_PTHREAD_RWLOCK_T_H
+typedef struct _opaque_pthread_rwlock_t __darwin_pthread_rwlock_t;
+typedef __darwin_pthread_rwlock_t pthread_rwlock_t;
+#endif
