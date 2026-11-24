@@ -14,7 +14,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 @interface NSConstantString : NSString {
 	unsigned flags;
-	unsigned long _length;
+	unsigned _length;
 	unsigned size;
 	unsigned hash;
 	const char *_bytes;

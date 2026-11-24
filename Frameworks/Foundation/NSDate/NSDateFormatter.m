@@ -20,6 +20,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSCalendar.h>
 #import <Foundation/NSNumber.h>
 
+NSString *NSNormalizedDateFormatString(NSString *format);
+
 @implementation NSDateFormatter
 
 -initWithDateFormat:(NSString *)format allowNaturalLanguage:(BOOL)flag {
@@ -107,11 +109,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 - (NSString *)stringFromDate:(NSDate *)date {
-	return NSStringWithDateFormatLocale([date timeIntervalSinceReferenceDate], [self dateFormat], nil, _tz);
+	return NSStringWithDateFormatLocale([date timeIntervalSinceReferenceDate], NSNormalizedDateFormatString([self dateFormat]), nil, _tz);
 }
 
 - (NSDate*)dateFromString:(NSString*)string {
-    return NSDateWithStringDateFormatLocale(string, [self dateFormat], nil, _tz);
+    return NSDateWithStringDateFormatLocale(string, NSNormalizedDateFormatString([self dateFormat]), nil, _tz);
 }
 
 - (NSArray *)shortStandaloneWeekdaySymbols {
@@ -368,6 +370,64 @@ NSInteger NSMillisecondsFromTimeInterval(NSTimeInterval interval){ // 0-999
         milli = (1000 + milli);
     }
     return milli;
+}
+
+// ICU/UDateFormat-style template -> strftime-style specifiers this engine
+// understands ("yyyy-MM-dd" -> "%Y-%m-%d"). Apple's documented user-facing
+// date templates use these pattern letters.
+NSString *NSNormalizedDateFormatString(NSString *format) {
+    if ([format rangeOfString:@"%"].location != NSNotFound)
+        return format; // already strftime-style
+    NSMutableString *out = [NSMutableString stringWithCapacity:[format length]];
+    unichar quote = 0;
+    NSUInteger i = 0, len = [format length];
+    while (i < len) {
+        unichar c = [format characterAtIndex:i];
+        NSUInteger run = 1;
+        while (i + run < len && [format characterAtIndex:i + run] == c) run++;
+        if (quote) {
+            if (c == quote) { quote = 0; }
+            else [out appendFormat:@"%C", c];
+            i += run; continue;
+        }
+        if (c == '\'' ) {
+            if (run >= 2) [out __appendCharacter:'\''];
+            else quote = c;
+            i += run; continue;
+        }
+        switch (c) {
+            case 'y': // year: yy = 2-digit, otherwise full
+                [out appendString:(run == 2) ? @"%y" : @"%Y"]; break;
+            case 'Y': [out appendString:(run == 2) ? @"%y" : @"%Y"]; break;
+            case 'M': // month: MM numeric, MMM short, MMMM full
+                if (run >= 4) [out appendString:@"%B"];
+                else if (run == 3) [out appendString:@"%b"];
+                else [out appendString:@"%m"]; break;
+            case 'L': if (run >= 4) [out appendString:@"%B"];
+                else if (run == 3) [out appendString:@"%b"];
+                else [out appendString:@"%m"]; break;
+            case 'd': [out appendString:@"%d"]; break;
+            case 'D': [out appendString:@"%j"]; break;
+            case 'F': break; // day of week in month: no strftime equivalent, skip
+            case 'E': if (run >= 4) [out appendString:@"%A"]; else [out appendString:@"%a"]; break;
+            case 'e': [out appendString:@"%w"]; break;
+            case 'a': [out appendString:@"%p"]; break;
+            case 'h': [out appendString:@"%I"]; break;
+            case 'H': [out appendString:@"%H"]; break;
+            case 'K': case 'k': [out appendString:@"%H"]; break;
+            case 'm': [out appendString:@"%M"]; break;
+            case 's': [out appendString:@"%S"]; break;
+            case 'S': [out appendString:@"%F"]; break;
+            case 'z': case 'Z': case 'v': case 'V': case 'x': case 'X': case 'O':
+                [out appendString:(run >= 4) ? @"%Z" : @"%z"]; break;
+            case 'G': case 'u': case 'Q': case 'q': case 'W': case 'w':
+                break; // era/quarter/week: not representable, skip
+            default: // literal text (punctuation, spaces, etc.)
+                for (NSUInteger k = 0; k < run; k++) [out __appendCharacter:c]; break;
+        }
+        i += run;
+    }
+    return out;
 }
 
 NSString *NSStringWithDateFormatLocale(NSTimeInterval interval,NSString *format,NSDictionary *locale,NSTimeZone *timeZone) {

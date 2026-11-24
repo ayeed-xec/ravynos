@@ -22,6 +22,7 @@ SOFTWARE.*/
 #import <Foundation/NSObject.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSException.h>
+#import <Foundation/NSZone.h>
 #import <Foundation/NSHashTable.h>
 #import <Foundation/NSObjCRuntime.h>
 #import <Foundation/NSInvocation.h>
@@ -32,6 +33,10 @@ SOFTWARE.*/
 #import <Foundation/NSRaise.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+
+/* The bundled objc/message.h is the GCC-runtime variant which does not declare
+ * the NeXT-style messaging entry point we link against (libobjc2). */
+extern id objc_msgSend(id self,SEL _cmd,...);
 #include <stdio.h>
 #import "forwarding.h"
 
@@ -229,6 +234,18 @@ extern id objc_autorelease(id obj);
     return imp;
 }
 
+-(id)performSelector:(SEL)aSelector {
+    return ((id (*)(id,SEL))objc_msgSend)(self,aSelector);
+}
+
+-(id)performSelector:(SEL)aSelector withObject:(id)object {
+    return ((id (*)(id,SEL,id))objc_msgSend)(self,aSelector,object);
+}
+
+-(id)performSelector:(SEL)aSelector withObject:(id)object1 withObject:(id)object2 {
+    return ((id (*)(id,SEL,id,id))objc_msgSend)(self,aSelector,object1,object2);
+}
+
 -(void)doesNotRecognizeSelector:(SEL)aSelector {
     [NSException raise:NSInvalidArgumentException
         format:@"%s does not recognize selector %s",
@@ -241,23 +258,36 @@ extern id objc_autorelease(id obj);
 
 -(instancetype)retain {
     /* Call the runtime refcount primitive directly: objc_retain() would
-     * dispatch back to -retain for non-ARC classes and recurse forever. */
-    objc_retain_fast_np(self);
+     * dispatch back to -retain for non-ARC classes and recurse forever.
+     * Tagged pointers have no refcount; the runtime's objc_retain is the
+     * one call that knows how to ignore them. */
+    if(((uintptr_t)self & 0x1) == 0)
+        objc_retain_fast_np(self);
     return self;
 }
 
 -(oneway void)release {
-    /* libobjc2 sends -dealloc when the reference count reaches zero */
-    objc_release_fast_np(self);
+    /* libobjc2 sends -dealloc when the reference count reaches zero.
+     * Tagged pointers have no refcount and are never deallocated. */
+    if(((uintptr_t)self & 0x1) == 0)
+        objc_release_fast_np(self);
 }
 
 -(NSUInteger)retainCount {
+    if(((uintptr_t)self & 0x1) != 0)
+        return NSUIntegerMax;
     return object_getRetainCount_np(self);
 }
 
 -(instancetype)autorelease {
     objc_autorelease(self);
     return self;
+}
+
+/* Tells libobjc2 that the root class owns retain/release/autorelease, so
+ * objc_autorelease() routes through +[NSAutoreleasePool addObject:] instead
+ * of messaging -autorelease (which would recurse back into objc_autorelease). */
+-(void)_ARCCompliantRetainRelease {
 }
 
 -(void)dealloc {
@@ -287,7 +317,11 @@ extern id objc_autorelease(id obj);
 }
 
 +(id)alloc {
-    return NSAllocateObject(self, 0, NULL);
+    return [self allocWithZone:NULL];
+}
+
++(id)new {
+    return [[self alloc] init];
 }
 
 + (NSMethodSignature *) methodSignatureForSelector:(SEL) sel

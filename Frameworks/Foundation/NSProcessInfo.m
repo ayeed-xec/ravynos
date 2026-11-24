@@ -203,6 +203,21 @@ const char * const *NSProcessInfoArgv=NULL;
 
 int __NSConstantStringClassReference[24];
 
+/* Clang emits @"..." literals under the gnustep-2.0 runtime as tagged
+ * pointers whose class must be in SmallObjectClasses before any literal
+ * is used, so register it when the library loads rather than relying on
+ * a main() shim. */
+__attribute__((constructor))
+static void NSRegisterTinyConstantStringClass(void) {
+#if !defined(__APPLE__)
+    extern BOOL objc_registerSmallObjectClass_np(void *cls, unsigned long classId);
+    if(objc_registerSmallObjectClass_np(objc_getClass("NSConstantString_tiny"),4) == 0) {
+        fprintf(stderr, "Error during initialization: unable to register tiny string class");
+        abort();
+    }
+#endif
+}
+
 FOUNDATION_EXPORT void __NSInitializeProcess(int argc,const char *argv[]) {
    NSProcessInfoArgc=argc;
    NSProcessInfoArgv=argv;
@@ -210,11 +225,8 @@ FOUNDATION_EXPORT void __NSInitializeProcess(int argc,const char *argv[]) {
     OBJCInitializeProcess();
 #endif
 #if !defined(__APPLE__)
-    extern BOOL objc_registerSmallObjectClass_np(void *cls, unsigned long classId);
-    if(objc_registerSmallObjectClass_np(objc_getClass("NSConstantString_tiny"),4) == 0) {
-        fprintf(stderr, "Error during initialization: unable to register tiny string class");
-        abort();
-    }
+    /* Tiny-string class registration happens in the load-time constructor
+     * above; see NSRegisterTinyConstantStringClass. */
 #endif
 #if defined(__APPLE__)
     Class cls = objc_getClass("__builtin_NSString");

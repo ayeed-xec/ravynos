@@ -8,8 +8,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #import <Foundation/NSObject.h>
 
+@class NSMutableArray;
+
 @interface NSAutoreleasePool : NSObject {
-    struct objc_autoreleasepool *_pool;
+    NSMutableArray *_objects;
+    NSAutoreleasePool *_previousPool;
 }
 
 + (void)addObject:object;

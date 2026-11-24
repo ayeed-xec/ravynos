@@ -28,6 +28,20 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    return NSAutorelease(NSEnumerator_dictionaryKeysNew(_table));
 }
 
+-(void)getObjects:(id *)objects andKeys:(id *)keys {
+   NSUInteger i,count;
+   NSEnumerator *keyEnum,*valueEnum;
+
+   count=[self count];
+   keyEnum=[self keyEnumerator];
+   for(i=0;i<count;i++)
+    keys[i]=[keyEnum nextObject];
+
+   valueEnum=[self objectEnumerator];
+   for(i=0;i<count;i++)
+    objects[i]=[valueEnum nextObject];
+}
+
 -init {
    return [self initWithObjects:NULL forKeys:NULL count:0];
 }
@@ -37,7 +51,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
    _table=NSCreateMapTableWithZone(NSObjectMapKeyCallBacks,
      NSObjectMapValueCallBacks,count,NULL);
-
    for(i=0;i<count;i++){
        if (keys[i]==nil){
            [self autorelease];

@@ -31,6 +31,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 + dictionaryWithContentsOfURL:(NSURL *)url;
 
 - objectForKey:key;
+- objectForKeyedSubscript:key;
 - (NSUInteger)count;
 - (NSEnumerator *)keyEnumerator;
 - (NSEnumerator *)objectEnumerator;

@@ -92,13 +92,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    id      *objects,*keys;
 
    va_start(arguments,first);
-   count=1;
+   count=2;                      /* first and its key */
    while(va_arg(arguments,id)!=nil)
     count++;
    va_end(arguments);
 
-   objects=__builtin_alloca(sizeof(id)*count/2);
-   keys=__builtin_alloca(sizeof(id)*count/2);
+   /* count is the number of arguments before the nil terminator, so the
+    * pair count is count/2 */
+   objects=__builtin_alloca(sizeof(id)*(count/2));
+   keys=__builtin_alloca(sizeof(id)*(count/2));
 
    va_start(arguments,first);
    objects[0]=first;
@@ -168,13 +170,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    id      *objects,*keys;
 
    va_start(arguments,first);
-   count=1;
+   count=2;                      /* first and its key */
    while(va_arg(arguments,id)!=nil)
     count++;
    va_end(arguments);
 
-   objects=__builtin_alloca(sizeof(id)*count/2);
-   keys=__builtin_alloca(sizeof(id)*count/2);
+   /* count is the number of arguments before the nil terminator, so the
+    * pair count is count/2 */
+   objects=__builtin_alloca(sizeof(id)*(count/2));
+   keys=__builtin_alloca(sizeof(id)*(count/2));
 
    va_start(arguments,first);
    objects[0]=first;
@@ -273,17 +277,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -objectForKey:key {
-   //NSInvalidAbstractInvocation();
+   NSInvalidAbstractInvocation();
    return nil;
 }
 
+-objectForKeyedSubscript:key {
+   return [self objectForKey:key];
+}
+
 -(NSUInteger)count {
-   //NSInvalidAbstractInvocation();
+   NSInvalidAbstractInvocation();
    return 0;
 }
 
 -(NSEnumerator *)keyEnumerator {
-   //NSInvalidAbstractInvocation();
+   NSInvalidAbstractInvocation();
    return nil;
 }
 
