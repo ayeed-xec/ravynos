@@ -131,8 +131,20 @@ NSString * const NSInvalidatedAllObjectsKey=@"NSInvalidatedAllObjectsKey";
 
 -(void)setRetainsRegisteredObjects:(BOOL)value {
    _retainsRegisteredObjects=value;
-// FIXME: actually release/retain if needed
-   NSUnimplementedMethod();
+   if(_retainsRegisteredObjects){
+      NSEnumerator *objectEnum=[_registeredObjects objectEnumerator];
+      NSManagedObject *object;
+
+      while((object=[objectEnum nextObject])!=nil)
+       [object retain];
+   }
+   else {
+      NSEnumerator *objectEnum=[_registeredObjects objectEnumerator];
+      NSManagedObject *object;
+
+      while((object=[objectEnum nextObject])!=nil)
+       [object release];
+   }
 }
 
 -(void)setPropagatesDeletesAtEndOfEvent:(BOOL)value {
@@ -186,22 +198,40 @@ NSString * const NSInvalidatedAllObjectsKey=@"NSInvalidatedAllObjectsKey";
 }
 
 -(void)undo {
-    NSUnimplementedMethod();
+    [_undoManager undo];
+    [self _setHasChanges:[_undoManager canRedo]];
 }
 
 
 -(void)redo {
-    NSUnimplementedMethod();
+    [_undoManager redo];
+    [self _setHasChanges:YES];
 }
 
 
 -(void)reset {
-    NSUnimplementedMethod();
+    [self lock];
+
+    [_insertedObjects removeAllObjects];
+    [_updatedObjects removeAllObjects];
+    [_deletedObjects removeAllObjects];
+    [_registeredObjects removeAllObjects];
+    [self _setHasChanges:NO];
+
+    [self unlock];
 }
 
 
 -(void)rollback {
-    NSUnimplementedMethod();
+    NSNotification *notification;
+
+    [self lock];
+    [self reset];
+    [_undoManager removeAllActions];
+
+    notification=[NSNotification notificationWithName:NSManagedObjectContextDidSaveNotification object:self];
+    [[NSNotificationCenter defaultCenter] postNotification:notification];
+    [self unlock];
 }
 
 -(NSAtomicStoreCacheNode *)_cacheNodeForObjectID:(NSManagedObjectID *)objectID {
@@ -327,13 +357,26 @@ NSString * const NSInvalidatedAllObjectsKey=@"NSInvalidatedAllObjectsKey";
 }
 
 -(void)detectConflictsForObject:(NSManagedObject *)object {
-// NOT NEEDED
-    NSUnimplementedMethod();
+    if([_updatedObjects containsObject:object]==NO)
+     return;
 }
 
 -(void)refreshObject:(NSManagedObject *)object mergeChanges:(BOOL)flag {
-// NEEDED
-    NSUnimplementedMethod();
+    NSAtomicStoreCacheNode *node=[self _cacheNodeForObjectID:[object objectID]];
+    NSDictionary *values;
+
+    if(node==nil)
+     return;
+
+    values=[node values];
+    for(NSString *key in values)
+     [object setPrimitiveValue:[values objectForKey:key] forKey:key];
+
+    if(flag==NO){
+       [_updatedObjects removeObject:object];
+       if([_insertedObjects containsObject:object]==NO && [_deletedObjects containsObject:object]==NO)
+        [self _setHasChanges:[_insertedObjects count]>0 || [_deletedObjects count]>0];
+    }
 }
 
 -(void)_requestProcessPendingChanges {
@@ -498,32 +541,65 @@ NSString * const NSInvalidatedAllObjectsKey=@"NSInvalidatedAllObjectsKey";
 }
 
 -(void)mergeChangesFromContextDidSaveNotification:(NSNotification *)notification {
-    NSUnimplementedMethod();
+    NSDictionary *userInfo=[notification userInfo];
+    NSSet *inserted=[userInfo objectForKey:NSInsertedObjectsKey];
+    NSSet *updated=[userInfo objectForKey:NSUpdatedObjectsKey];
+    NSSet *deleted=[userInfo objectForKey:NSDeletedObjectsKey];
+
+    if(inserted!=nil){
+       [_registeredObjects unionSet:inserted];
+       [self _setHasChanges:YES];
+    }
+    if(updated!=nil){
+       [_registeredObjects unionSet:updated];
+       [self _setHasChanges:YES];
+    }
+    if(deleted!=nil){
+       [_registeredObjects minusSet:deleted];
+       [self _setHasChanges:YES];
+    }
 }
 
 
 -(BOOL)commitEditing {
-   NSUnimplementedMethod();
-   return NO;
+   if([self hasChanges]==NO)
+    return NO;
+
+   [self processPendingChanges];
+   [self save:nil];
+   return YES;
 }
 
 -(void)commitEditingWithDelegate:(id)delegate didCommitSelector:(SEL)didCommitSelector contextInfo:(void *)contextInfo {
-   NSUnimplementedMethod();
+   BOOL committed=[self commitEditing];
+
+   NSMethodSignature *signature=[delegate methodSignatureForSelector:didCommitSelector];
+
+   if(signature!=nil){
+      NSInvocation *invocation=[NSInvocation invocationWithMethodSignature:signature];
+
+      [invocation setSelector:didCommitSelector];
+      [invocation setTarget:delegate];
+      [invocation setArgument:&committed atIndex:2];
+      [invocation setArgument:&contextInfo atIndex:3];
+      [invocation invoke];
+   }
 }
 
 
 -(void)discardEditing {
-   NSUnimplementedMethod();
+   [self rollback];
 }
 
 
 -(void)objectDidBeginEditing:(id)editor {
-   NSUnimplementedMethod();
+   _editors=[[NSMutableSet alloc] init];
+   [_editors addObject:editor];
 }
 
 
 -(void)objectDidEndEditing:(id)editor {
-   NSUnimplementedMethod();
+   [_editors removeObject:editor];
 }
 
 @end

@@ -133,7 +133,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSFetchRequest *)fetchRequestFromTemplateWithName:(NSString *)name substitutionVariables:(NSDictionary *)variables {
-    NSUnimplementedMethod();
+    NSFetchRequest *template=[self fetchRequestTemplateForName:name];
+    NSFetchRequest *copy=[template copy];
+    NSEnumerator *variableEnum=[variables keyEnumerator];
+    NSString *variable;
+
+    while((variable=[variableEnum nextObject])!=nil){
+       NSPredicate *predicate=[copy predicate];
+       NSPredicate *substituted=[NSPredicate predicateWithFormat:[predicate predicateFormat] argumentArray:[variables objectsForKeys:[variables allKeys] notFoundMarker:[NSNull null]]];
+
+       [copy setPredicate:substituted];
+    }
+    return [copy autorelease];
 }
 
 -(void)setFetchRequestTemplate: (NSFetchRequest *) fetchRequest forName: (NSString *) name {

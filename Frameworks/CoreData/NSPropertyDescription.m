@@ -60,59 +60,64 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 - (BOOL) isOptional {
-    NSUnimplementedMethod();
-    return NO;
+    return _isOptional;
 }
 
 
 - (BOOL) isTransient {
-    NSUnimplementedMethod();
-    return NO;
+    return _isTransient;
 }
 
 
 - (NSDictionary *) userInfo {
-    NSUnimplementedMethod();
-    return nil;
+    return _userInfo;
 }
 
 
 - (NSArray *) validationPredicates {
-    NSUnimplementedMethod();
-    return nil;
+    return _validationPredicates;
 }
 
 
 - (NSArray *) validationWarnings {
-    NSUnimplementedMethod();
-    return nil;
+    return _validationWarnings;
 }
 
 
 - (void) setName: (NSString *) value {
-    NSUnimplementedMethod();
+    if(_propertyName!=nil)
+     [_propertyName release];
+    _propertyName=[value copy];
 }
 
 
 - (void) setOptional: (BOOL) value {
-    NSUnimplementedMethod();
+    _isOptional=value;
 }
 
 
 - (void) setTransient: (BOOL) value {
-    NSUnimplementedMethod();
+    _isTransient=value;
 }
 
 
 - (void) setUserInfo: (NSDictionary *) value {
-    NSUnimplementedMethod();
+    [value retain];
+    [_userInfo release];
+    _userInfo=value;
 }
 
 
 - (void) setValidationPredicates: (NSArray *) predicates
 	  withValidationWarnings: (NSArray *) warnings
 {
-    NSUnimplementedMethod();
+    [predicates retain];
+    [_validationPredicates release];
+    _validationPredicates=predicates;
+
+    [warnings retain];
+    [_validationWarnings release];
+    _validationWarnings=warnings;
 }
 
 

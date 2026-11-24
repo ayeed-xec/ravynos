@@ -17,8 +17,7 @@
 }
 
 +(Class)migrationManagerClass {
-   NSUnimplementedMethod();
-   return 0;
+   return nil;
 }
 
 -initWithPersistentStoreCoordinator:(NSPersistentStoreCoordinator *)root configurationName:(NSString *)name URL:(NSURL *)url options:(NSDictionary *)options {
@@ -79,7 +78,7 @@
 }
 
 -(void)setReadOnly:(BOOL)value {
-   NSUnimplementedMethod();
+   _isReadOnly=value;
 }
 
 -(void)setIdentifier:(NSString *)value {
@@ -89,11 +88,20 @@
 }
 
 -(void)setMetadata:(NSDictionary *)value {
-   NSUnimplementedMethod();
+   [value retain];
+   [_metadata release];
+   _metadata=value;
 }
 
 -(BOOL)loadMetadata:(NSError **)error {
-   NSUnimplementedMethod();
+   NSDictionary *metadata=[[[self class] metadataForPersistentStoreWithURL:_url error:error] retain];
+
+   if(metadata==nil)
+    return NO;
+
+   [_metadata release];
+   _metadata=metadata;
+   return YES;
 }
 
 -(void)willRemoveFromPersistentStoreCoordinator:(NSPersistentStoreCoordinator *)coordinator {

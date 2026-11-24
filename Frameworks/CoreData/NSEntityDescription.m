@@ -329,7 +329,13 @@ static void appendMethodToList(Class class,NSString *selectorName,IMP imp,const 
     return;
    }
     
-   NSUnimplementedMethod();
+   [_properties removeAllObjects];
+   for(NSPropertyDescription *property in value){
+      NSString *propertyName=[property name];
+
+      if(propertyName!=nil)
+       [_properties setObject:property forKey:propertyName];
+   }
 }
 
 
@@ -339,7 +345,12 @@ static void appendMethodToList(Class class,NSString *selectorName,IMP imp,const 
 	return;
     }
     
-    NSUnimplementedMethod();
+    for(NSEntityDescription *subentity in value){
+       NSString *subentityName=[subentity name];
+
+       if(subentityName!=nil)
+        [_subentities setObject:subentity forKey:subentityName];
+    }
 }
 
 
@@ -361,8 +372,7 @@ static void appendMethodToList(Class class,NSString *selectorName,IMP imp,const 
 
 
 -(NSDictionary *)subentitiesByName {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSDictionary dictionaryWithDictionary:_subentities];
 }
 
 

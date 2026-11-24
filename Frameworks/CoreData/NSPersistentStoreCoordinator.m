@@ -104,8 +104,21 @@ static NSMutableDictionary *_storeTypes=nil;
 }
 
 -(NSPersistentStore *)migratePersistentStore:(NSPersistentStore *)store toURL:(NSURL *)URL options:(NSDictionary *)options withType:(NSString *)storeType error:(NSError **)error {
-    NSUnimplementedMethod();
-    return nil;
+    NSDictionary *metadata=[store metadata];
+
+    [self removePersistentStore:store error:error];
+
+    NSPersistentStore *newStore=[self addPersistentStoreWithType:storeType
+                                                  configurationName:[store configurationName]
+                                                              URL:URL
+                                                          options:options
+                                                            error:error];
+
+    if(newStore==nil)
+     return nil;
+
+    [newStore setMetadata:metadata];
+    return newStore;
 }
 
 -(NSArray *)persistentStores {

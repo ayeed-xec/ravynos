@@ -23,12 +23,34 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithCoder: (NSCoder *) coder {
-   NSUnimplementedMethod();
-   return nil;
+   if([coder allowsKeyedCoding]){
+      _resultType=[coder decodeIntegerForKey:@"resultType"];
+      _entity=[coder decodeObjectForKey:@"entity"];
+      _predicate=[coder decodeObjectForKey:@"predicate"];
+      _sortDescriptors=[coder decodeObjectForKey:@"sortDescriptors"];
+      _fetchLimit=[coder decodeIntegerForKey:@"fetchLimit"];
+      _fetchOffset=[coder decodeIntegerForKey:@"fetchOffset"];
+      _includesPropertyValues=[coder decodeBoolForKey:@"includesPropertyValues"];
+   }
+   else {
+      [NSException raise:NSInvalidArgumentException format:@"non-keyed decoding is not supported for %@", NSStringFromClass([self class])];
+   }
+   return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if([coder allowsKeyedCoding]){
+      [coder encodeInteger:_resultType forKey:@"resultType"];
+      [coder encodeObject:_entity forKey:@"entity"];
+      [coder encodeObject:_predicate forKey:@"predicate"];
+      [coder encodeObject:_sortDescriptors forKey:@"sortDescriptors"];
+      [coder encodeInteger:_fetchLimit forKey:@"fetchLimit"];
+      [coder encodeInteger:_fetchOffset forKey:@"fetchOffset"];
+      [coder encodeBool:_includesPropertyValues forKey:@"includesPropertyValues"];
+   }
+   else {
+      [NSException raise:NSInvalidArgumentException format:@"non-keyed encoding is not supported for %@", NSStringFromClass([self class])];
+   }
 }
 
 -copyWithZone:(NSZone *)zone {

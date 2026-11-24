@@ -34,6 +34,7 @@ COREDATA_EXPORT NSString *const NSInvalidatedAllObjectsKey;
     id _mergePolicy;
 
     NSMutableSet *_registeredObjects;
+    NSMutableSet *_editors;
 
     NSMutableSet *_insertedObjects;
     NSMutableSet *_updatedObjects;

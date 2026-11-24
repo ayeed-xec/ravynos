@@ -3,7 +3,6 @@
 @class NSMutableSet, NSSet, NSAtomicStoreCacheNode, NSManagedObjectID, NSManagedObject, NSEntityDescription, NSMutableDictionary, NSDictionary;
 
 @interface NSAtomicStore : NSPersistentStore {
-    NSDictionary *_metadata;
     NSMutableSet *_cacheNodes;
     NSMutableDictionary *_objectIDToCacheNode;
     NSMutableDictionary *_objectIDTable;

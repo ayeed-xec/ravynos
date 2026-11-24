@@ -12,6 +12,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @interface NSPropertyDescription : NSObject <NSCoding, NSCopying> {
     NSEntityDescription *_entity;
     NSString *_propertyName;
+    BOOL _isOptional;
+    BOOL _isTransient;
+    NSDictionary *_userInfo;
+    NSArray *_validationPredicates;
+    NSArray *_validationWarnings;
 }
 
 - (NSEntityDescription *)entity;

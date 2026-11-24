@@ -26,8 +26,7 @@
 }
 
 -(NSEnumerator *)objectEnumerator {
-   NSUnimplementedMethod();
-   return nil;
+   return [[_object valueForKey:_key] objectEnumerator];
 }
 
 -(void)addObject:object {

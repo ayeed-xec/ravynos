@@ -123,16 +123,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 - (BOOL) hasFaultForRelationshipNamed:(NSString *) key {
-    NSUnimplementedMethod();
-    return NO;
+    NSRelationshipDescription *relationship=[[self entity] relationshipsByName][key];
+
+    if(relationship==nil)
+     return NO;
+    return _isFault;
 }
 
 - (void) awakeFromFetch {
-    NSUnimplementedMethod();
 }
 
 - (void) awakeFromInsert {
-    NSUnimplementedMethod();
 }
 
 -(NSDictionary *)changedValues {
@@ -369,25 +370,74 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 - (BOOL) validateValue:(id *) value forKey:(NSString *) key error:(NSError **) error {
-    NSUnimplementedMethod();
+    NSEntityDescription *entity=[self entity];
+    NSAttributeDescription *attribute=[[entity attributesByName] objectForKey:key];
+
+    if(attribute==nil)
+     return YES;
+
+    if(*value==nil){
+       if([attribute isOptional]==NO){
+          if(error!=NULL)
+           *error=[NSError errorWithDomain:@"NSCocoaErrorDomain" code:1600 userInfo:[NSDictionary dictionaryWithObject:[NSString stringWithFormat:@"%@ is not optional",key] forKey:NSLocalizedDescriptionKey]];
+          return NO;
+       }
+       return YES;
+    }
+
+    if([attribute attributeType]==NSDoubleAttributeType || [attribute attributeType]==NSFloatAttributeType){
+       if([*value isKindOfClass:[NSNumber class]]==NO){
+          if(error!=NULL)
+           *error=[NSError errorWithDomain:@"NSCocoaErrorDomain" code:1610 userInfo:[NSDictionary dictionaryWithObject:[NSString stringWithFormat:@"%@ expects a number",key] forKey:NSLocalizedDescriptionKey]];
+          return NO;
+       }
+    }
     return YES;
 }
 
 
 - (BOOL) validateForDelete:(NSError **) error {
-    NSUnimplementedMethod();
     return YES;
 }
 
 
 - (BOOL) validateForInsert:(NSError **) error {
-    NSUnimplementedMethod();
+    NSEntityDescription *entity=[self entity];
+    NSDictionary *attributes=[entity attributesByName];
+    NSEnumerator *keyEnum=[attributes keyEnumerator];
+    NSString *key;
+    id value;
+
+    while((key=[keyEnum nextObject])!=nil){
+       NSAttributeDescription *attribute=[attributes objectForKey:key];
+
+       if([attribute isOptional])
+        continue;
+       value=[self primitiveValueForKey:key];
+       if(value==nil){
+          if(error!=NULL)
+           *error=[NSError errorWithDomain:@"NSCocoaErrorDomain" code:1570 userInfo:[NSDictionary dictionaryWithObject:[NSString stringWithFormat:@" %@ is a required value",key] forKey:NSLocalizedDescriptionKey]];
+          return NO;
+       }
+    }
     return YES;
 }
 
 
 - (BOOL) validateForUpdate:(NSError **) error {
-    NSUnimplementedMethod();
+    NSEntityDescription *entity=[self entity];
+    NSDictionary *attributes=[entity attributesByName];
+    NSEnumerator *keyEnum=[_changedValues keyEnumerator];
+    NSString *key;
+
+    while((key=[keyEnum nextObject])!=nil){
+       id value=[_changedValues objectForKey:key];
+
+       if([attributes objectForKey:key]==nil)
+        continue;
+       if([self validateValue:&value forKey:key error:error]==NO)
+        return NO;
+    }
     return YES;
 }
 
