@@ -24,12 +24,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 NSDate* NSDateFromPlistString(NSString* string)
 {
 	NSScanner* sc=[NSScanner scannerWithString:string];
-	int y;
-	int mo;
-	int d;
-	int h;
-	int mi;
-	int s;
+	int y=1970;
+	int mo=1;
+	int d=1;
+	int h=0;
+	int mi=0;
+	int s=0;
 	NSString* str;
 	[sc scanInt:&y];
 	[sc scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"-"] intoString:&str];
@@ -43,7 +43,40 @@ NSDate* NSDateFromPlistString(NSString* string)
 	[sc scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@":"] intoString:&str];
 	[sc scanInt:&s];
 
-	NSCalendarDate* date= [NSCalendarDate dateWithYear:y month:mo day:d-1 hour:h minute:mi second:s timeZone: [NSTimeZone localTimeZone]];
+	/* XML plist dates are UTC (trailing 'Z'); the older space-separated
+	 * form carries an explicit +HHMM/-HHMM offset. Only fall back to the
+	 * local time zone when no zone information is present. */
+	NSTimeZone* tz=[NSTimeZone localTimeZone];
+	NSString* rest=[[string substringFromIndex:[sc scanLocation]]
+	  stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+	NSUInteger restLength=[rest length];
+
+	if(restLength>0){
+	 unichar lead=[rest characterAtIndex:0];
+
+	 if(lead=='Z' || lead=='z')
+	  tz=[NSTimeZone timeZoneForSecondsFromGMT:0];
+	 else if(lead=='+' || lead=='-'){
+	  NSInteger seconds=0;
+
+	  if(restLength>=3)
+	   seconds=((int)([rest characterAtIndex:1]-'0')*10
+	            +(int)([rest characterAtIndex:2]-'0'))*3600;
+	  if(restLength>=6 && [rest characterAtIndex:3]==':')
+	   seconds+=((int)([rest characterAtIndex:4]-'0')*10
+	            +(int)([rest characterAtIndex:5]-'0'))*60;
+	  else if(restLength>=5)
+	   seconds+=((int)([rest characterAtIndex:3]-'0')*10
+	            +(int)([rest characterAtIndex:4]-'0'))*60;
+
+	  if(lead=='-')
+	   seconds=-seconds;
+
+	  tz=[NSTimeZone timeZoneForSecondsFromGMT:seconds];
+	 }
+	}
+
+	NSCalendarDate* date=[NSCalendarDate dateWithYear:y month:mo day:d hour:h minute:mi second:s timeZone:tz];
 	return date;
 }
 
@@ -182,9 +215,9 @@ NSDate* NSDateFromPlistString(NSString* string)
    else if([name isEqualToString:@"string"])
     result=[element stringValue];
    else if([name isEqualToString:@"integer"])
-    result=[NSNumber numberWithInt:[element intValue]];
+    result=[NSNumber numberWithLongLong:[element longLongValue]];
    else if([name isEqualToString:@"real"])
-    result=[NSNumber numberWithFloat:[element floatValue]];
+    result=[NSNumber numberWithDouble:[element doubleValue]];
    else if([name isEqualToString:@"true"])
     result=[NSNumber numberWithBool:YES];
    else if([name isEqualToString:@"false"])
