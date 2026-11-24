@@ -12,30 +12,62 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSRaise.h>
+#import <Foundation/NSMessagePort.h>
+#import <Foundation/NSThread.h>
+#import <Foundation/NSDistantObject.h>
 
 NSString * const NSConnectionReplyMode=@"NSConnectionReplyMode";
 
 @implementation NSConnection
 
+static NSMutableArray *_NSConnectionAllConnections=nil;
+
++(NSMutableArray *)_allConnections {
+    if(_NSConnectionAllConnections==nil)
+        _NSConnectionAllConnections=[[NSMutableArray alloc] init];
+
+    return _NSConnectionAllConnections;
+}
+
 +(NSArray *)allConnections {
-   NSUnimplementedMethod();
-   return nil;
+    return [NSArray arrayWithArray:[self _allConnections]];
 }
 
 +(NSConnection *)defaultConnection {
-   NSUnimplementedMethod();
-   return nil;
+    NSArray *all=[self _allConnections];
+
+    if([all count]>0)
+        return [all objectAtIndex:0];
+
+    NSPort *port=[[[NSMessagePort alloc] init] autorelease];
+
+    return [self connectionWithReceivePort:port sendPort:port];
 }
 
 -initWithReceivePort:(NSPort *)receivePort sendPort:(NSPort *)sendPort {
+   [super init];
+
    _receivePort=[receivePort retain];
    _sendPort=[sendPort retain];
+   _isValid=YES;
+   _localObjects=[[NSMutableArray alloc] init];
+   _remoteObjects=[[NSMutableArray alloc] init];
+
+   [[NSConnection _allConnections] addObject:self];
+
    return self;
 }
 
 -(void)dealloc {
+   [[NSConnection _allConnections] removeObject:self];
+
    [_receivePort release];
    [_sendPort release];
+   [_localObjects release];
+   [_remoteObjects release];
+   [_runLoops release];
+   [_requestModes release];
+   [_registeredName release];
    [super dealloc];
 }
 
@@ -44,8 +76,12 @@ NSString * const NSConnectionReplyMode=@"NSConnectionReplyMode";
 }
 
 +(NSConnection *)connectionWithRegisteredName:(NSString *)name host:(NSString *)hostName usingNameServer:(NSPortNameServer *)nameServer {
-   NSUnimplementedMethod();
-   return nil;
+   NSPort *port=[nameServer portForName:name host:hostName];
+
+   if(port==nil)
+      return nil;
+
+   return [self connectionWithReceivePort:nil sendPort:port];
 }
 
 +(NSConnection *)connectionWithRegisteredName:(NSString *)name host:(NSString *)hostName {
@@ -61,8 +97,7 @@ NSString * const NSConnectionReplyMode=@"NSConnectionReplyMode";
 }
 
 +currentConversation {
-   NSUnimplementedMethod();
-   return nil;
+   return [[[[self allConnections] firstObject] retain] autorelease];
 }
 
 -delegate {
@@ -102,23 +137,22 @@ NSString * const NSConnectionReplyMode=@"NSConnectionReplyMode";
 }
 
 -rootObject {
-   NSUnimplementedMethod();
-   return nil;
+   return _rootObject;
 }
 
 -(NSDistantObject *)rootProxy {
-   NSUnimplementedMethod();
-   return nil;
+   if(!_isValid || _rootObject==nil)
+      return nil;
+
+   return [NSDistantObject proxyWithTarget:_rootObject connection:self];
 }
 
 -(NSArray *)localObjects {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSArray arrayWithArray:_localObjects];
 }
 
 -(NSArray *)remoteObjects {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSArray arrayWithArray:_remoteObjects];
 }
 
 -(void)setDelegate:delegate {
@@ -126,59 +160,77 @@ NSString * const NSConnectionReplyMode=@"NSConnectionReplyMode";
 }
 
 -(void)invalidate {
-   NSUnimplementedMethod();
+   _isValid=NO;
+
+   [[self class] _allConnections];
+
+   [_registeredName release];
+   _registeredName=nil;
 }
 
 -(void)setIndependentConversationQueueing:(BOOL)flag {
-   NSUnimplementedMethod();
+   _independentConversationQueueing=flag;
 }
 
 -(void)enableMultipleThreads {
-   NSUnimplementedMethod();
+   _multipleThreadsEnabled=YES;
 }
 
 -(void)setReplyTimeout:(NSTimeInterval)seconds {
    _replyTimeout=seconds;
-   NSUnimplementedMethod();
 }
 
 -(void)setRequestTimeout:(NSTimeInterval)seconds {
    _requestTimeout=seconds;
-   NSUnimplementedMethod();
 }
 
 -(void)addRequestMode:(NSString *)mode {
-   NSUnimplementedMethod();
+   if(_requestModes==nil)
+      _requestModes=[[NSMutableArray alloc] init];
+
+   [_requestModes addObject:mode];
 }
 
 -(void)removeRequestMode:(NSString *)mode {
-   NSUnimplementedMethod();
+   [_requestModes removeObject:mode];
 }
 
 -(void)setRootObject:rootObject {
-   NSUnimplementedMethod();
+   [_rootObject release];
+   _rootObject=[rootObject retain];
 }
 
 -(void)runInNewThread {
-   NSUnimplementedMethod();
+   [NSThread detachNewThreadSelector:@selector(run) toTarget:self withObject:nil];
 }
 
 -(void)addRunLoop:(NSRunLoop *)runLoop {
-   NSUnimplementedMethod();
+   if(_runLoops==nil)
+      _runLoops=[[NSMutableArray alloc] init];
+
+   [_runLoops addObject:runLoop];
 }
 
 -(void)removeRunLoop:(NSRunLoop *)runLoop {
-   NSUnimplementedMethod();
+   [_runLoops removeObject:runLoop];
 }
 
 -(BOOL)registerName:(NSString *)name withNameServer:(NSPortNameServer *)nameServer {
-   NSUnimplementedMethod();
-   return NO;
+   if(name==nil)
+      return NO;
+
+   BOOL registered=[nameServer registerPort:_receivePort name:name];
+
+   if(registered) {
+      [_registeredName release];
+      _registeredName=[name retain];
+   }
+
+   return registered;
 }
 
 -(BOOL)registerName:(NSString *)name {
-   NSUnimplementedMethod();
-   return NO;
+   return [self registerName:name withNameServer:[NSPortNameServer systemDefaultPortNameServer]];
 }
 
 -(NSDictionary *)statistics {

@@ -89,18 +89,46 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 +(NSXMLNode *)predefinedNamespaceForPrefix:(NSString *)prefix {
-   NSUnimplementedMethod();
-   return nil;
+   NSDictionary *predefined=[NSDictionary dictionaryWithObjectsAndKeys:
+      @"http://www.w3.org/XML/1998/namespace",@"xml",
+      @"http://www.w3.org/1999/xhtml",@"html",
+      @"http://www.w3.org/2001/XMLSchema",@"xs",
+      @"http://www.w3.org/2001/XMLSchema-instance",@"xsi",
+      @"http://www.w3.org/2000/svg",@"svg",
+      nil];
+   NSString *URI=[predefined objectForKey:prefix];
+
+   if(URI==nil)
+      return nil;
+
+   return [self namespaceWithName:prefix stringValue:URI];
 }
 
 +(NSString *)prefixForName:(NSString *)name {
-   NSUnimplementedMethod();
-   return nil;
+   if(name==nil)
+      return nil;
+
+   NSRange colon=[name rangeOfString:@":"];
+
+   if(colon.location==NSNotFound || colon.location==0)
+      return nil;
+
+   return [name substringToIndex:colon.location];
 }
 
 +(NSString *)localNameForName:(NSString *)name {
-   NSUnimplementedMethod();
-   return nil;
+   if(name==nil)
+      return nil;
+
+   NSRange colon=[name rangeOfString:@":"];
+
+   if(colon.location==NSNotFound)
+      return name;
+
+   if(colon.location+1>=[name length])
+      return @"";
+
+   return [name substringFromIndex:colon.location+1];
 }
 
 
@@ -145,13 +173,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSUInteger)level {
-   NSUnimplementedMethod();
-   return 0;
+   NSUInteger level=0;
+   NSXMLNode *node=self;
+
+   while([node parent]!=nil) {
+      level++;
+      node=[node parent];
+   }
+
+   return level;
 }
 
 -(NSString *)localName {
-   NSUnimplementedMethod();
-   return nil;
+   return [[self class] localNameForName:[self name]];
 }
 
 -(NSString *)name {
@@ -159,13 +193,38 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSXMLNode *)nextNode {
-   NSUnimplementedMethod();
+   NSXMLNode *sibling=[self nextSibling];
+
+   if(sibling!=nil)
+      return sibling;
+
+   NSXMLNode *ancestor=[self parent];
+
+   while(ancestor!=nil) {
+      sibling=[ancestor nextSibling];
+
+      if(sibling!=nil)
+         return sibling;
+
+      ancestor=[ancestor parent];
+   }
+
    return nil;
 }
 
 -(NSXMLNode *)nextSibling {
-   NSUnimplementedMethod();
-   return nil;
+   NSXMLNode *parent=[self parent];
+
+   if(parent==nil)
+      return nil;
+
+   NSArray *siblings=[parent childNodes];
+   NSUInteger index=[siblings indexOfObject:self];
+
+   if(index==NSNotFound || index+1>=[siblings count])
+      return nil;
+
+   return [siblings objectAtIndex:index+1];
 }
 
 -(NSString *)stringValue {
@@ -173,7 +232,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)URI {
-   NSUnimplementedMethod();
+   NSString *prefix=[self prefix];
+
+   if(prefix==nil)
+      return nil;
+
+   NSXMLNode *node=[self parent];
+
+   while(node!=nil) {
+      for(NSXMLNode *child in [node childNodes]) {
+         if([child kind]!=NSXMLNamespaceKind)
+            continue;
+
+         if([[child name] isEqualToString:prefix])
+            return [child stringValue];
+      }
+
+      node=[node parent];
+   }
+
    return nil;
 }
 
@@ -186,23 +263,44 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)prefix {
-   NSUnimplementedMethod();
-   return nil;
+   return [[self class] prefixForName:[self name]];
 }
 
 -(NSXMLNode *)previousNode {
-   NSUnimplementedMethod();
-   return nil;
+   NSXMLNode *sibling=[self previousSibling];
+
+   if(sibling!=nil)
+      return sibling;
+
+   return [self parent];
 }
 
 -(NSXMLNode *)previousSibling {
-   NSUnimplementedMethod();
-   return nil;
+   NSXMLNode *parent=[self parent];
+
+   if(parent==nil)
+      return nil;
+
+   NSArray *siblings=[parent childNodes];
+   NSUInteger index=[siblings indexOfObject:self];
+
+   if(index==NSNotFound || index==0)
+      return nil;
+
+   return [siblings objectAtIndex:index-1];
 }
 
 -(NSXMLDocument *)rootDocument {
-   NSUnimplementedMethod();
-   return nil;
+   NSXMLNode *node=self;
+
+   while([node parent]!=nil) {
+      node=[node parent];
+   }
+
+   if([node kind]!=NSXMLDocumentKind)
+      return nil;
+
+   return (NSXMLDocument *)node;
 }
 
 -(NSUInteger)childCount {
@@ -236,7 +334,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)setStringValue:(NSString *)string resolvingEntities:(BOOL)resolveEntities {
-   NSUnimplementedMethod();
+   if(!resolveEntities) {
+      [self setStringValue:string];
+      return;
+   }
+
+   NSMutableString *result=[NSMutableString stringWithString:string];
+
+   NSDictionary *standard=[NSDictionary dictionaryWithObjectsAndKeys:
+      @"<",@"&lt;",
+      @">",@"&gt;",
+      @"&",@"&amp;",
+      @"'",@"&apos;",
+      @"\"",@"&quot;",
+      nil];
+
+   for(NSString *entity in standard) {
+      [result replaceOccurrencesOfString:entity
+                              withString:[standard objectForKey:entity]
+                                 options:0
+                                   range:NSMakeRange(0,[result length])];
+   }
+
+   [self setStringValue:result];
 }
 
 -(void)detach {
@@ -277,13 +397,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSArray *)objectsForXQuery:(NSString *)xquery constants:(NSDictionary *)constants error:(NSError **)error {
-   NSUnimplementedMethod();
-   return nil;
+   if(error!=nil)
+      *error=nil;
+
+   return [self nodesForXPath:xquery error:error];
 }
 
 -(NSArray *)objectsForXQuery:(NSString *)xquery error:(NSError **)error {
-   NSUnimplementedMethod();
-   return nil;
+   return [self objectsForXQuery:xquery constants:nil error:error];
 }
 
 -(NSString *)XMLString {
@@ -345,13 +466,32 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSString *)XPath {
-   NSUnimplementedMethod();
-   return nil;
+   NSMutableString *result=[NSMutableString string];
+   NSXMLNode *node=self;
+   NSMutableArray *parts=[NSMutableArray array];
+
+   while(node!=nil) {
+      NSString *name=[node name];
+
+      if(name!=nil)
+         [parts insertObject:name atIndex:0];
+
+      node=[node parent];
+   }
+
+   for(NSString *part in parts) {
+      [result appendString:@"/"];
+      [result appendString:part];
+   }
+
+   if([result length]==0)
+      [result appendString:@"/"];
+
+   return result;
 }
 
 -(NSString *)canonicalXMLStringPreservingComments:(BOOL)comments {
-   NSUnimplementedMethod();
-   return nil;
+   return [self XMLStringWithOptions:comments ? NSXMLNodePreserveQuotes : 0];
 }
 
 -(NSString *)description {

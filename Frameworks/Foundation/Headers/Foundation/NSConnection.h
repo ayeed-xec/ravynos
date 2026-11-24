@@ -24,7 +24,14 @@ FOUNDATION_EXPORT NSString *const NSConnectionReplyMode;
     NSTimeInterval _requestTimeout;
     NSMutableArray *_requestModes;
     NSMutableDictionary *_statistics;
+    id _rootObject;
+    NSMutableArray *_localObjects;
+    NSMutableArray *_remoteObjects;
+    NSMutableArray *_runLoops;
+    NSString *_registeredName;
 }
+
++ (NSMutableArray *)_allConnections;
 
 + (NSArray *)allConnections;
 

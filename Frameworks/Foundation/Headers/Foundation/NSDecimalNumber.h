@@ -14,10 +14,34 @@ FOUNDATION_EXPORT NSString *const NSDecimalNumberUnderflowException;
 FOUNDATION_EXPORT NSString *const NSDecimalNumberOverflowException;
 FOUNDATION_EXPORT NSString *const NSDecimalNumberExactnessException;
 
+@class NSString;
+
+typedef enum {
+    NSRoundPlain,
+    NSRoundDown,
+    NSRoundUp,
+    NSRoundBankers
+} NSRoundingMode;
+
+typedef enum {
+    NSCalculationNoError = 0,
+    NSCalculationLossOfPrecision,
+    NSCalculationUnderflow,
+    NSCalculationOverflow,
+    NSCalculationDivideByZero
+} NSDecimalNumberCalculationError;
+
+@class NSDecimalNumber;
+
 @protocol NSDecimalNumberBehaviors
+- (NSRoundingMode)roundingMode;
+- (short)scale;
+- (NSDecimalNumber *)exceptionDuringOperation:(NSString *)operation error:(NSDecimalNumberCalculationError)error leftOperand:(NSDecimalNumber *)leftOperand rightOperand:(NSDecimalNumber *)rightOperand;
 @end
 
 @interface NSDecimalNumber : NSNumber {
+    @public
+    NSDecimal _decimal;
 }
 
 - initWithDecimal:(NSDecimal)decimal;
