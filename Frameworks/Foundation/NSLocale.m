@@ -10,6 +10,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSRaise.h>
 #import <Foundation/NSNumber.h>
 #import <Foundation/NSArray.h>
+#import <Foundation/NSUserDefaults.h>
+#import <Foundation/NSCharacterSet.h>
 
 #include <locale.h>
 
@@ -73,18 +75,29 @@ static NSLocale *_sharedCurrentLocale = nil;
 }
 
 +autoupdatingCurrentLocale {
-   NSUnimplementedMethod();
-   return 0;
+   return [self currentLocale];
 }
 
 +(NSArray *)availableLocaleIdentifiers {
-   NSUnimplementedMethod();
-   return 0;
+   static NSArray *identifiers=nil;
+
+   if(identifiers==nil) {
+      NSMutableArray *result=[NSMutableArray array];
+
+      for(NSUInteger i=0;i<sizeof(NSKnownLocaleIdentifiers)/sizeof(NSKnownLocaleIdentifiers[0]);i++)
+         [result addObject:NSKnownLocaleIdentifiers[i]];
+
+      identifiers=[[NSArray arrayWithArray:result] retain];
+   }
+
+   return identifiers;
 }
 
 +(NSString *)canonicalLocaleIdentifierFromString:(NSString *)string {
-   NSUnimplementedMethod();
-   return 0;
+   if(string==nil)
+      return @"";
+
+   return [[string lowercaseString] stringByReplacingOccurrencesOfString:@"-" withString:@"_"];
 }
 
 +(NSDictionary *)componentsFromLocaleIdentifier:(NSString *)identifier {
@@ -98,33 +111,110 @@ static NSLocale *_sharedCurrentLocale = nil;
 }
 
 +(NSString *)localeIdentifierFromComponents:(NSDictionary *)components {
-   NSUnimplementedMethod();
-   return 0;
+   NSString *language=[components objectForKey:NSLocaleLanguageCode];
+   NSString *country=[components objectForKey:NSLocaleCountryCode];
+
+   if(language==nil)
+      return @"";
+
+   if(country==nil)
+      return language;
+
+   return [language stringByAppendingFormat:@"_%@",country];
 }
 
+static NSString *const NSKnownISOCountryCodes[]={
+   @"AD",@"AE",@"AF",@"AG",@"AI",@"AL",@"AM",@"AO",@"AR",@"AS",@"AT",@"AU",@"AW",@"AZ",
+   @"BA",@"BB",@"BD",@"BE",@"BF",@"BG",@"BH",@"BI",@"BJ",@"BM",@"BN",@"BO",@"BR",@"BS",@"BT",@"BW",@"BY",@"BZ",
+   @"CA",@"CD",@"CF",@"CG",@"CH",@"CI",@"CK",@"CL",@"CM",@"CN",@"CO",@"CR",@"CU",@"CV",@"CW",@"CY",@"CZ",
+   @"DE",@"DJ",@"DK",@"DM",@"DO",@"DZ",
+   @"EC",@"EE",@"EG",@"ER",@"ES",@"ET",
+   @"FI",@"FJ",@"FM",@"FO",@"FR",
+   @"GA",@"GB",@"GD",@"GE",@"GH",@"GM",@"GN",@"GQ",@"GR",@"GT",@"GU",@"GW",@"GY",
+   @"HK",@"HN",@"HR",@"HT",@"HU",
+   @"ID",@"IE",@"IL",@"IN",@"IQ",@"IR",@"IS",@"IT",
+   @"JM",@"JO",@"JP",
+   @"KE",@"KG",@"KH",@"KI",@"KM",@"KN",@"KP",@"KR",@"KW",@"KY",@"KZ",
+   @"LA",@"LB",@"LC",@"LI",@"LK",@"LR",@"LS",@"LT",@"LU",@"LV",@"LY",
+   @"MA",@"MC",@"MD",@"ME",@"MG",@"MH",@"MK",@"ML",@"MM",@"MN",@"MO",@"MP",@"MR",@"MT",@"MU",@"MV",@"MW",@"MX",@"MY",@"MZ",
+   @"NA",@"NC",@"NE",@"NG",@"NI",@"NL",@"NO",@"NP",@"NR",@"NZ",
+   @"OM",
+   @"PA",@"PE",@"PF",@"PG",@"PH",@"PK",@"PL",@"PR",@"PS",@"PT",@"PW",@"PY",
+   @"QA",
+   @"RE",@"RO",@"RS",@"RU",@"RW",
+   @"SA",@"SB",@"SC",@"SD",@"SE",@"SG",@"SI",@"SK",@"SL",@"SM",@"SN",@"SO",@"SR",@"SS",@"ST",@"SV",@"SX",@"SY",@"SZ",
+   @"TC",@"TD",@"TG",@"TH",@"TJ",@"TL",@"TM",@"TN",@"TO",@"TR",@"TT",@"TV",@"TW",@"TZ",
+   @"UA",@"UG",@"US",@"UY",@"UZ",
+   @"VA",@"VC",@"VE",@"VG",@"VI",@"VN",@"VU",
+   @"WF",@"WS",
+   @"YE",
+   @"ZA",@"ZM",@"ZW"
+};
+
+static NSString *const NSKnownLocaleIdentifiers[]={
+   @"en_US",@"en_GB",@"en_CA",@"en_AU",@"en_IN",@"en_IE",@"en_NZ",@"en_ZA",
+   @"fr_FR",@"fr_CA",@"fr_BE",@"fr_CH",
+   @"de_DE",@"de_AT",@"de_CH",
+   @"es_ES",@"es_MX",@"es_AR",
+   @"it_IT",@"it_CH",
+   @"ja_JP",@"ko_KR",@"zh_CN",@"zh_TW",@"zh_HK",
+   @"pt_BR",@"pt_PT",
+   @"ru_RU",@"pl_PL",@"nl_NL",@"nl_BE",
+   @"sv_SE",@"da_DK",@"nb_NO",@"fi_FI",@"is_IS",
+   @"cs_CZ",@"hu_HU",@"ro_RO",@"bg_BG",@"el_GR",@"tr_TR",@"uk_UA",
+   @"he_IL",@"ar_SA",@"hi_IN",@"th_TH",@"vi_VN",@"id_ID",@"ms_MY"
+};
+
 +(NSArray *)ISOCountryCodes {
-   NSUnimplementedMethod();
-   return 0;
+   static NSArray *codes=nil;
+
+   if(codes==nil)
+      codes=[[NSArray arrayWithObjects:NSKnownISOCountryCodes count:sizeof(NSKnownISOCountryCodes)/sizeof(NSKnownISOCountryCodes[0])] retain];
+
+   return codes;
 }
 
 +(NSArray *)ISOLanguageCodes {
-   NSUnimplementedMethod();
-   return 0;
+   NSCharacterSet *underscore=[NSCharacterSet characterSetWithCharactersInString:@"_"];
+
+   NSMutableArray *result=[NSMutableArray array];
+
+   for(NSString *identifier in [self availableLocaleIdentifiers]) {
+      NSString *language=[identifier componentsSeparatedByCharactersInSet:underscore].firstObject;
+
+      if(language!=nil && [result containsObject:language]==NO)
+         [result addObject:language];
+   }
+
+   return [NSArray arrayWithArray:result];
 }
 
 +(NSArray *)ISOCurrencyCodes {
-   NSUnimplementedMethod();
-   return 0;
+   static NSArray *codes=nil;
+
+   if(codes==nil)
+      codes=[@[@"USD",@"EUR",@"JPY",@"GBP",@"CHF",@"CAD",@"AUD",@"CNY",@"INR",@"BRL",@"RUB",@"KRW",@"SGD",@"HKD",@"NZD",@"SEK",@"NOK",@"DKK",@"PLN",@"CZK",@"HUF",@"ILS",@"MXN",@"TRY",@"ZAR"] retain];
+
+   return codes;
 }
 
 +(NSArray *)commonISOCurrencyCodes {
-   NSUnimplementedMethod();
-   return 0;
+   return [self ISOCurrencyCodes];
 }
 
 +(NSArray *)preferredLanguages {
-   NSUnimplementedMethod();
-   return 0;
+   NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+   NSArray *languages=[defaults arrayForKey:@"AppleLanguages"];
+
+   if(languages!=nil)
+      return languages;
+
+    NSString *language = [[NSLocale autoupdatingCurrentLocale] objectForKey:NSLocaleLanguageCode];
+
+   if(language!=nil)
+      return [NSArray arrayWithObject:language];
+
+   return [NSArray arrayWithObject:@"en"];
 }
 
 -initWithLocaleIdentifier:(NSString *)identifier {
@@ -174,7 +264,7 @@ static NSLocale *_sharedCurrentLocale = nil;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeObject:[self localeIdentifier] forKey:@"NSLocaleIdentifier"];
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -196,8 +286,15 @@ static NSLocale *_sharedCurrentLocale = nil;
 }
 
 -(NSString *)displayNameForKey:key value:value {
-   NSUnimplementedMethod();
-   return 0;
+   if(key==nil || value==nil)
+      return nil;
+
+   if([key isEqualToString:NSLocaleIdentifier] || [key isEqualToString:NSLocaleLanguageCode] ||
+      [key isEqualToString:NSLocaleCountryCode] || [key isEqualToString:NSLocaleCurrencyCode] ||
+      [key isEqualToString:NSLocaleCurrencySymbol])
+      return [[value description] copy];
+
+   return nil;
 }
 
 -(NSString *)description

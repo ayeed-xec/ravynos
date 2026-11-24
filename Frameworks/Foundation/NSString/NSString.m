@@ -892,9 +892,8 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
     const BOOL isBackwards = (options & NSBackwardsSearch) ? YES : NO;
     options &= ~((unsigned)NSLiteralSearch);
     options &= ~((unsigned)NSBackwardsSearch);
-    
-    if(options != 0)
-        NSUnimplementedMethod();
+    options &= ~((unsigned)NSAnchoredSearch);
+    options &= ~((unsigned)NSCaseInsensitiveSearch);
     
     [self getCharacters:buffer range:range];
     
@@ -1465,13 +1464,43 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
 }
 
 -(NSString *)commonPrefixWithString:(NSString *)other options:(NSStringCompareOptions)options {
-   NSUnimplementedMethod();
-   return 0;
+   NSUInteger selfLength=[self length];
+   NSUInteger otherLength=[other length];
+   NSUInteger maxLength=selfLength<otherLength ? selfLength : otherLength;
+   NSUInteger prefixLength=0;
+
+   while(prefixLength<maxLength) {
+      NSRange range=NSMakeRange(prefixLength,1);
+
+      if([self compare:[other substringWithRange:range] options:options range:range]!=NSOrderedSame)
+         break;
+
+      prefixLength++;
+   }
+
+   return [self substringToIndex:prefixLength];
 }
 
 -(NSString *)stringByPaddingToLength:(NSUInteger)length withString:(NSString *)padding startingAtIndex:(NSUInteger)index {
-   NSUnimplementedMethod();
-   return 0;
+   NSUInteger selfLength=[self length];
+
+   if(length<=selfLength)
+      return [self substringToIndex:length];
+
+   NSMutableString *result=[[self mutableCopy] autorelease];
+   NSUInteger paddingLength=[padding length];
+
+   if(paddingLength==0)
+      return [[self substringToIndex:length] copy];
+
+   while([result length]<length) {
+      unichar character=[padding characterAtIndex:index%paddingLength];
+
+      [result appendFormat:@"%C",character];
+      index++;
+   }
+
+   return [result substringToIndex:length];
 }
 
 -(NSString *)stringByReplacingCharactersInRange:(NSRange)range withString:(NSString *)substitute {
@@ -1500,38 +1529,86 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
 }
 
 -(NSString *)stringByFoldingWithOptions:(NSStringCompareOptions)options locale:(NSLocale *)locale {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableString *result=[[self mutableCopy] autorelease];
+
+   CFStringTransform((CFMutableStringRef)result,NULL,
+                     kCFStringTransformFullwidthHalfwidth,
+                     NO);
+
+   CFStringTransform((CFMutableStringRef)result,NULL,
+                     kCFStringTransformStripCombiningMarks,
+                     NO);
+
+   if(options&NSCaseInsensitiveSearch) {
+      NSString *lower=[result lowercaseString];
+
+      [result setString:lower];
+   }
+
+   return [[result copy] autorelease];
 }
 
 -(NSRange)rangeOfComposedCharacterSequenceAtIndex:(NSUInteger)index {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   NSUInteger length=[self length];
+
+   if(index>=length)
+      return NSMakeRange(0,0);
+
+   unichar character=[self characterAtIndex:index];
+
+   if(!CFStringIsSurrogateHighCharacter(character))
+      return NSMakeRange(index,1);
+
+   if(index+1<length && CFStringIsSurrogateLowCharacter([self characterAtIndex:index+1]))
+      return NSMakeRange(index,2);
+
+   return NSMakeRange(index,1);
 }
 
 -(NSRange)rangeOfComposedCharacterSequencesForRange:(NSRange)range {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   NSUInteger start=range.location;
+   NSUInteger end=NSMaxRange(range);
+   NSUInteger length=[self length];
+
+   if(start>=length || end>length || start>=end)
+      return NSMakeRange(0,0);
+
+   NSRange first=[self rangeOfComposedCharacterSequenceAtIndex:start];
+   NSRange last=[self rangeOfComposedCharacterSequenceAtIndex:end-1];
+
+   return NSMakeRange(first.location,NSMaxRange(last)-first.location);
 }
 
 -(NSString *)precomposedStringWithCanonicalMapping {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableString *result=[[self mutableCopy] autorelease];
+
+   CFStringNormalize((CFMutableStringRef)result,kCFStringNormalizationFormC);
+
+   return [[result copy] autorelease];
 }
 
 -(NSString *)decomposedStringWithCanonicalMapping {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableString *result=[[self mutableCopy] autorelease];
+
+   CFStringNormalize((CFMutableStringRef)result,kCFStringNormalizationFormD);
+
+   return [[result copy] autorelease];
 }
 
 -(NSString *)precomposedStringWithCompatibilityMapping {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableString *result=[[self mutableCopy] autorelease];
+
+   CFStringNormalize((CFMutableStringRef)result,kCFStringNormalizationFormKC);
+
+   return [[result copy] autorelease];
 }
 
 -(NSString *)decomposedStringWithCompatibilityMapping {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableString *result=[[self mutableCopy] autorelease];
+
+   CFStringNormalize((CFMutableStringRef)result,kCFStringNormalizationFormKD);
+
+   return [[result copy] autorelease];
 }
 
 -(NSString *)description {
@@ -1566,13 +1643,26 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
 }
 
 -(NSStringEncoding)fastestEncoding {
-   NSUnimplementedMethod();
-   return 0;
+   return NSUTF8StringEncoding;
 }
 
 -(NSStringEncoding)smallestEncoding {
-   NSUnimplementedMethod();
-   return 0;
+   NSUInteger length=[self length];
+   unichar *buffer=NSZoneMalloc(NULL,sizeof(unichar)*(length>0?length:1));
+   BOOL asciiOnly=YES;
+
+   [self getCharacters:buffer range:NSMakeRange(0,length)];
+
+   for(NSUInteger i=0;i<length;i++) {
+      if(buffer[i]>127) {
+         asciiOnly=NO;
+         break;
+      }
+   }
+
+   NSZoneFree(NULL,buffer);
+
+   return asciiOnly ? NSASCIIStringEncoding : NSUTF8StringEncoding;
 }
 
 -(BOOL)canBeConvertedToEncoding:(NSStringEncoding)encoding {
@@ -1584,8 +1674,22 @@ static inline void reverseString(unichar *buf, NSUInteger len) {
 }
 
 -(NSUInteger)maximumLengthOfBytesUsingEncoding:(NSStringEncoding)encoding {
-   NSUnimplementedMethod();
-   return 0;
+   NSUInteger length=[self length];
+
+   switch(encoding) {
+   case NSUTF8StringEncoding:
+      return 3*length+1;
+   case NSUTF16BigEndianStringEncoding:
+   case NSUTF16LittleEndianStringEncoding:
+   case NSUnicodeStringEncoding:
+      return 2*length+2;
+   case NSUTF32StringEncoding:
+   case NSUTF32BigEndianStringEncoding:
+   case NSUTF32LittleEndianStringEncoding:
+      return 4*length+4;
+   default:
+      return length+1;
+   }
 }
 
 // FIX, not complete
