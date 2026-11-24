@@ -11,10 +11,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSMenu.h>
 #import <AppKit/NSMenuItem.h>
 #import <AppKit/NSRaise.h>
+#import <AppKit/NSTextField.h>
 #import <Foundation/NSNumber.h>
 #import <Foundation/NSBundle.h>
 #import <Foundation/NSOrthography.h>
 #import <Foundation/NSSpellEngine.h>
+#import <Foundation/NSCharacterSet.h>
+#import <Foundation/NSUserDefaults.h>
 #import "NSSpellCheckerTagData.h"
 #import "NSSpellingViewController.h"
 
@@ -31,6 +34,59 @@ NSString * const NSTextCheckingDocumentTitleKey=@"NSTextCheckingDocumentTitleKey
 NSString * const NSTextCheckingDocumentAuthorKey=@"NSTextCheckingDocumentAuthorKey";
 
 #define SPELLCHECK_DEBUG 0
+
+/* Headless spell checking has no per-language engine dictionaries; fall back to
+   a plain word list read once from /usr/share/dict/words. When no word list is
+   available every word is treated as known, so nothing is reported misspelled. */
+
+static NSMutableSet *NSSpellCheckerSystemWordList() {
+    static NSMutableSet *wordList = nil;
+    static BOOL loaded = NO;
+
+    if(!loaded) {
+        loaded = YES;
+
+        NSData *data = [NSData dataWithContentsOfFile: @"/usr/share/dict/words"];
+
+        if(data != nil) {
+            NSString *contents = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+
+            if(contents != nil) {
+                wordList = [[NSMutableSet alloc] init];
+                NSEnumerator *lines = [[contents componentsSeparatedByString:@"\n"] objectEnumerator];
+                NSString *line;
+
+                while((line = [lines nextObject]) != nil) {
+                    NSString *word = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+
+                    if([word length] > 0)
+                        [wordList addObject:word];
+                }
+
+                [contents release];
+            }
+        }
+    }
+
+    return wordList;
+}
+
+static BOOL NSSpellCheckerIsWordKnown(NSString *word) {
+    NSMutableSet *wordList = NSSpellCheckerSystemWordList();
+
+    if(wordList == nil || [wordList count] == 0)
+        return YES;
+
+    if([wordList containsObject:word])
+        return YES;
+
+    NSString *lower = [word lowercaseString];
+
+    if([wordList containsObject:lower])
+        return YES;
+
+    return [wordList containsObject:[lower capitalizedString]];
+}
 
 @implementation NSSpellChecker
 
@@ -100,7 +156,7 @@ static NSSpellChecker *shared=nil;
 {
 	static NSMutableArray *userPreferredLanguages = nil;
 	if (userPreferredLanguages == nil) {
-		NSMutableArray* userPreferredLanguages = [[NSMutableArray alloc] init];
+		userPreferredLanguages = [[NSMutableArray alloc] init];
 		NSArray* availableLanguages = [self availableLanguages];
 		NSArray* allPreferredLanguages = [NSLocale preferredLanguages];
 
@@ -174,11 +230,17 @@ static NSSpellChecker *shared=nil;
 }
 
 -(void)updateSpellingPanelWithGrammarString:(NSString *)problemString detail:(NSDictionary *)detail {
-	NSUnimplementedMethod();
+	/* There is no grammar panel of its own; surface the problem text in the
+	   spelling panel's info field. */
+	NSSpellingViewController *vc=[self _spellingViewController];
+	NSTextField *infoField=[vc valueForKey:@"_infoLabel"];
+
+	if([infoField respondsToSelector:@selector(setStringValue:)])
+		[infoField setStringValue:(problemString != nil) ? problemString : @""];
 }
 
 -(void)updatePanels {
-	NSUnimplementedMethod();
+	[[self spellingPanel] makeKeyAndOrderFront:nil];
 }
 
 -(NSView *)accessoryView {
@@ -189,24 +251,55 @@ static NSSpellChecker *shared=nil;
 	view=[view retain];
 	[_accessoryView release];
 	_accessoryView=view;
-	NSUnimplementedMethod();
+}
+
+static NSMutableDictionary *NSSpellCheckerAccessoryControllers() {
+	static NSMutableDictionary *map = nil;
+
+	if(map == nil)
+		map = [[NSMutableDictionary alloc] init];
+
+	return map;
 }
 
 -(NSViewController *)substitutionsPanelAccessoryViewController {
-	NSUnimplementedMethod();
-	return 0;
+	return [NSSpellCheckerAccessoryControllers() objectForKey:self];
 }
 
 -(void)setSubstitutionsPanelAccessoryViewController:(NSViewController *)viewController {
-	NSUnimplementedMethod();
+	if(viewController == nil)
+		[NSSpellCheckerAccessoryControllers() removeObjectForKey:self];
+	else
+		[NSSpellCheckerAccessoryControllers() setObject:viewController forKey:self];
 }
 
 #pragma mark -
 #pragma mark Checking Strings for Spelling and Grammar
 
 -(NSInteger)countWordsInString:(NSString *)string language:(NSString *)language {
-	NSUnimplementedMethod();
-	return 0;
+	if(string == nil || [string length] == 0)
+		return 0;
+
+	NSCharacterSet *wordChars=[NSCharacterSet alphanumericCharacterSet];
+	NSInteger count=0;
+	BOOL inWord=NO;
+	NSUInteger i, length=[string length];
+
+	for(i=0; i<length; i++) {
+		unichar c=[string characterAtIndex:i];
+		BOOL isWordChar=[wordChars characterIsMember:c] || c=='\'' || c=='-';
+
+		if(isWordChar) {
+			if(!inWord)
+				count++;
+			inWord=YES;
+		}
+		else {
+			inWord=NO;
+		}
+	}
+
+	return count;
 }
 
 -(NSRange)checkSpellingOfString:(NSString *)string startingAt:(NSInteger)offset {
@@ -239,8 +332,12 @@ static NSSpellChecker *shared=nil;
 }
 
 -(NSRange)checkGrammarOfString:(NSString *)string startingAt:(NSInteger)start language:(NSString *)language wrap:(BOOL)wrap inSpellDocumentWithTag:(NSInteger)documentTag details:(NSArray **)outDetails {
-	NSUnimplementedMethod();
-	return NSMakeRange(0,0);
+	NSSpellEngine *spellEngine=[[self class] _currentSpellEngine];
+
+	if(outDetails != NULL)
+		*outDetails=nil;
+
+	return [spellEngine checkGrammarInString:string language:(language != nil) ? language : [self currentLanguage] details:outDetails];
 }
 
 -(NSArray *)checkString:(NSString *)string range:(NSRange)range types:(NSTextCheckingTypes)types options:(NSDictionary *)options inSpellDocumentWithTag:(NSInteger)tag orthography:(NSOrthography **)orthography wordCount:(NSInteger *)wordCount {
@@ -307,8 +404,8 @@ static NSSpellChecker *shared=nil;
 	return result;
 }
 
--(void)closeSpellDocumentWithTag:(NSInteger)tag { 
-	NSUnimplementedMethod();
+-(void)closeSpellDocumentWithTag:(NSInteger)tag {
+	[_tagToData removeObjectForKey:[NSNumber numberWithInteger:tag]];
 }
 
 -(void)ignoreWord:(NSString *)word inSpellDocumentWithTag:(NSInteger)tag {
@@ -324,7 +421,11 @@ static NSSpellChecker *shared=nil;
 }
 
 -(void)setWordFieldStringValue:(NSString *)string {
-	NSUnimplementedMethod();
+	NSSpellingViewController *vc=[self _spellingViewController];
+	NSTextField *wordField=[vc valueForKey:@"_currentWord"];
+
+	if([wordField respondsToSelector:@selector(setStringValue:)])
+		[wordField setStringValue:(string != nil) ? string : @""];
 }
 
 -(void)updateSpellingPanelWithMisspelledWord:(NSString *)word
@@ -344,8 +445,33 @@ static NSSpellChecker *shared=nil;
 }
 
 -(NSArray *)completionsForPartialWordRange:(NSRange)partialWordRange inString:(NSString *)string language:(NSString *)language inSpellDocumentWithTag:(NSInteger)tag {
-	NSUnimplementedMethod();
-	return 0;
+	if(NSMaxRange(partialWordRange) > [string length])
+		return [NSArray array];
+
+	NSString *partial=[string substringWithRange:partialWordRange];
+
+	if([partial length] == 0)
+		return [NSArray array];
+
+	NSMutableArray *result=[NSMutableArray array];
+	NSMutableSet *wordList=NSSpellCheckerSystemWordList();
+
+	if(wordList != nil && [wordList count] > 0) {
+		NSString *lower=[partial lowercaseString];
+		NSEnumerator *words=[wordList objectEnumerator];
+		NSString *word;
+
+		while((word = [words nextObject]) != nil) {
+			if([word length] > [lower length] && [[word lowercaseString] hasPrefix:lower]) {
+				[result addObject:word];
+
+				if([result count] >= 10)
+					break;
+			}
+		}
+	}
+
+	return result;
 }
 
 -(BOOL)hasLearnedWord:(NSString *)word {
@@ -353,7 +479,7 @@ static NSSpellChecker *shared=nil;
 }
 
 -(void)unlearnWord:(NSString *)word {
-	NSUnimplementedMethod();
+	[_learnedWords removeObject:word];
 }
 
 -(void)learnWord:(NSString *)word {
@@ -361,13 +487,15 @@ static NSSpellChecker *shared=nil;
 }
 
 -(NSArray *)userQuotesArrayForLanguage:(NSString *)language {
-	NSUnimplementedMethod();
-	return 0;
+	/* English defaults: opening/closing double quotes, then opening/closing
+	   single quotes. */
+	return [NSArray arrayWithObjects:@"\u201C", @"\u201D", @"'", @"'", nil];
 }
 
 -(NSDictionary *)userReplacementsDictionary {
-	NSUnimplementedMethod();
-	return 0;
+	NSDictionary *result=[[NSUserDefaults standardUserDefaults] dictionaryForKey:@"NSSpellCheckerReplacements"];
+
+	return (result != nil) ? result : [NSDictionary dictionary];
 }
 
 #pragma mark -
@@ -401,8 +529,7 @@ static NSSpellChecker *shared=nil;
 #pragma mark Automatic Spelling Correction
 
 +(BOOL)isAutomaticSpellingCorrectionEnabled {
-	NSUnimplementedMethod();
-	return 0;
+	return [[NSUserDefaults standardUserDefaults] boolForKey:@"NSAutomaticSpellingCorrectionEnabled"];
 }
 
 #ifdef NS_BLOCKS
