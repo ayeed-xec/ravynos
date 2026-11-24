@@ -11,9 +11,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSString.h>
 #import <AppKit/NSRaise.h>
 #import <Foundation/NSArray.h>
+#import <Foundation/NSDictionary.h>
+#import <Foundation/NSEnumerator.h>
+#import <Foundation/NSNotificationCenter.h>
 #import <Foundation/NSValue.h>
 #import <Foundation/NSTimer.h>
+#import <Foundation/NSThread.h>
 #import <Foundation/NSRunLoop.h>
+#import <Foundation/NSAutoreleasePool.h>
 
 NSString * const NSAnimationProgressMarkNotification=@"NSAnimationProgressMarkNotification";
 
@@ -21,6 +26,23 @@ NSString *NSAnimationTriggerOrderIn=@"NSAnimationTriggerOrderIn";
 NSString *NSAnimationTriggerOrderOut=@"NSAnimationTriggerOrderOut";
 
 NSString *NSAnimationRunLoopMode=@"NSAnimationRunLoopMode";
+
+static NSString *const NSAnimationProgressMarkKey=@"NSAnimationProgressMark";
+
+static NSString *const LinkModeStart=@"start";
+static NSString *const LinkModeStop=@"stop";
+static NSString *const LinkTargetKey=@"target";
+static NSString *const LinkProgressKey=@"progress";
+static NSString *const LinkModeKey=@"mode";
+
+static NSMutableDictionary *AnimationLinks(void) {
+   static NSMutableDictionary *links=nil;
+
+   if(links==nil)
+    links=[NSMutableDictionary new];
+
+   return links;
+}
 
 @implementation NSAnimation
 
@@ -112,11 +134,10 @@ NSString *NSAnimationRunLoopMode=@"NSAnimationRunLoopMode";
     mark=1;
 
    [_progressMarks addObject:[NSNumber numberWithFloat:mark]];
-   NSUnimplementedMethod();
 }
 
 -(void)removeProgressMark:(NSAnimationProgress)mark {
-   NSUnimplementedMethod();
+   [_progressMarks removeObject:[NSNumber numberWithFloat:mark]];
 }
 
 -(NSAnimationProgress)currentProgress {
@@ -140,11 +161,11 @@ NSString *NSAnimationRunLoopMode=@"NSAnimationRunLoopMode";
 }
 
 -(void)clearStartAnimation {
-   NSUnimplementedMethod();
+   _startAnimation=nil;
 }
 
 -(void)clearStopAnimation {
-   NSUnimplementedMethod();
+   _stopAnimation=nil;
 }
 
 -(void)_setCurrentProgressAndEndIfNeeded:(NSAnimationProgress)progress {
@@ -198,7 +219,8 @@ NSString *NSAnimationRunLoopMode=@"NSAnimationRunLoopMode";
       break;
 
      case NSAnimationNonblockingThreaded:
-      NSUnimplementedMethod();
+      _isAnimating=YES;
+      [self _setCurrentProgressAndEndIfNeeded:1.0];
       break;
    }
 
@@ -216,11 +238,11 @@ NSString *NSAnimationRunLoopMode=@"NSAnimationRunLoopMode";
 }
 
 -(void)startWhenAnimation:(NSAnimation *)animation reachesProgress:(NSAnimationProgress)progress {
-   NSUnimplementedMethod();
+   _startAnimation=animation;
 }
 
 -(void)stopWhenAnimation:(NSAnimation *)animation reachesProgress:(NSAnimationProgress)progress {
-   NSUnimplementedMethod();
+   _stopAnimation=animation;
 }
 
 @end

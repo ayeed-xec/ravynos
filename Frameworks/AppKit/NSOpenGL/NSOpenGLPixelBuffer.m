@@ -9,36 +9,101 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSOpenGLPixelBuffer.h>
 #import <AppKit/NSRaise.h>
 
+static const unsigned long GLTexture2DTarget=0x0DE1;
+static const unsigned long GLTextureCubeMapTarget=0x8513;
+static const unsigned long GLTextureRectangleTarget=0x84F5;
+static const unsigned long GLRGBInternalFormat=0x1907;
+static const unsigned long GLRGBAInternalFormat=0x1908;
+static const unsigned long GLRGB8InternalFormat=0x8051;
+static const unsigned long GLRGBA8InternalFormat=0x8058;
+
+static BOOL textureTargetIsValid(unsigned long target) {
+   switch(target){
+      case GLTexture2DTarget:
+      case GLTextureCubeMapTarget:
+      case GLTextureRectangleTarget:
+    return YES;
+   }
+
+   return NO;
+}
+
+static BOOL textureInternalFormatIsValid(unsigned long format) {
+   switch(format){
+      case GLRGBInternalFormat:
+      case GLRGBAInternalFormat:
+      case GLRGB8InternalFormat:
+      case GLRGBA8InternalFormat:
+    return YES;
+   }
+
+   return NO;
+}
+
 @implementation NSOpenGLPixelBuffer
+{
+    unsigned long _textureTarget;
+    unsigned long _textureInternalFormat;
+    long _textureMaxMipMapLevel;
+    int _pixelsWide;
+    int _pixelsHigh;
+}
 
 -initWithTextureTarget:(unsigned long)textureTarget textureInternalFormat:(unsigned long)textureFormat textureMaxMipMapLevel:(long)mipMapLevel pixelsWide:(int)pixelsWide pixelsHigh:(int)pixelsHigh {
-   NSUnimplementedMethod();
+   [super init];
+
+   if(!textureTargetIsValid(textureTarget)){
+      NSLog(@"NSOpenGLPixelBuffer invalid texture target 0x%lx",textureTarget);
+      return nil;
+   }
+
+   if(!textureInternalFormatIsValid(textureFormat)){
+      NSLog(@"NSOpenGLPixelBuffer invalid texture internal format 0x%lx",textureFormat);
+      return nil;
+   }
+
+   if(mipMapLevel<0){
+      NSLog(@"NSOpenGLPixelBuffer negative mip map level %ld",mipMapLevel);
+      return nil;
+   }
+
+   if(pixelsWide<=0 || pixelsHigh<=0){
+      NSLog(@"NSOpenGLPixelBuffer invalid dimensions %dx%d",pixelsWide,pixelsHigh);
+      return nil;
+   }
+
+   if(textureTarget==GLTextureCubeMapTarget && pixelsWide!=pixelsHigh){
+      NSLog(@"NSOpenGLPixelBuffer cube map requires square dimensions %dx%d",pixelsWide,pixelsHigh);
+      return nil;
+   }
+
+   _textureTarget=textureTarget;
+   _textureInternalFormat=textureFormat;
+   _textureMaxMipMapLevel=mipMapLevel;
+   _pixelsWide=pixelsWide;
+   _pixelsHigh=pixelsHigh;
+
    return self;
 }
 
 -(unsigned)textureTarget {
-   NSUnimplementedMethod();
-   return 0;
+   return _textureTarget;
 }
 
 -(unsigned long)textureInternalFormat {
-   NSUnimplementedMethod();
-   return 0;
+   return _textureInternalFormat;
 }
 
 -(long)textureMaxMipMapLevel {
-   NSUnimplementedMethod();
-   return 0;
+   return _textureMaxMipMapLevel;
 }
 
 -(int)pixelsWide {
-   NSUnimplementedMethod();
-   return 0;
+   return _pixelsWide;
 }
 
 -(int)pixelsHigh {
-   NSUnimplementedMethod();
-   return 0;
+   return _pixelsHigh;
 }
 
 @end

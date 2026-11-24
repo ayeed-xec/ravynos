@@ -745,8 +745,12 @@ static NSMutableString *AssembleResourceSpecifier( NSMutableString *result, NSSt
 }
 
 -propertyForKey:(NSString *)key {
-   NSUnimplementedMethod();
-   return nil;
+   if(![self isFileURL] || key==nil)
+    return nil;
+
+   NSDictionary *attributes=[[NSFileManager defaultManager] fileAttributesAtPath:[self path] traverseLink:YES];
+
+   return [attributes objectForKey:key];
 }
 
 -(NSString *)scheme 
@@ -819,8 +823,29 @@ static NSMutableString *AssembleResourceSpecifier( NSMutableString *result, NSSt
 }
 
 -(NSURL *)standardizedURL {
-   NSUnimplementedMethod();
-   return nil;
+   if([self isFileURL])
+    return [NSURL fileURLWithPath:[[self path] stringByStandardizingPath]];
+
+   NSMutableArray *stack=[NSMutableArray array];
+
+   for(NSString *component in [[self path] pathComponents]){
+    if([component isEqualToString:@"."])
+     continue;
+
+    if([component isEqualToString:@".."]){
+     if([stack count]>0)
+      [stack removeLastObject];
+
+     continue;
+    }
+
+    [stack addObject:component];
+   }
+
+   NSString *path=[NSString pathWithComponents:stack];
+   NSString *string=[NSString stringWithFormat:@"%@://%@%@",[self scheme],[self host],path];
+
+   return [NSURL URLWithString:string];
 }
 
 - (NSString *)description;
@@ -839,28 +864,42 @@ static NSMutableString *AssembleResourceSpecifier( NSMutableString *result, NSSt
    return _baseURL;
 }
 
--(BOOL)setProperty:property forKey:(NSString *)key {
-   NSUnimplementedMethod();
-   return NO;
+-(BOOL)setProperty:(id)property forKey:(NSString *)key {
+   if(![self isFileURL] || key==nil)
+    return NO;
+
+   return [[NSFileManager defaultManager] changeFileAttributes:[NSDictionary dictionaryWithObject:property forKey:key] atPath:[self path]];
 }
 
 -(BOOL)setResourceData:(NSData *)data {
-   NSUnimplementedMethod();
-   return NO;
+   if(![self isFileURL])
+    return NO;
+
+   return [[NSFileManager defaultManager] createFileAtPath:[self path] contents:data attributes:nil];
 }
 
 -(NSData *)resourceDataUsingCache:(BOOL)useCache {
-   NSUnimplementedMethod();
-   return nil;
+   if(![self isFileURL])
+    return nil;
+
+   return [[NSFileManager defaultManager] contentsAtPath:[self path]];
 }
 
 -(NSURLHandle *)URLHandleUsingCache:(BOOL)useCache {
-   NSUnimplementedMethod();
    return nil;
 }
 
 -(void)loadResourceDataNotifyingClient:client usingCache:(BOOL)useCache {
-   NSUnimplementedMethod();
+   if(![self isFileURL])
+    return;
+
+   NSData *data=[[NSFileManager defaultManager] contentsAtPath:[self path]];
+
+   if(data==nil)
+    return;
+
+   if(client!=nil && [client respondsToSelector:@selector(URLResourceDidFinishLoading:)])
+    [client performSelector:@selector(URLResourceDidFinishLoading:) withObject:self];
 }
 
 
@@ -911,8 +950,10 @@ static NSMutableString *AssembleResourceSpecifier( NSMutableString *result, NSSt
 }
 
 - (NSURL *)URLByAppendingPathComponent:(NSString *)pathComponent isDirectory:(BOOL)isDirectory {
-    NSUnimplementedMethod();
-    return nil;
+    NSString *separator=isDirectory && [pathComponent length]>0 && ![pathComponent hasSuffix:@"/"] ? @"/" : @"";
+    NSString *url=[[self absoluteString] stringByAppendingFormat:@"%@%@",pathComponent,separator];
+
+    return [NSURL URLWithString:url];
 }
 
 - (NSURL *)URLByStandardizingPath {

@@ -54,15 +54,16 @@ static BOOL _isContextHelpModeActive=NO;
 }
 
 -(void)showContextHelpForObject:object locationHint:(NSPoint)hintPoint {
-   NSUnimplementedMethod();
+   NSString *text=[_objectToText objectForKey:object];
+
+   if(text!=nil)
+    [self showHelp:text];
 }
 
 -(void)findString:(NSString *)string inBook:(NSString *)bookName {
-   NSUnimplementedMethod();
 }
 
 -(void)openHelpAnchor:(NSString *)anchor inBook:(NSString *)bookName {
-   NSUnimplementedMethod();
 }
 
 @end

@@ -15,6 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 @interface NSURLRequest(private)
 -initWithURLRequest:(NSURLRequest *)other;
+-(NSMutableDictionary *)_protocolProperties;
 @end
 
 @implementation NSMutableURLRequest : NSURLRequest
@@ -90,6 +91,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    value=[value copy];
    [_mainDocumentURL release];
    _mainDocumentURL=value;
+}
+
+-(id)propertyForKey:(NSString *)key {
+   if(_protocolProperties==nil)
+    return nil;
+
+   return [_protocolProperties objectForKey:key];
+}
+
+-(void)setProperty:(id)value forKey:(NSString *)key {
+   if(_protocolProperties==nil)
+    _protocolProperties=[NSMutableDictionary new];
+
+   [_protocolProperties setObject:value forKey:key];
+}
+
+-(void)removePropertyForKey:(NSString *)key {
+   if(_protocolProperties==nil)
+    return;
+
+   [_protocolProperties removeObjectForKey:key];
 }
 
 @end

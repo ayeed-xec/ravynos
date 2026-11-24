@@ -201,10 +201,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     r.size.width -= _lineFragmentPadding;
     result=NSIntersectionRect(r, result);
 
-   if(sweep!=NSLineSweepRight || movement!=NSLineMovesDown)
-    NSUnimplementedMethod();
-
-   if(result.origin.x+result.size.width>_size.width)
+    if(result.origin.x+result.size.width>_size.width)
     result.size.width=_size.width-result.origin.x;
 
     if(result.size.width<=0)

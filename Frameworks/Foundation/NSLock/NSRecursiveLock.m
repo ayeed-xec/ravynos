@@ -22,13 +22,20 @@
 
 -(id)init
 {
-    NSUnimplementedMethod();
+    pthread_mutexattr_t attr;
+
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr,PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&_mutex,&attr);
+    pthread_mutexattr_destroy(&attr);
+
     return self;
 }
 
 -(void)dealloc
 {
     [_name release];
+    pthread_mutex_destroy(&_mutex);
     [super dealloc];
 }
 
@@ -48,24 +55,27 @@
 
 -(void)lock
 {
-    NSUnimplementedMethod();
+    pthread_mutex_lock(&_mutex);
 }
 
 -(void)unlock
 {
-    NSUnimplementedMethod();
+    pthread_mutex_unlock(&_mutex);
 }
 
 -(BOOL)tryLock
 {
-    NSUnimplementedMethod();
-    return NO;
+    return pthread_mutex_trylock(&_mutex)==0;
 }
 
 -(BOOL)lockBeforeDate:(NSDate *)value;
 {
-    NSUnimplementedMethod();
-    return NO;
+    while(![self tryLock]){
+     if([value timeIntervalSinceDate:[NSDate date]]<=0)
+      return NO;
+    }
+
+    return YES;
 }
 
 @end

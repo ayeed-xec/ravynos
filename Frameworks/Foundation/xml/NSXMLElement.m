@@ -8,6 +8,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #import <Foundation/NSXMLElement.h>
 #import <Foundation/NSXMLNode.h>
+#import <Foundation/NSXMLElement.h>
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSEnumerator.h>
@@ -30,18 +31,56 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithName:(NSString *)name URI:(NSString *)uri {
-   NSUnimplementedMethod();
-   return 0;
+   [self initWithName:name];
+
+   if(uri!=nil) {
+      NSString *prefix=[NSXMLNode prefixForName:name];
+      NSString *key=(prefix==nil?@"":prefix);
+      NSXMLNode *aNamespace=[NSXMLNode namespaceWithName:key stringValue:uri];
+
+      [_namespaces setObject:aNamespace forKey:key];
+   }
+
+   return self;
 }
 
 -initWithXMLString:(NSString *)xml error:(NSError **)error {
-   NSUnimplementedMethod();
-   return 0;
+   NSXMLDocument *document=[[NSXMLDocument alloc] initWithXMLString:xml options:NSXMLNodeOptionsNone error:error];
+   NSXMLElement *root=[document rootElement];
+
+   if(root==nil) {
+      [document release];
+      return nil;
+   }
+
+   [root retain];
+   [document release];
+
+   [super initWithKind:NSXMLElementKind options:NSXMLNodeOptionsNone];
+   _name=[root name];
+   _attributes=[root->_attributes retain];
+   _namespaces=[root->_namespaces retain];
+   [_children setArray:[root children]];
+
+   for(NSXMLNode *child in _children)
+      child->_parent=self;
+
+   [root release];
+
+   return self;
 }
 
 -copyWithZone:(NSZone *)zone {
-   NSUnimplementedMethod();
-   return 0;
+   NSXMLElement *copy=NSCopyObject(self,0,zone);
+
+   copy->_attributes=[_attributes mutableCopy];
+   copy->_namespaces=[_namespaces mutableCopy];
+   copy->_children=[_children mutableCopy];
+
+   for(NSXMLNode *child in copy->_children)
+      child->_parent=copy;
+
+   return copy;
 }
 
 -(NSArray *)attributes {
@@ -49,8 +88,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSXMLNode *)attributeForLocalName:(NSString *)name URI:(NSString *)uri {
-   NSUnimplementedMethod();
-   return 0;
+   for(NSXMLNode *attribute in [_attributes objectEnumerator]) {
+      if([[attribute localName] isEqualToString:name]) {
+         if(uri==nil)
+            return attribute;
+
+         NSString *attributeURI=[attribute URI];
+
+         if(uri==attributeURI || [attributeURI isEqualToString:uri])
+            return attribute;
+      }
+   }
+
+   return nil;
 }
 
 -(NSXMLNode *)attributeForName:(NSString *)name {
@@ -58,8 +108,26 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSArray *)elementsForLocalName:(NSString *)localName URI:(NSString *)uri {
-   NSUnimplementedMethod();
-   return 0;
+   NSMutableArray *result=[NSMutableArray array];
+
+   for(NSXMLNode *node in _children) {
+      if([node kind]!=NSXMLElementKind)
+         continue;
+
+      if(![[node localName] isEqualToString:localName])
+         continue;
+
+      if(uri!=nil) {
+         NSString *nodeURI=[node URI];
+
+         if(nodeURI==nil || ![nodeURI isEqualToString:uri])
+            continue;
+      }
+
+      [result addObject:node];
+   }
+
+   return result;
 }
 
 -(NSArray *)elementsForName:(NSString *)name {
@@ -73,13 +141,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSArray *)namespaces {
-   NSUnimplementedMethod();
-   return 0;
+   return [_namespaces allValues];
 }
 
 -(NSXMLNode *)namespaceForPrefix:(NSString *)prefix {
-   NSUnimplementedMethod();
-   return 0;
+   return [_namespaces objectForKey:prefix];
 }
 
 -(void)setAttributes:(NSArray *)attributes {
@@ -157,15 +223,75 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)resolveNamespaceForName:(NSString *)name {
-   NSUnimplementedMethod();
+   NSString *prefix=[NSXMLNode prefixForName:name];
+
+   if(prefix==nil)
+      prefix=@"";
+
+   if([_namespaces objectForKey:prefix]!=nil)
+      return;
+
+   NSXMLNode *node=[self parent];
+
+   while(node!=nil) {
+      if([node kind]==NSXMLElementKind) {
+         NSXMLNode *aNamespace=[(NSXMLElement *)node namespaceForPrefix:prefix];
+
+         if(aNamespace!=nil) {
+            [_namespaces setObject:aNamespace forKey:prefix];
+            return;
+         }
+      }
+
+      node=[node parent];
+   }
 }
 
 -(void)resolvePrefixForNamespaceURI:(NSString *)uri {
-   NSUnimplementedMethod();
+   for(NSXMLNode *aNamespace in [_namespaces objectEnumerator]) {
+      if([[aNamespace stringValue] isEqualToString:uri])
+         return;
+   }
+
+   NSXMLNode *node=[self parent];
+
+   while(node!=nil) {
+      if([node kind]==NSXMLElementKind) {
+         for(NSXMLNode *found in [node namespaces]) {
+            if([[found stringValue] isEqualToString:uri]) {
+               if([found name]!=nil)
+                  [_namespaces setObject:found forKey:[found name]];
+
+               return;
+            }
+         }
+      }
+
+      node=[node parent];
+   }
 }
 
 -(void)normalizeAdjacentTextNodesPreservingCDATA:(BOOL)preserve {
-   NSUnimplementedMethod();
+   NSXMLNode *previous=nil;
+   NSInteger i=0;
+
+   while(i<[_children count]) {
+      NSXMLNode *node=[_children objectAtIndex:i];
+
+      if([node kind]==NSXMLTextKind && !(preserve && (node->_options&NSXMLNodeIsCDATA))) {
+         if(previous!=nil) {
+            [previous setStringValue:[[previous stringValue] stringByAppendingString:[node stringValue]]];
+            [_children removeObjectAtIndex:i];
+            continue;
+         }
+
+         previous=node;
+      } else {
+         previous=nil;
+      }
+
+      i++;
+   }
 }
 
 static void appendStringWithCharacterEntities(NSMutableString *result,NSString *string){

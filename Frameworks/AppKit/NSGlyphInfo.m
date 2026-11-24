@@ -8,6 +8,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #import <AppKit/NSGlyphInfo.h>
 #import <AppKit/NSRaise.h>
+#import <Foundation/NSAutoreleasePool-private.h>
+#import <Foundation/NSAutoreleasePool.h>
 
 @implementation NSGlyphInfo
 
@@ -24,17 +26,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 +(NSGlyphInfo *)glyphInfoWithCharacterIdentifier:(unsigned int)identifier collection:(NSCharacterCollection)collection baseString:(NSString *)baseString {
-   NSUnimplementedMethod();
-   return nil;
+   NSGlyphInfo *info=[[self allocWithZone:NULL] init];
+
+   info->_identifier=identifier;
+   info->_collection=collection;
+
+   return NSAutorelease(info);
 }
 
 +(NSGlyphInfo *)glyphInfoWithGlyph:(NSGlyph)glyph forFont:(NSFont *)font baseString:(NSString *)baseString {
-   NSUnimplementedMethod();
    return nil;
 }
 
 +(NSGlyphInfo *)glyphInfoWithGlyphName:(NSString *)glyphName forFont:(NSFont *)font baseString:(NSString *)baseString {
-   NSUnimplementedMethod();
    return nil;
 }
 

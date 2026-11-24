@@ -78,6 +78,57 @@ NSString * const NSOldSelectedCharacterRange=@"NSOldSelectedCharacterRange";
 -(void)_continuousSpellCheck;
 @end
 
+@implementation NSTextViewSharedData(NSTextViewSharedData_textview)
+
+-initWithTextView:(NSTextView *)textView {
+    unsigned flags=0;
+
+    if((self=[self init])){
+        _backgroundColor=[[textView backgroundColor] retain];
+        _defaultParagraphStyle=[[textView defaultParagraphStyle] copy];
+        _insertionColor=[[textView insertionPointColor] retain];
+        _selectedAttributes=[[textView selectedTextAttributes] retain];
+
+        if([textView isSelectable])
+            flags|=0x01;
+        if([textView isEditable])
+            flags|=0x02;
+        if([textView isRichText])
+            flags|=0x04;
+        if([textView drawsBackground])
+            flags|=1<<8;
+        if([textView allowsUndo])
+            flags|=0x400;
+
+        _flags=flags;
+    }
+
+    return self;
+}
+
+@end
+
+@implementation NSTextViewSharedData(NSTextViewSharedData_coding)
+
+-(void)encodeWithCoder:(NSCoder *)coder {
+    if([coder allowsKeyedCoding]){
+        NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+        [keyed encodeObject:_backgroundColor forKey:@"NSBackgroundColor"];
+        [keyed encodeObject:_defaultParagraphStyle forKey:@"NSDefaultParagraphStyle"];
+        [keyed encodeInt:_flags forKey:@"NSFlags"];
+        [keyed encodeObject:_insertionColor forKey:@"NSInsertionColor"];
+        [keyed encodeObject:_linkAttributes forKey:@"NSLinkAttributes"];
+        [keyed encodeObject:_markedAttributes forKey:@"NSMarkedAttributes"];
+        [keyed encodeObject:_selectedAttributes forKey:@"NSSelectedAttributes"];
+    }
+    else {
+        [NSException raise:NSInvalidArgumentException format:@"-[%@ %s] is not implemented for coder %@",[self class],sel_getName(_cmd),coder];
+    }
+}
+
+@end
+
 @implementation NSTextView
 -(void)configureMenu {
     static NSMenu *menu=nil;
@@ -98,7 +149,22 @@ NSString * const NSOldSelectedCharacterRange=@"NSOldSelectedCharacterRange";
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-    NSUnimplementedMethod();
+    [super encodeWithCoder:coder];
+
+    if([coder allowsKeyedCoding]){
+        NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+        unsigned flags=0;
+
+        if(_isHorizontallyResizable)
+            flags|=0x01;
+        if(_isVerticallyResizable)
+            flags|=0x02;
+
+        [keyed encodeObject:[[[NSTextViewSharedData alloc] initWithTextView:self] autorelease] forKey:@"NSSharedData"];
+        [keyed encodeObject:_textContainer forKey:@"NSTextContainer"];
+        [keyed encodeInt:flags forKey:@"NSTVFlags"];
+        [keyed encodeObject:_delegate forKey:@"NSDelegate"];
+    }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -1917,11 +1983,32 @@ NSString * const NSOldSelectedCharacterRange=@"NSOldSelectedCharacterRange";
 
 
 -(void)copyRuler:sender {
-    NSUnimplementedMethod();
+    NSDictionary *attributes=[self typingAttributes];
+    NSParagraphStyle *style=[attributes objectForKey:NSParagraphStyleAttributeName];
+
+    if(style==nil)
+        style=[self defaultParagraphStyle];
+
+    if(style!=nil){
+        NSData *data=[NSKeyedArchiver archivedDataWithRootObject:style];
+
+        [[NSPasteboard generalPasteboard] setData:data forType:NSPasteboardTypeRuler];
+    }
 }
 
 -(void)pasteRuler:sender {
-    NSUnimplementedMethod();
+    NSData *data=[[NSPasteboard generalPasteboard] dataForType:NSPasteboardTypeRuler];
+
+    if(data!=nil){
+        NSParagraphStyle *style=[NSKeyedUnarchiver unarchiveObjectWithData:data];
+        NSRange range=[self selectedRange];
+
+        if(style!=nil && range.length>0){
+            [[self textStorage] addAttribute:NSParagraphStyleAttributeName value:style range:range];
+            [self didChangeText];
+            [self updateRuler];
+        }
+    }
 }
 
 // NSText
@@ -2876,17 +2963,39 @@ NSString * const NSOldSelectedCharacterRange=@"NSOldSelectedCharacterRange";
 }
 
 -(NSDragOperation)dragOperationForDraggingInfo:(id <NSDraggingInfo>)info type:(NSString *)type {
-    NSUnimplementedMethod();
-    return 0;
+    NSDragOperation mask=[info draggingSourceOperationMask];
+
+    if(!_isEditable)
+        return NSDragOperationNone;
+
+    if(mask&NSDragOperationGeneric)
+        return NSDragOperationGeneric;
+
+    if(mask&NSDragOperationCopy)
+        return NSDragOperationCopy;
+
+    if(mask&NSDragOperationMove)
+        return NSDragOperationMove;
+
+    return NSDragOperationNone;
 }
 
 -(void)cleanUpAfterDragOperation {
-    NSUnimplementedMethod();
+    [self setSelectedRange:NSMakeRange([self selectedRange].location,0)];
 }
 
 -(NSUInteger)characterIndexForPoint:(NSPoint)point {
-    NSUnimplementedMethod();
-    return 0;
+    NSPoint viewPoint=[self convertPoint:point fromView:nil];
+    float fraction=0;
+    unsigned index=[self glyphIndexForPoint:viewPoint fractionOfDistanceThroughGlyph:&fraction];
+
+    if(index==NSNotFound)
+        return NSNotFound;
+
+    if(fraction>=0.5 && index<[[[self textStorage] string] length])
+        index++;
+
+    return index;
 }
 
 -(void)_setFieldEditorUndoManager:(NSUndoManager *)undoManager
@@ -3136,12 +3245,10 @@ NSString * const NSOldSelectedCharacterRange=@"NSOldSelectedCharacterRange";
 
 -(void)setAutomaticSpellingCorrectionEnabled:(BOOL)value {
     _isAutomaticSpellingCorrectionEnabled=value;
-    NSUnimplementedMethod();
 }
 
 -(void)toggleAutomaticSpellingCorrection:sender {
     _isAutomaticSpellingCorrectionEnabled=!_isAutomaticSpellingCorrectionEnabled;
-    NSUnimplementedMethod();
 }
 
 -(NSTextCheckingTypes)enabledTextCheckingTypes {
@@ -3150,7 +3257,6 @@ NSString * const NSOldSelectedCharacterRange=@"NSOldSelectedCharacterRange";
 
 -(void)setEnabledTextCheckingTypes:(NSTextCheckingTypes)checkingTypes {
     _enabledTextCheckingTypes=checkingTypes;
-    NSUnimplementedMethod();
 }
 
 -(void)setSpellingState:(NSInteger)value range:(NSRange)characterRange {

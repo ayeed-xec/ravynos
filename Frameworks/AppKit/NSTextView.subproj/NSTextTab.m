@@ -8,6 +8,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 // Original - Christopher Lloyd <cjwl@objc.net>
 #import <Foundation/NSKeyedArchiver.h>
+#import <Foundation/NSException.h>
 
 #import <AppKit/NSParagraphStyle.h>
 #import <AppKit/NSRaise.h>
@@ -56,9 +57,8 @@ NSString *NSTabColumnTerminatorsAttributeName = @"NSTabColumnTerminatorsAttribut
 			_type = [aDecoder decodeIntForKey: @"Type"];
 			_location = [aDecoder decodeFloatForKey: @"Location"];
 		} else {
-			NSUnimplementedMethod();
-			[self release];
-			self = nil;
+			[NSException raise: NSInvalidArgumentException
+				format: @"-[%@ %s] is not implemented for coder %@", [self class], sel_getName (_cmd), aDecoder];
 		}
 	}
 	return self;
@@ -70,7 +70,8 @@ NSString *NSTabColumnTerminatorsAttributeName = @"NSTabColumnTerminatorsAttribut
 		[aCoder encodeInt: _type forKey: @"Type"];
 		[aCoder encodeFloat: _location forKey: @"Location"];
 	} else {
-		NSUnimplementedMethod();
+		[NSException raise: NSInvalidArgumentException
+			format: @"-[%@ %s] is not implemented for coder %@", [self class], sel_getName (_cmd), aCoder];
 	}
 }
 

@@ -369,7 +369,9 @@ static NSMutableDictionary *NSSpellCheckerAccessoryControllers() {
 
 #ifdef NS_BLOCKS
 -(NSInteger)requestCheckingOfString:(NSString *)stringToCheck range:(NSRange)range types:(NSTextCheckingTypes)checkingTypes options:(NSDictionary *)options inSpellDocumentWithTag:(NSInteger)tag completionHandler:(void (^)(NSInteger sequenceNumber, NSArray *results, NSOrthography *orthography, NSInteger wordCount))completionHandler {
-	NSUnimplementedMethod();
+	if(completionHandler!=nil)
+	 completionHandler(0,[NSArray array],nil,0);
+
 	return 0;
 }
 #endif
@@ -534,29 +536,26 @@ static NSMutableDictionary *NSSpellCheckerAccessoryControllers() {
 
 #ifdef NS_BLOCKS
 -(void)showCorrectionIndicatorOfType:(NSCorrectionIndicatorType)type primaryString:(NSString *)primaryString alternativeStrings:(NSArray *)alternativeStrings forStringInRect:(NSRect)rect view:(NSView *)view completionHandler:(void (^)(NSString *acceptedString))completionBlock {
-	NSUnimplementedMethod();
 }
 #endif
 
 -(NSString *)correctionForWordRange:(NSRange)range inString:(NSString *)string language:(NSString *)language inSpellDocumentWithTag:(NSInteger)tag {
-	NSUnimplementedMethod();
-	return 0;
+	NSArray *guesses=[self guessesForWordRange:range inString:string language:language inSpellDocumentWithTag:tag];
+
+	return [guesses count]>0 ? [guesses objectAtIndex:0] : nil;
 }
 
 -(void)recordResponse:(NSCorrectionResponse)response toCorrection:(NSString *)correction forWord:(NSString *)word language :(NSString *)language inSpellDocumentWithTag :(NSInteger)tag {
-	NSUnimplementedMethod();
 }
 
 -(void)dismissCorrectionIndicatorForView:(NSView *)view {
-	NSUnimplementedMethod();
 }
 
 #pragma mark -
 #pragma mark Automatic Text Replacement
 
 +(BOOL)isAutomaticTextReplacementEnabled {
-   NSUnimplementedMethod();
-   return 0;
+   return NO;
 }
 
 @end

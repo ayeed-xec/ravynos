@@ -236,7 +236,22 @@ static NSURLCache *shared=nil;
 }
 
 -(void)removeAllCachedResponses {
-   NSUnimplementedMethod();
+   [_memoryCache removeAllObjects];
+   [_memoryAccess removeAllObjects];
+
+   NSArray *allFiles=[[NSFileManager defaultManager] contentsOfDirectoryAtPath:_path error:NULL];
+
+   for(NSString *check in allFiles){
+    if(![check isEqualToString:@"cache"]){
+     NSString *fullPath=[_path stringByAppendingPathComponent:check];
+
+     [[NSFileManager defaultManager] removeItemAtPath:fullPath error:NULL];
+    }
+   }
+
+   [_diskCache removeAllObjects];
+
+   [_diskCache writeToFile:[_path stringByAppendingPathComponent:@"cache"] atomically:YES];
 }
 
 -(void)removeCachedResponseForRequest:(NSURLRequest *)request {

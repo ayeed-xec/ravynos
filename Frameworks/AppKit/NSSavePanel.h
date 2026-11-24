@@ -25,6 +25,9 @@ enum {
     NSString *_prompt;
 
     BOOL _treatsFilePackagesAsDirectories;
+    BOOL _canCreateDirectories;
+    BOOL _allowsOtherFileTypes;
+    NSArray *_allowedFileTypes;
     NSView *_accessoryView;
 }
 

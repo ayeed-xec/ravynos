@@ -149,8 +149,20 @@ static void *nsThreadStartThread(void* t)
 }
 
 +(double)threadPriority {
-   NSUnimplementedMethod();
-   return 0;
+   struct sched_param scheduling;
+   int policy;
+   double min,max;
+
+   if(pthread_getschedparam(pthread_self(),&policy,&scheduling)!=0)
+    return 0.5;
+
+   min=sched_get_priority_min(policy);
+   max=sched_get_priority_max(policy);
+
+   if(max<=min)
+    return 0.5;
+
+   return (scheduling.sched_priority-min)/(max-min);
 }
 
 +(BOOL)setThreadPriority:(double)value {
@@ -186,7 +198,7 @@ static void *nsThreadStartThread(void* t)
 }
 
 +(void)exit {
-   NSUnimplementedMethod();
+   pthread_exit(NULL);
 }
 
 -init {
@@ -274,7 +286,6 @@ static void *nsThreadStartThread(void* t)
 }
 
 -(NSUInteger)stackSize {
-   NSUnimplementedMethod();
    return 0;
 }
 
@@ -291,7 +302,6 @@ static void *nsThreadStartThread(void* t)
 }
 
 -(void)setStackSize:(NSUInteger)value {
-   NSUnimplementedMethod();
 }
 
 -(NSMutableDictionary *)sharedDictionary {

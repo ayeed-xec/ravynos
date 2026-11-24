@@ -42,7 +42,21 @@ NSString * const NSFontPboard=@"NSFontPboard";
 NSString * const NSGeneralPboard=@"NSGeneralPboard";
 NSString * const NSRulerPboard=@"NSRulerPboard";
 
-@implementation NSPasteboard
+@interface NSPasteboard ()
+-(NSPasteboard *)_initWithName:(NSString *)name;
+@end
+
+@implementation NSPasteboard {
+   NSMutableDictionary *_contents;
+   int _changeCount;
+}
+
+-(NSPasteboard *)_initWithName:(NSString *)name {
+   _contents=[NSMutableDictionary new];
+   _changeCount=0;
+
+   return self;
+}
 
 +(NSPasteboard *)generalPasteboard {
    return [self pasteboardWithName:NSGeneralPboard];
@@ -53,13 +67,11 @@ NSString * const NSRulerPboard=@"NSRulerPboard";
 }
 
 -(int)changeCount {
-   NSUnimplementedMethod();
-   return 0;
+   return _changeCount;
 }
 
 -(NSArray *)types {
-   NSUnimplementedMethod();
-   return nil;
+   return [_contents allKeys];
 }
 
 -(NSString *)availableTypeFromArray:(NSArray *)types {
@@ -78,8 +90,7 @@ NSString * const NSRulerPboard=@"NSRulerPboard";
 
 
 -(NSData *)dataForType:(NSString *)type {
-   NSUnimplementedMethod();
-   return nil;
+   return [_contents objectForKey:type];
 }
 
 -(NSString *)stringForType:(NSString *)type {
@@ -100,18 +111,28 @@ NSString * const NSRulerPboard=@"NSRulerPboard";
 }
 
 -(int)declareTypes:(NSArray *)types owner:(id)owner {
-   NSUnimplementedMethod();
-   return 0;
+   [_contents removeAllObjects];
+   _changeCount++;
+
+   return [self addTypes:types owner:owner];
 }
 
 -(int)addTypes:(NSArray *)types owner:(id)owner {
-    NSUnimplementedMethod();
-    return 0;
+   _changeCount++;
+
+   return [types count];
 }
 
 -(BOOL)setData:(NSData *)data forType:(NSString *)type {
-   NSUnimplementedMethod();
-   return NO;
+   if(data==nil){
+    [_contents removeObjectForKey:type];
+
+    return NO;
+   }
+
+   [_contents setObject:data forKey:type];
+
+   return YES;
 }
 
 -(BOOL)setString:(NSString *)string forType:(NSString *)type {

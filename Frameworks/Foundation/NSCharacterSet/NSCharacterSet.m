@@ -37,17 +37,24 @@ static NSMapTable *nameToSet=NULL;
 }
 
 -(Class)classForCoder {
-   NSUnimplementedMethod();
-   return Nil;
+   return [NSMutableCharacterSet class];
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   if(self=[super init]) {
+    NSData *bitmap=[coder decodeObject];
+
+    if(bitmap!=nil) {
+     [self release];
+     self=(id)NSAutorelease(NSCharacterSet_bitmapNewWithBitmap(NULL,bitmap));
+    }
+   }
+
    return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeObject:[self bitmapRepresentation]];
 }
 
 +characterSetWithBitmapRepresentation:(NSData *)data {

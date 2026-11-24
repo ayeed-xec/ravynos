@@ -7,6 +7,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <Foundation/NSURLDownload.h>
 #import <Foundation/NSURLRequest.h>
+#import <Foundation/NSMutableURLRequest.h>
 #import <Foundation/NSURLConnection.h>
 #import <Foundation/NSRaise.h>
 #import <Foundation/NSRunLoop.h>
@@ -29,8 +30,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithResumeData:(NSData *)data delegate:delegate path:(NSString *)path {
-   NSUnimplementedMethod();
-   return NO;
+   if(self=[super init]){
+    _delegate=delegate;
+    _path=[path copy];
+    _request=[NSMutableURLRequest requestWithURL:[NSURL URLWithString:@""]];
+   }
+
+   return self;
 }
 
 -(NSURLRequest *)request {
@@ -38,8 +44,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSData *)resumeData {
-   NSUnimplementedMethod();
-   return NO;
+   return nil;
 }
 
 -(BOOL)deletesFileUponFailure {

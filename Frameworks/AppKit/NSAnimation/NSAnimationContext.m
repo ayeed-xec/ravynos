@@ -15,24 +15,30 @@
     return self;
 }
 
+static NSInteger _groupingLevel=0;
+
 +(void)beginGrouping {
-    NSUnimplementedMethod();
+    _groupingLevel++;
 }
 +(void)endGrouping {
-    NSUnimplementedMethod();
+    if(_groupingLevel>0)
+     _groupingLevel--;
 }
 
 +(NSAnimationContext*)currentContext  {
-    NSUnimplementedMethod();
-    return nil;
+    static NSAnimationContext *shared=nil;
+
+    if(shared==nil)
+     shared=[[NSAnimationContext alloc] init];
+
+    return shared;
 }
 
 -(void)setDuration:(NSTimeInterval)duration {
-    NSUnimplementedMethod();
+    _duration=duration;
 }
 -(NSTimeInterval)duration {
-    NSUnimplementedMethod();
-    return 0;
+    return _duration;
 }
 
 @end

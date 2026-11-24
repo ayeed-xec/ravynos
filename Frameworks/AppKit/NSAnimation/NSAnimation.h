@@ -57,6 +57,8 @@ APPKIT_EXPORT NSString *NSAnimationTriggerOrderOut;
     BOOL _isAnimating;
     NSTimer *_timer;
     NSTimeInterval _startTime;
+    NSAnimation *_startAnimation;
+    NSAnimation *_stopAnimation;
 }
 
 - initWithDuration:(NSTimeInterval)duration animationCurve:(NSAnimationCurve)curve;

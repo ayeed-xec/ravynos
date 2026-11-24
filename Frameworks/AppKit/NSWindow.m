@@ -403,6 +403,10 @@ const float WSWindowEdgePad = 2;
 
 -(void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+    if(windowBorderThicknesses)
+        [windowBorderThicknesses removeObjectForKey:[NSValue valueWithPointer:self]];
+    if(windowBorderAutorecalculate)
+        [windowBorderAutorecalculate removeObjectForKey:[NSValue valueWithPointer:self]];
     if(_context)
         [_context release];
     if(buffer && bufsize)
@@ -1057,9 +1061,30 @@ const float WSWindowEdgePad = 2;
    _contentMaxSize=value;
 }
 
+static NSMutableDictionary *windowBorderThicknesses=nil;
+static NSMutableDictionary *windowBorderAutorecalculate=nil;
+
+static NSMutableDictionary *windowBorderDictionaryForWindow(NSWindow *window, NSMutableDictionary **storage) {
+   NSMutableDictionary *result;
+
+   if(*storage==nil)
+    *storage=[[NSMutableDictionary alloc] init];
+
+   result=[*storage objectForKey:[NSValue valueWithPointer:window]];
+
+   if(result==nil){
+    result=[NSMutableDictionary new];
+    [*storage setObject:result forKey:[NSValue valueWithPointer:window]];
+    [result release];
+   }
+
+   return result;
+}
+
 -(void)setContentBorderThickness:(CGFloat)thickness forEdge:(NSRectEdge)edge {
-// FIXME: should warn, but low priority cosmetic, so we dont, still needs to be implemented
-//   NSUnimplementedMethod();
+   [windowBorderDictionaryForWindow(self, &windowBorderThicknesses)
+    setObject:[NSNumber numberWithDouble:thickness]
+       forKey:[NSNumber numberWithInt:edge]];
 }
 
 -(void)setMovable:(BOOL)movable {
@@ -1099,8 +1124,9 @@ const float WSWindowEdgePad = 2;
 }
 
 -(void)setAutorecalculatesContentBorderThickness:(BOOL)automatic forEdge:(NSRectEdge)edge {
-// FIXME: should warn, but low priority cosmetic, so we dont, still needs to be implemented
-//   NSUnimplementedMethod();
+   [windowBorderDictionaryForWindow(self, &windowBorderAutorecalculate)
+    setObject:[NSNumber numberWithBool:automatic]
+       forKey:[NSNumber numberWithInt:edge]];
 }
 
 -(BOOL)_isApplicationWindow {
@@ -1339,11 +1365,37 @@ const float WSWindowEdgePad = 2;
 }
 
 -(BOOL)autorecalculatesContentBorderThicknessForEdge:(NSRectEdge)edge {
-   return NO;
+   if(windowBorderAutorecalculate==nil)
+    return YES;
+
+   NSDictionary *perWindow=[windowBorderAutorecalculate objectForKey:[NSValue valueWithPointer:self]];
+
+   if(perWindow==nil)
+    return YES;
+
+   NSNumber *value=[perWindow objectForKey:[NSNumber numberWithInt:edge]];
+
+   if(value==nil)
+    return YES;
+
+   return [value boolValue];
 }
 
 -(CGFloat)contentBorderThicknessForEdge:(NSRectEdge)edge {
-   return 0.;
+   if(windowBorderThicknesses==nil)
+    return 0.;
+
+   NSDictionary *perWindow=[windowBorderThicknesses objectForKey:[NSValue valueWithPointer:self]];
+
+   if(perWindow==nil)
+    return 0.;
+
+   NSNumber *value=[perWindow objectForKey:[NSNumber numberWithInt:edge]];
+
+   if(value==nil)
+    return 0.;
+
+   return [value doubleValue];
 }
 
 -(NSString *)_autosaveFrameKeyWithName:(NSString *)name {

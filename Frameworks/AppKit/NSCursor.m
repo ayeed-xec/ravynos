@@ -179,7 +179,6 @@ static NSMutableArray *_cursorStack=nil;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
 }
 
 -initWithName:(NSString *)name {
@@ -398,11 +397,13 @@ static NSMutableArray *_cursorStack=nil;
 }
 
 -(void)mouseEntered:(NSEvent *)event {
-   NSUnimplementedMethod();
+   if(_isSetOnMouseEntered)
+    [self set];
 }
 
 -(void)mouseExited:(NSEvent *)event {
-   NSUnimplementedMethod();
+   if(_isSetOnMouseExited)
+    [[self class] pop];
 }
 
 -(void)pop {

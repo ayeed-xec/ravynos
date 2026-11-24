@@ -172,15 +172,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)setCanCreateDirectories:(BOOL)value {
-   NSUnimplementedMethod();
+   _canCreateDirectories=value;
 }
 
 -(void)setAllowedFileTypes:(NSArray *)value {
-   NSUnimplementedMethod();
+   if(_allowedFileTypes!=value){
+    [_allowedFileTypes release];
+    _allowedFileTypes=[value copy];
+   }
 }
 
 -(void)setAllowsOtherFileTypes:(BOOL)value {
-   NSUnimplementedMethod();
+   _allowsOtherFileTypes=value;
 }
 
 - (void)beginSheetForDirectory:(NSString *)path

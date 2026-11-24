@@ -10,11 +10,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSColor.h>
 #import <Foundation/NSArray.h>
 #import <AppKit/NSRaise.h>
+#import <AppKit/NSGraphics.h>
 
 @implementation NSTextBlock
 
 -init {
-   NSUnimplementedMethod();
+   [super init];
+
    return self;
 }
 
@@ -43,8 +45,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSTextBlockValueType)valueTypeForDimension:(NSTextBlockDimension)dimension {
-   NSUnimplementedMethod();
-   return 0;
+   return _dimensionValueTypes[dimension];
 }
 
 -(float)widthForLayer:(NSTextBlockLayer)layer edge:(NSRectEdge)edge {
@@ -101,17 +102,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSRect)rectForLayoutAtPoint:(NSPoint)point inRect:(NSRect)rect textContainer:(NSTextContainer *)textContainer characterRange:(NSRange)range {
-   NSUnimplementedMethod();
-   return NSZeroRect;
+   return rect;
 }
 
 -(NSRect)boundsRectForContentRect:(NSRect)contentRect inRect:(NSRect)rect textContainer:(NSTextContainer *)textContainer characterRange:(NSRange)range {
-   NSUnimplementedMethod();
-   return NSZeroRect;
+   return contentRect;
 }
 
 -(void)drawBackgroundWithFrame:(NSRect)frame inView:(NSView *)view characterRange:(NSRange)range layoutManager:(NSLayoutManager *)layoutManager {
-   NSUnimplementedMethod();
+   if(_backgroundColor!=nil){
+    [_backgroundColor set];
+
+    NSRectFillUsingOperation(frame,NSCompositeSourceOver);
+   }
 }
 
 @end

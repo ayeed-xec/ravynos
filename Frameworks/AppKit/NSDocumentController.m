@@ -15,6 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSWindowController.h>
 #import <AppKit/NSRaise.h>
+#import <Foundation/NSCoder.h>
 
 @interface NSDocument(private)
 -(void)_setUntitledNumber:(int)number;
@@ -58,12 +59,16 @@ static NSDocumentController *shared=nil;
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
-   return nil;
+   self=[super init];
+
+   if([coder containsValueForKey:@"NSAutosavingDelay"])
+    _autosavingDelay=[coder decodeDoubleForKey:@"NSAutosavingDelay"];
+
+   return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [coder encodeDouble:_autosavingDelay forKey:@"NSAutosavingDelay"];
 }
 
 -(NSString *)defaultType {
@@ -150,8 +155,6 @@ static NSDocumentController *shared=nil;
 
 -(void)setAutosavingDelay:(NSTimeInterval)value {
    _autosavingDelay=value;
-   
-   NSUnimplementedMethod();
 }
 
 -(NSArray *)documents {
@@ -387,8 +390,27 @@ static NSDocumentController *shared=nil;
 } 
 
 -(BOOL)reopenDocumentForURL:(NSURL *)url withContentsOfURL:(NSURL *)contentsUL error:(NSError **)error {
-   NSUnimplementedMethod();
-   return 0;
+   NSDocument *document=[self documentForURL:url];
+
+   if(document==nil){
+    NSString *type=[self typeForContentsOfURL:url error:error];
+
+    document=[self makeDocumentForURL:url withContentsOfURL:contentsUL ofType:type error:error];
+
+    if(document==nil)
+     return NO;
+
+    [self addDocument:document];
+    [document makeWindowControllers];
+   }
+   else{
+    if(![document revertToContentsOfURL:contentsUL ofType:[document fileType] error:error])
+     return NO;
+   }
+
+   [document showWindows];
+
+   return YES;
 }
 
 -(void)_closeDocumentsStartingWith:(NSDocument *)document 
@@ -434,7 +456,13 @@ static NSDocumentController *shared=nil;
 }
 
 -(void)reviewUnsavedDocumentsWithAlertTitle:(NSString *)title cancellable:(BOOL)cancellable delegate:delegate didReviewAllSelector:(SEL)selector info:(void *)info {
-   NSUnimplementedMethod();
+   BOOL reviewed=[self reviewUnsavedDocumentsWithAlertTitle:title cancellable:cancellable];
+
+   if([delegate respondsToSelector:selector]){
+    void (*delegateMethod)(id, SEL, id, BOOL, void *);
+    delegateMethod=(void (*)(id, SEL, id, BOOL, void *))[delegate methodForSelector:selector];
+    delegateMethod(delegate, selector, self, reviewed, info);
+   }
 }
 
 -(NSError *)willPresentError:(NSError *)error {
@@ -676,13 +704,37 @@ static BOOL actionIsDocumentController(SEL selector){
 }
 
 -(BOOL)closeAllDocuments {
-   NSUnimplementedMethod();
-   return NO;
+   [self closeAllDocumentsWithDelegate:nil didCloseAllSelector:NULL contextInfo:NULL];
+
+   return [_documents count]==0;
 }
 
 -(BOOL)reviewUnsavedDocumentsWithAlertTitle:(NSString *)title cancellable:(BOOL)cancellable {
-   NSUnimplementedMethod();
-   return 0;
+   int result;
+
+   if(![self hasEditedDocuments])
+    return YES;
+
+   result=NSRunAlertPanel(title,
+                          NSLocalizedStringFromTableInBundle(@"Do you want to save the changes to the open documents?", nil, [NSBundle bundleForClass:[NSDocumentController class]], @""),
+                          NSLocalizedStringFromTableInBundle(@"Save All", nil, [NSBundle bundleForClass:[NSDocumentController class]], @""),
+                          cancellable?NSLocalizedStringFromTableInBundle(@"Cancel", nil, [NSBundle bundleForClass:[NSDocumentController class]], @""):nil,
+                          NSLocalizedStringFromTableInBundle(@"Discard All", nil, [NSBundle bundleForClass:[NSDocumentController class]], @""));
+
+   if(result==NSAlertDefaultReturn){
+    [self saveAllDocuments:self];
+    return YES;
+   }
+
+   if(result==NSAlertOtherReturn){
+    for(NSDocument *document in [_documents copy]){
+     if([document isDocumentEdited])
+      [document updateChangeCount:NSChangeCleared];
+    }
+    return YES;
+   }
+
+   return NO;
 }
 
 @end

@@ -13,6 +13,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSArray.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSRaise.h>
+#import <Foundation/NSError.h>
 
 @implementation NSXMLDocument
 
@@ -26,13 +27,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithRootElement:(NSXMLElement *)element {
-   NSUnimplementedMethod();
-   return nil;
+   [super initWithKind:NSXMLDocumentKind options:NSXMLNodeOptionsNone];
+
+   if(element!=nil)
+    [self setRootElement:element];
+
+   return self;
 }
 
 -initWithXMLString:(NSString *)string options:(NSUInteger)options error:(NSError **)error {
-   NSUnimplementedMethod();
-   return nil;
+   NSData *data=[string dataUsingEncoding:NSUTF8StringEncoding];
+
+   if(data==nil){
+    if(error!=NULL)
+     *error=[NSError errorWithDomain:@"NSXMLDocumentErrorDomain" code:1 userInfo:[NSDictionary dictionaryWithObject:@"string could not be encoded as UTF-8" forKey:NSLocalizedDescriptionKey]];
+
+    [self dealloc];
+
+    return nil;
+   }
+
+   return [self initWithData:data options:options error:error];
 }
 
 -(void)parser:(NSXMLParser *)parser didStartElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qualifiedName attributes:(NSDictionary *)attributes {
@@ -216,8 +231,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(BOOL)validateAndReturnError:(NSError **)error {
-   NSUnimplementedMethod();
-   return NO;
+   if(_dtd==nil){
+    if(error!=NULL)
+     *error=[NSError errorWithDomain:@"NSXMLDocumentErrorDomain" code:2 userInfo:[NSDictionary dictionaryWithObject:@"document has no DTD" forKey:NSLocalizedDescriptionKey]];
+
+    return NO;
+   }
+
+   return YES;
 }
 
 -(NSString *)XMLStringWithOptions:(NSUInteger)options {
@@ -242,17 +263,20 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -objectByApplyingXSLT:(NSData *)xslt arguments:(NSDictionary *)arguments error:(NSError *)error {
-   NSUnimplementedMethod();
+   [NSException raise:NSInvalidArgumentException format:@"XSLT is not supported"];
+
    return nil;
 }
 
 -objectByApplyingXSLTAtURL:(NSURL *)url arguments:(NSDictionary *)arguments error:(NSError *)error {
-   NSUnimplementedMethod();
+   [NSException raise:NSInvalidArgumentException format:@"XSLT is not supported"];
+
    return nil;
 }
 
 -objectByApplyingXSLTString:(NSString *)string arguments:(NSDictionary *)arguments error:(NSError *)error {
-   NSUnimplementedMethod();
+   [NSException raise:NSInvalidArgumentException format:@"XSLT is not supported"];
+
    return nil;
 }
 

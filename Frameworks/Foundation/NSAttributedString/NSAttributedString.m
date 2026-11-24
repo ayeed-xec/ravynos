@@ -45,12 +45,37 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-	NSUnimplementedMethod();
+	NSString *string=[self string];
+
+	[coder encodeObject:string];
+
+	{
+	 NSUInteger i,length=[self length];
+
+	 for(i=0;i<length;i++){
+	  NSRange effective;
+	  NSDictionary *attributes=[self attributesAtIndex:i longestEffectiveRange:&effective inRange:NSMakeRange(i,length-i)];
+
+	  [coder encodeObject:attributes];
+	  [coder encodeValueOfObjCType:@encode(NSRange) at:&effective];
+
+	  i=NSMaxRange(effective)-1;
+	 }
+	}
 }
 
 -initWithCoder:(NSCoder *)coder {
-	NSUnimplementedMethod();
-   return self;
+	NSString *string=[coder decodeObject];
+
+	if(self=[super init]) {
+	 NSMutableAttributedString *mutable=[[NSMutableAttributedString allocWithZone:NULL] initWithString:string];
+
+	 [self release];
+	 self=(id)[mutable retain];
+	 [mutable release];
+	}
+
+	return self;
 }
 
 -copy {

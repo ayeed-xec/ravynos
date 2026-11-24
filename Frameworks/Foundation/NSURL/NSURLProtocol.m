@@ -8,6 +8,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #import <Foundation/NSURLProtocol.h>
 #import <Foundation/NSRaise.h>
 #import <Foundation/NSArray.h>
+#import <Foundation/NSMapTable.h>
+#import <Foundation/NSMutableDictionary.h>
+#import <Foundation/NSDictionary.h>
+#import <Foundation/NSData.h>
+#import <Foundation/NSURL.h>
+#import <Foundation/NSURLRequest.h>
+#import <Foundation/NSURLResponse.h>
+#import <Foundation/NSCachedURLResponse.h>
+#import <Foundation/NSError.h>
+#import <Foundation/NSURLError.h>
 #import "NSURLProtocol_http.h"
 
 @implementation NSURLProtocol
@@ -48,31 +58,30 @@ static NSMutableArray *_registeredClasses=nil;
 }
 
 +propertyForKey:(NSString *)key inRequest:(NSURLRequest *)request {
-   NSUnimplementedMethod();
-   return 0;
+   if(request==nil || key==nil)
+    return nil;
+
+   return [(id)request propertyForKey:key];
 }
 
 +(void)removePropertyForKey:(NSString *)key inRequest:(NSMutableURLRequest *)request {
-   NSUnimplementedMethod();
+   [(id)request removePropertyForKey:key];
 }
 
 +(void)setProperty:value forKey:(NSString *)key inRequest:(NSMutableURLRequest *)request {
-   NSUnimplementedMethod();
+   [(id)request setProperty:value forKey:key];
 }
 
 +(BOOL)canInitWithRequest:(NSURLRequest *)request {
-   NSUnimplementedMethod();
-   return 0;
+   return NO;
 }
 
 +(NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request {
-   NSUnimplementedMethod();
-   return 0;
+   return request;
 }
 
 +(BOOL)requestIsCacheEquivalent:(NSURLRequest *)request toRequest:(NSURLRequest *)other {
-   NSUnimplementedMethod();
-   return 0;
+   return request==other || [request URL]==[other URL];
 }
 
 -initWithRequest:(NSURLRequest *)request cachedResponse:(NSCachedURLResponse *)response client:(id <NSURLProtocolClient>)client {

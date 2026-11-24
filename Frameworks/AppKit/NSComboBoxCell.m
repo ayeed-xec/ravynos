@@ -16,7 +16,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSComboBoxCell
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [super encodeWithCoder:coder];
+
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeObject:_objectValues forKey:@"NSComboBoxCell.objectValues"];
+    [keyed encodeBool:_usesDataSource forKey:@"NSComboBoxCell.usesDataSource"];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -199,23 +206,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(void)deselectItemAtIndex:(int)index {
-   NSUnimplementedMethod();
 }
 
 -(void)scrollItemAtIndexToTop:(int)index {
-   NSUnimplementedMethod();
 }
 
 -(void)scrollItemAtIndexToVisible:(int)index {
-   NSUnimplementedMethod();
 }
 
 -(void)noteNumberOfItemsChanged {
-   NSUnimplementedMethod();
 }
 
 -(void)reloadData {
-   NSUnimplementedMethod();
+   [_objectValues removeAllObjects];
 }
 
 - (NSString *)completedString:(NSString *)string {

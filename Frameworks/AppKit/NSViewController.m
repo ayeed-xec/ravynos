@@ -87,16 +87,17 @@
 }
 
 -(void)discardEditing {
-   NSUnimplementedMethod();
 }
 
 -(BOOL)commitEditing {
-   NSUnimplementedMethod();
-   return NO;
+   return YES;
 }
 
 -(void)commitEditingWithDelegate:delegate didCommitSelector:(SEL)didCommitSelector contextInfo:(void *)contextInfo {
-   NSUnimplementedMethod();
+   BOOL committed=[self commitEditing];
+
+   if(delegate!=nil && didCommitSelector!=NULL)
+    [delegate performSelector:didCommitSelector withObject:self withObject:(id)(committed?YES:NO) ];
 }
 
 @end

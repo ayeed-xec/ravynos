@@ -29,6 +29,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    _headerFields=[[other allHTTPHeaderFields] mutableCopy];
    _method=[other HTTPMethod];
    _handleCookies=[other HTTPShouldHandleCookies];
+   _protocolProperties=[[other _protocolProperties] mutableCopy];
    return self;
 }
 
@@ -45,6 +46,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    _headerFields=[NSMutableDictionary new];
    _method=@"GET";
    _handleCookies=YES;
+   _protocolProperties=[NSMutableDictionary new];
    return self;
 }
 
@@ -57,6 +59,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    [_bodyDataOrStream release];
    [_headerFields release];
    [_method release];
+   [_protocolProperties release];
    [super dealloc];
 }
 
@@ -122,6 +125,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -(BOOL)HTTPShouldHandleCookies {
    return _handleCookies;
+}
+
+-(NSMutableDictionary *)_protocolProperties {
+   return _protocolProperties;
 }
 
 -(NSString *)description {

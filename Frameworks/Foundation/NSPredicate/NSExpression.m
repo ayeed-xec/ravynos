@@ -26,12 +26,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -initWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
    return self;
 }
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
 }
 
 -copyWithZone:(NSZone *)zone {
@@ -92,12 +90,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(NSExpression *)operand {
-   NSUnimplementedMethod();
-   return nil;
+   return self;
 }
 
 -expressionValueWithObject:object context:(NSMutableDictionary *)context {
-    NSUnimplementedMethod();
     return nil;
 }
 

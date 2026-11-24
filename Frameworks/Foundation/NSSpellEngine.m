@@ -52,36 +52,38 @@ static NSMutableArray *_allSpellEngines=nil;
 }
 
 -(NSRange)checkGrammarInString:(NSString *)string language:(NSString *)language details:(NSArray **)outDetails {
-   NSUnimplementedMethod();
+   if(outDetails!=NULL)
+    *outDetails=[NSArray array];
+
    return NSMakeRange(0,0);
 }
 
 -(NSArray *)checkString:(NSString *)stringToCheck offset:(NSUInteger)offset types:(NSTextCheckingTypes)checkingTypes options:(NSDictionary *)options orthography:(NSOrthography *)orthography wordCount:(NSInteger *)wordCount {
-   NSUnimplementedMethod();
-   return nil;
+   if(wordCount!=NULL)
+    *wordCount=[[stringToCheck componentsSeparatedByCharactersInString:@" "] count];
+
+   return [NSArray array];
 }
 
 -(void)didForgetWord:(NSString *)word inLanguage:(NSString *)language {
-   NSUnimplementedMethod();
 }
 
 -(void)didLearnWord:(NSString *)word inLanguage:(NSString *)language {
-   NSUnimplementedMethod();
 }
 
 -(NSRange)findMisspelledWordInString:(NSString *)stringToCheck language:(NSString *)language wordCount:(NSInteger *)wordCount countOnly:(BOOL)countOnly {
-   NSUnimplementedMethod();
-   return NSMakeRange(0,0);
+   if(wordCount!=NULL)
+    *wordCount=[[stringToCheck componentsSeparatedByCharactersInString:@" "] count];
+
+   return NSMakeRange(NSNotFound,0);
 }
 
 -(NSArray *)suggestCompletionsForPartialWordRange:(NSRange)range inString:(NSString *)string language:(NSString *)language {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSArray array];
 }
 
 -(NSArray *)suggestGuessesForWord:(NSString *)word inLanguage:(NSString *)language {
-   NSUnimplementedMethod();
-   return nil;
+   return [NSArray array];
 }
 
 -(NSRange)spellServer:(NSSpellServer *)sender checkGrammarInString:(NSString *)string language:(NSString *)language details:(NSArray **)outDetails {

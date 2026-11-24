@@ -7,6 +7,10 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <AppKit/NSTextAttachmentCell.h>
 #import <AppKit/NSRaise.h>
+#import <AppKit/NSTextAttachment.h>
+#import <AppKit/NSFileWrapper.h>
+#import <AppKit/NSImage.h>
+#import <AppKit/NSGraphics.h>
 
 @implementation NSTextAttachmentCell
 
@@ -18,19 +22,45 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    _attachment=attachment;
 }
 
+-(NSImage *)attachmentImage {
+   NSFileWrapper *wrapper=[[self attachment] fileWrapper];
+   NSImage *image=[wrapper icon];
+
+   if(image==nil && wrapper!=nil){
+      NSData *contents=[wrapper regularFileContents];
+
+      if(contents!=nil)
+         image=[[[NSImage alloc] initWithData:contents] autorelease];
+   }
+
+   return image;
+}
+
 -(NSSize)cellSize {
-   NSUnimplementedMethod();
-   return NSMakeSize(0,0);
+   NSImage *image=[self attachmentImage];
+   NSSize size=NSMakeSize(0,0);
+
+   if(image!=nil)
+      size=[image size];
+
+   return size;
 }
 
 -(NSPoint)cellBaselineOffset {
-   NSUnimplementedMethod();
    return NSMakePoint(0,0);
 }
 
 -(NSRect)cellFrameForTextContainer:(NSTextContainer *)textContainer proposedLineFragment:(NSRect)proposedRect glyphPosition:(NSPoint)glyphPoint characterIndex:(unsigned)characterIndex {
-   NSUnimplementedMethod();
-   return NSMakeRect(0,0,0,0);
+   NSSize size=[self cellSize];
+   NSRect frame=NSMakeRect(glyphPoint.x,glyphPoint.y,size.width,size.height);
+
+   if(frame.size.width>proposedRect.size.width)
+      frame.size.width=proposedRect.size.width;
+
+   if(frame.origin.x+frame.size.width>proposedRect.origin.x+proposedRect.size.width)
+      frame.origin.x=proposedRect.origin.x+proposedRect.size.width-frame.size.width;
+
+   return frame;
 }
 
 -(BOOL)wantsToTrackMouse {
@@ -42,29 +72,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 -(BOOL)trackMouse:(NSEvent *)event inRect:(NSRect)rect ofView:(NSView *)view atCharacterIndex:(unsigned)characterIndex untilMouseUp:(BOOL)untilMouseUp {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(BOOL)trackMouse:(NSEvent *)event inRect:(NSRect)rect ofView:(NSView *)view untilMouseUp:(BOOL)untilMouseUp {
-   NSUnimplementedMethod();
    return NO;
 }
 
 -(void)highlight:(BOOL)highlight withFrame:(NSRect)frame inView:(NSView *)view {
-   NSUnimplementedMethod();
 }
 
 -(void)drawWithFrame:(NSRect)frame inView:(NSView *)view characterIndex:(unsigned)characterIndex layoutManager:(NSLayoutManager *)layoutManager {
-   NSUnimplementedMethod();
+   NSImage *image=[self attachmentImage];
+
+   if(image!=nil)
+      [image drawInRect:frame fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
 }
 
 -(void)drawWithFrame:(NSRect)frame inView:(NSView *)view characterIndex:(unsigned)characterIndex {
-   NSUnimplementedMethod();
+   [self drawWithFrame:frame inView:view characterIndex:characterIndex layoutManager:nil];
 }
 
 -(void)drawWithFrame:(NSRect)frame inView:(NSView *)view {
-   NSUnimplementedMethod();
+   [self drawWithFrame:frame inView:view characterIndex:NSNotFound layoutManager:nil];
 }
 
 @end

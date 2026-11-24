@@ -97,13 +97,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 }
 
 - (NSInteger)maxConcurrentOperationCount {
-	NSUnimplementedMethod();
-	return NSOperationQueueDefaultMaxConcurrentOperationCount;
+	return _maxConcurrentOperationCount;
 }
 
 - (void)setMaxConcurrentOperationCount:(NSInteger)count {
-// FIXME: implement but dont warn
-//	NSUnimplementedMethod();
+	if(count<1)
+	 count=1;
+
+	_maxConcurrentOperationCount=count;
 }
 
 - (NSString *)name {
@@ -224,14 +225,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 + (id)currentQueue
 {
-	NSUnimplementedMethod();
 	return nil;
 }
 
 + (id)mainQueue
 {
-	NSUnimplementedMethod();
-	return nil;
+	static id mainQueue=nil;
+
+	if(mainQueue==nil)
+	 mainQueue=[[self alloc] init];
+
+	return mainQueue;
 }
 
 @end

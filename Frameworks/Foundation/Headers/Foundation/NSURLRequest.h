@@ -26,6 +26,7 @@ typedef enum {
     NSMutableDictionary *_headerFields;
     NSURL *_mainDocumentURL;
     BOOL _handleCookies;
+    NSMutableDictionary *_protocolProperties;
 }
 
 - initWithURL:(NSURL *)url;

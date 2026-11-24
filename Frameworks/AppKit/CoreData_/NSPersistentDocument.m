@@ -45,7 +45,10 @@
 
 
 - (void) setManagedObjectContext: (NSManagedObjectContext *) managedObjectContext {
-    NSUnimplementedMethod();
+    if(_context!=managedObjectContext){
+     [_context release];
+     _context=[managedObjectContext retain];
+    }
 }
 
 
@@ -55,14 +58,15 @@
                                       storeOptions: (NSDictionary *) storeOptions
                                              error: (NSError **) error
 {
-    NSUnimplementedMethod();
+    if(error!=NULL)
+     *error=[NSError errorWithDomain:@"NSPersistentDocumentErrorDomain" code:1 userInfo:[NSDictionary dictionaryWithObject:@"Core Data is not available in this build" forKey:NSLocalizedDescriptionKey]];
+
     return NO;
 }
 
 
 - (NSString *) persistentStoreTypeForFileType: (NSString *) fileType {
-    NSUnimplementedMethod();
-    return nil;
+    return fileType;
 }
 
 
@@ -82,7 +86,6 @@
 
 
 - (BOOL)isDocumentEdited {
-    NSUnimplementedMethod();
     return NO;
 }
 
@@ -91,7 +94,9 @@
               ofType: (NSString *) typeName
                error: (NSError **) outError
 {
-    NSUnimplementedMethod();
+    if(outError!=NULL)
+     *outError=[NSError errorWithDomain:@"NSPersistentDocumentErrorDomain" code:2 userInfo:[NSDictionary dictionaryWithObject:@"Core Data is not available in this build" forKey:NSLocalizedDescriptionKey]];
+
     return NO;
 }
 
@@ -100,7 +105,9 @@
                         ofType: (NSString *) inTypeName
                          error: (NSError **) outError
 {
-    NSUnimplementedMethod();
+    if(outError!=NULL)
+     *outError=[NSError errorWithDomain:@"NSPersistentDocumentErrorDomain" code:2 userInfo:[NSDictionary dictionaryWithObject:@"Core Data is not available in this build" forKey:NSLocalizedDescriptionKey]];
+
     return NO;
 }
 
@@ -111,7 +118,9 @@
 originalContentsURL: (NSURL *) absoluteOriginalContentsURL
               error: (NSError **) error
 {
-    NSUnimplementedMethod();
+    if(error!=NULL)
+     *error=[NSError errorWithDomain:@"NSPersistentDocumentErrorDomain" code:2 userInfo:[NSDictionary dictionaryWithObject:@"Core Data is not available in this build" forKey:NSLocalizedDescriptionKey]];
+
     return NO;
 }
 

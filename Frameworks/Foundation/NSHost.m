@@ -15,16 +15,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 @implementation NSHost
 
 +(BOOL)isHostCacheEnabled {
-   NSUnimplementedMethod();
    return NO;
 }
 
 +(void)setHostCacheEnabled:(BOOL)value {
-   NSUnimplementedMethod();
 }
 
 +(void)flushHostCache {
-   NSUnimplementedMethod();
 }
 
 -initWithName:(NSString *)name {

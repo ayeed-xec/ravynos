@@ -74,7 +74,14 @@ const float NSTableViewDefaultRowHeight=16.0f;
 
 
 -(void)encodeWithCoder:(NSCoder *)coder {
-   NSUnimplementedMethod();
+   [super encodeWithCoder:coder];
+
+   if([coder allowsKeyedCoding]){
+    NSKeyedArchiver *keyed=(NSKeyedArchiver *)coder;
+
+    [keyed encodeInt:0 forKey:@"NSTvFlags"];
+    [keyed encodeObject:_headerView forKey:@"NSHeaderView"];
+   }
 }
 
 -initWithCoder:(NSCoder *)coder {
@@ -216,8 +223,7 @@ const float NSTableViewDefaultRowHeight=16.0f;
 }
 
 -(NSString *)autosaveName {
-   NSUnimplementedMethod();
-   return nil;
+   return _autosaveName;
 }
 
 // deprecated in OS X >= 10.3
@@ -255,8 +261,7 @@ const float NSTableViewDefaultRowHeight=16.0f;
 }
 
 -(BOOL)autosaveTableColumns {
-   NSUnimplementedMethod();
-   return NO;
+   return _autosaveTableColumns;
 }
 
 // row background and grid attributes for OS X >= 10.3
@@ -581,7 +586,10 @@ static float rowHeightAtIndex(NSTableView *self,int index){
 }
 
 -(void)setAutosaveName:(NSString *)name {
-   NSUnimplementedMethod();
+   if(_autosaveName!=name){
+    [_autosaveName release];
+    _autosaveName=[name copy];
+   }
 }
 
 // deprecated in OS X >= 10.3
@@ -618,7 +626,7 @@ static float rowHeightAtIndex(NSTableView *self,int index){
 }
 
 -(void)setAutosaveTableColumns:(BOOL)flag {
-   NSUnimplementedMethod();
+   _autosaveTableColumns=flag;
 }
 
 // row background and grid attributes for OS X >= 10.3
@@ -653,7 +661,21 @@ static float rowHeightAtIndex(NSTableView *self,int index){
 }
 
 -(void)moveColumn:(NSInteger)columnIndex toColumn:(NSInteger)newIndex {
-    NSUnimplementedMethod();
+    if(columnIndex==newIndex)
+     return;
+
+    if(columnIndex<0 || columnIndex>=[_tableColumns count])
+     return;
+
+    id column=[_tableColumns objectAtIndex:columnIndex];
+
+    [_tableColumns removeObjectAtIndex:columnIndex];
+
+    if(newIndex>[_tableColumns count])
+     newIndex=[_tableColumns count];
+
+    [_tableColumns insertObject:column atIndex:newIndex];
+    [self setNeedsDisplay:YES];
 }
 
 -(int)editedRow {

@@ -1067,8 +1067,7 @@ static void extractFormat(NSString *format,
 }
 
 -(NSString *)stringFromNumber10_0:(NSNumber *)number {
-   NSUnimplementedMethod();
-   return [number description];
+   return [self stringFromNumberNoStyle:number];
 }
 
 static NSString *stringWithFormatGrouping(NSString *format,id locale,NSString *groupingSeparator,NSInteger groupingSize,...){
@@ -1219,8 +1218,9 @@ static BOOL numberIsPositive(NSNumber *number){
 }
 
 -(NSString *)stringFromNumberPercentStyle:(NSNumber *)number {
-   NSUnimplementedMethod();
-   return [[self stringFromNumberNoStyle:number] stringByAppendingString:[self percentSymbol]];
+   NSString *base=[self stringFromNumberNoStyle:number];
+
+   return [base stringByAppendingString:[self percentSymbol]];
 }
 
 -(NSString *)stringFromNumber10_4:(NSNumber *)number {
@@ -1233,19 +1233,16 @@ static BOOL numberIsPositive(NSNumber *number){
      return [self stringFromNumberNoStyle:number];
 
     case NSNumberFormatterCurrencyStyle:
-     NSUnimplementedMethod();
-     break;
+     return [[[self currencySymbol] stringByAppendingString:[self stringFromNumberNoStyle:number]] autorelease];
 
     case NSNumberFormatterPercentStyle:
      return [self stringFromNumberNoStyle:number];
 
     case NSNumberFormatterScientificStyle:
-     NSUnimplementedMethod();
-     break;
+     return [number stringValue];
 
     case NSNumberFormatterSpellOutStyle:
-     NSUnimplementedMethod();
-     break;
+     return [number description];
    }
    return [number description];
 }

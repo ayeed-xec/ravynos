@@ -9,9 +9,11 @@
 #import <Foundation/NSLock.h>
 #import <Foundation/NSThread.h>
 #import <Foundation/NSString.h>
+#import <pthread.h>
 
 @interface NSRecursiveLock : NSObject <NSLocking> {
     NSString *_name;
+    pthread_mutex_t _mutex;
 }
 - (NSString *)name;
 - (void)setName:(NSString *)value;

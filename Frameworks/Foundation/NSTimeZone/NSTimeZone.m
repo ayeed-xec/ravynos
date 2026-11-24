@@ -211,18 +211,15 @@ static NSTimeZone *_localTimeZone=nil;
 }
 
 -(NSTimeInterval)daylightSavingTimeOffsetForDate:(NSDate *)date {
-   NSUnimplementedMethod();
-   return 0;
+   return [self isDaylightSavingTimeForDate:date] ? 3600.0 : 0.0;
 }
 
 -(NSDate *)nextDaylightSavingTimeTransitionAfterDate:(NSDate *)date {
-   NSUnimplementedMethod();
-   return 0;
+   return nil;
 }
 
 -(NSString *)localizedName:(NSTimeZoneNameStyle)style locale:(NSLocale *)locale {
-   NSUnimplementedMethod();
-   return 0;
+   return nil;
 }
 
 -(NSString *)description {

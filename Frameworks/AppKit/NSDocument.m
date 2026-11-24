@@ -534,12 +534,19 @@ static int untitled_document_number = 0;
 }
 
 -(void)autosaveDocumentWithDelegate:delegate didAutosaveSelector:(SEL)selector contextInfo:(void *)info {
-   NSError *error;
+   NSError *error=nil;
+   BOOL     success;
 
-   if(![self writeToURL:[self autosavedContentsFileURL] ofType:[self autosavingFileType] forSaveOperation:NSAutosaveOperation originalContentsURL:[self fileURL] error:&error]){
+   success=[self writeToURL:[self autosavedContentsFileURL] ofType:[self autosavingFileType] forSaveOperation:NSAutosaveOperation originalContentsURL:[self fileURL] error:&error];
+
+   if(success)
+    [self updateChangeCount:NSChangeAutosaved];
+
+   if([delegate respondsToSelector:selector]){
+    void (*delegateMethod)(id, SEL, id, BOOL, void *);
+    delegateMethod=(void (*)(id, SEL, id, BOOL, void *))[delegate methodForSelector:selector];
+    delegateMethod(delegate, selector, self, success, info);
    }
-
-   NSUnimplementedMethod();
 }
 
 
@@ -585,13 +592,11 @@ static int untitled_document_number = 0;
 }
 
 -(BOOL)fileNameExtensionWasHiddenInLastRunSavePanel {
-   NSUnimplementedMethod();
-   return 0;
+   return _fileNameExtensionWasHiddenInLastRunSavePanel;
 }
 
 -(NSString *)fileTypeFromLastRunSavePanel {
-   NSUnimplementedMethod();
-   return nil;
+   return _fileTypeFromLastRunSavePanel;
 }
 
 -(void)runModalSavePanelForSaveOperation:(NSSaveOperationType)operation
@@ -637,6 +642,10 @@ static int untitled_document_number = 0;
         NSString *savePath=[savePanel filename];
         NSString* extension = [savePath pathExtension];
         NSString* fileType = [[NSDocumentController sharedDocumentController] typeFromFileExtension: extension];
+
+        _fileNameExtensionWasHiddenInLastRunSavePanel=([extension length]==0);
+        [_fileTypeFromLastRunSavePanel release];
+        _fileTypeFromLastRunSavePanel=[fileType copy];
 
         [[NSUserDefaults standardUserDefaults] setObject:[savePath stringByDeletingLastPathComponent]
                                                   forKey:@"NSNavLastRootDirectory"];
@@ -800,7 +809,13 @@ forSaveOperation:(NSSaveOperationType)operation
 }
 
 -(void)runModalPrintOperation:(NSPrintOperation *)printOperation delegate:delegate didRunSelector:(SEL)selector contextInfo:(void *)info {
-   NSUnimplementedMethod();
+   BOOL success=[printOperation runOperation];
+
+   if([delegate respondsToSelector:selector]){
+    void (*delegateMethod)(id, SEL, id, BOOL, void *);
+    delegateMethod=(void (*)(id, SEL, id, BOOL, void *))[delegate methodForSelector:selector];
+    delegateMethod(delegate, selector, self, success, info);
+   }
 }
 
 -(NSPrintOperation *)printOperationWithSettings:(NSDictionary *)settings error:(NSError **)error {
@@ -996,8 +1011,21 @@ forSaveOperation:(NSSaveOperationType)operation
 }
 
 -(NSString *)fileNameFromRunningSavePanelForSaveOperation:(NSSaveOperationType)operation {
-   NSUnimplementedMethod();
-   return nil;
+   NSSavePanel *savePanel=[NSSavePanel savePanel];
+   NSString    *extension=[[self fileName] pathExtension];
+   NSString    *result=nil;
+
+   if([extension length]==0)
+    extension=[[[NSDocumentController sharedDocumentController] fileExtensionsFromType:[self fileType]] objectAtIndex:0];
+
+   [savePanel setRequiredFileType:extension];
+
+   if([self prepareSavePanel:savePanel]){
+    if([self runModalSavePanel:savePanel withAccessoryView:nil]==NSOKButton)
+     result=[savePanel filename];
+   }
+
+   return result;
 }
 
 -(NSFileWrapper *)fileWrapperRepresentationOfType:(NSString *)type {
@@ -1109,8 +1137,10 @@ forSaveOperation:(NSSaveOperationType)operation
 }
 
 -(int)runModalSavePanel:(NSSavePanel *)savePanel withAccessoryView:(NSView *)accessoryView {
-   NSUnimplementedMethod();
-   return 0;
+   if(accessoryView!=nil)
+    [savePanel setAccessoryView:accessoryView];
+
+   return [savePanel runModal];
 }
 
 -(int)runModalPageLayoutWithPrintInfo:(NSPrintInfo *)printInfo {
@@ -1164,13 +1194,11 @@ forSaveOperation:(NSSaveOperationType)operation
 }
 
 -(BOOL)writeToFile:(NSString *)path ofType:(NSString *)type originalFile:(NSString *)original saveOperation:(NSSaveOperationType)operation {
-   NSUnimplementedMethod();
-   return 0;
+   return [self writeWithBackupToFile:path ofType:type saveOperation:operation];
 }
 
 -(BOOL)writeToURL:(NSURL *)url ofType:(NSString *)type {
-   NSUnimplementedMethod();
-   return 0;
+   return [self writeToFile:[url path] ofType:type];
 }
 
 -(BOOL)writeWithBackupToFile:(NSString *)path ofType:(NSString *)type saveOperation:(NSSaveOperationType)operation {

@@ -88,6 +88,8 @@ typedef enum {
     BOOL _alternatingRowBackground;
     unsigned int _gridStyleMask;
     NSTableViewSelectionHighlightStyle _selectionHighlightStyle;
+    NSString *_autosaveName;
+    BOOL _autosaveTableColumns;
 
     // temp ivars
     NSMutableArray *_selectedColumns;
