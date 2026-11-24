@@ -10,10 +10,15 @@
 #include <darwintest_utils.h>
 
 T_GLOBAL_META(T_META_NAMESPACE("xnu.net"),
-    T_META_RUN_CONCURRENTLY(true));
+    T_META_RADAR_COMPONENT_NAME("xnu"),
+    T_META_RADAR_COMPONENT_VERSION("networking"),
+    T_META_RUN_CONCURRENTLY(true),
+    T_META_ASROOT(true),
+    T_META_OWNER("fernandes")
+    );
 
 T_DECL(PR_35136664_utun,
-    "This bind a utun and close it without connecting")
+    "This bind a utun and close it without connecting", T_META_TAG_VM_PREFERRED)
 {
 	int tunsock;
 	struct ctl_info kernctl_info;
@@ -23,7 +28,7 @@ T_DECL(PR_35136664_utun,
 
 	memset(&kernctl_info, 0, sizeof(kernctl_info));
 	strlcpy(kernctl_info.ctl_name, UTUN_CONTROL_NAME, sizeof(kernctl_info.ctl_name));
-	T_ASSERT_POSIX_ZERO(ioctl(tunsock, CTLIOCGINFO, &kernctl_info), NULL);
+	T_ASSERT_POSIX_SUCCESS(ioctl(tunsock, CTLIOCGINFO, &kernctl_info), NULL);
 
 	memset(&kernctl_addr, 0, sizeof(kernctl_addr));
 	kernctl_addr.sc_len = sizeof(kernctl_addr);
@@ -32,13 +37,13 @@ T_DECL(PR_35136664_utun,
 	kernctl_addr.sc_id = kernctl_info.ctl_id;
 	kernctl_addr.sc_unit = 0;
 
-	T_ASSERT_POSIX_ZERO(bind(tunsock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr)), NULL);
+	T_ASSERT_POSIX_SUCCESS(bind(tunsock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr)), NULL);
 
-	T_ASSERT_POSIX_ZERO(close(tunsock), NULL);
+	T_ASSERT_POSIX_SUCCESS(close(tunsock), NULL);
 }
 
 T_DECL(PR_35136664_ipsec,
-    "This bind a ipsec and close it without connecting")
+    "This bind a ipsec and close it without connecting", T_META_TAG_VM_PREFERRED)
 {
 	int tunsock;
 	struct ctl_info kernctl_info;
@@ -48,7 +53,7 @@ T_DECL(PR_35136664_ipsec,
 
 	memset(&kernctl_info, 0, sizeof(kernctl_info));
 	strlcpy(kernctl_info.ctl_name, IPSEC_CONTROL_NAME, sizeof(kernctl_info.ctl_name));
-	T_ASSERT_POSIX_ZERO(ioctl(tunsock, CTLIOCGINFO, &kernctl_info), NULL);
+	T_ASSERT_POSIX_SUCCESS(ioctl(tunsock, CTLIOCGINFO, &kernctl_info), NULL);
 
 	memset(&kernctl_addr, 0, sizeof(kernctl_addr));
 	kernctl_addr.sc_len = sizeof(kernctl_addr);
@@ -57,7 +62,7 @@ T_DECL(PR_35136664_ipsec,
 	kernctl_addr.sc_id = kernctl_info.ctl_id;
 	kernctl_addr.sc_unit = 0;
 
-	T_ASSERT_POSIX_ZERO(bind(tunsock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr)), NULL);
+	T_ASSERT_POSIX_SUCCESS(bind(tunsock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr)), NULL);
 
-	T_ASSERT_POSIX_ZERO(close(tunsock), NULL);
+	T_ASSERT_POSIX_SUCCESS(close(tunsock), NULL);
 }

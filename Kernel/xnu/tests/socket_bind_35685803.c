@@ -13,7 +13,14 @@
 #include <stdbool.h>
 #include <TargetConditionals.h>
 
-T_GLOBAL_META(T_META_RUN_CONCURRENTLY(true));
+#include "net_test_lib.h"
+
+T_GLOBAL_META(
+	T_META_NAMESPACE("xnu.net"),
+	T_META_RADAR_COMPONENT_NAME("xnu"),
+	T_META_RADAR_COMPONENT_VERSION("networking"),
+	T_META_RUN_CONCURRENTLY(true),
+	T_META_OWNER("dieter"));
 
 static bool debug;
 
@@ -177,20 +184,24 @@ run_multithreaded_bind_test(int number_of_runs, bool v6, int socket_count)
 		multithreaded_bind_test(v6, socket_count);
 	}
 	T_PASS("multithreaded_bind_test %s", v6 ? "IPv6" : "IPv4");
+
+	force_zone_gc();
 #endif /* TARGET_OS_BRIDGE */
 }
 
 T_DECL(socket_bind_35685803,
     "multithreaded bind IPv4 socket as root",
     T_META_ASROOT(false),
-    T_META_CHECK_LEAKS(false))
+    T_META_CHECK_LEAKS(false),
+    T_META_TAG_VM_PREFERRED)
 {
 	run_multithreaded_bind_test(100, false, 100);
 }
 
 T_DECL(socket_bind_35685803_root,
     "multithreaded bind IPv4 socket",
-    T_META_ASROOT(true))
+    T_META_ASROOT(true),
+    T_META_TAG_VM_PREFERRED)
 {
 	run_multithreaded_bind_test(100, false, 100);
 }
@@ -198,14 +209,16 @@ T_DECL(socket_bind_35685803_root,
 T_DECL(socket_bind_35685803_v6,
     "multithreaded bind IPv6 socket as root",
     T_META_ASROOT(false),
-    T_META_CHECK_LEAKS(false))
+    T_META_CHECK_LEAKS(false),
+    T_META_TAG_VM_PREFERRED)
 {
 	run_multithreaded_bind_test(100, true, 100);
 }
 
 T_DECL(socket_bind_35685803_v6_root,
     "multithreaded bind IPv6 socket",
-    T_META_ASROOT(true))
+    T_META_ASROOT(true),
+    T_META_TAG_VM_PREFERRED)
 {
 	run_multithreaded_bind_test(100, true, 100);
 }

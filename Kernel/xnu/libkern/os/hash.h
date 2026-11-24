@@ -34,6 +34,30 @@
 
 __BEGIN_DECLS
 
+static inline uint32_t
+os_hash_jenkins_update(const void *data, size_t length, uint32_t hash)
+{
+	const uint8_t *key = (const uint8_t *)data;
+
+	for (size_t i = 0; i < length; i++) {
+		hash += key[i];
+		hash += (hash << 10);
+		hash ^= (hash >> 6);
+	}
+
+	return hash;
+}
+
+static inline uint32_t
+os_hash_jenkins_finish(uint32_t hash)
+{
+	hash += (hash << 3);
+	hash ^= (hash >> 11);
+	hash += (hash << 15);
+
+	return hash;
+}
+
 /*!
  * @function os_hash_jenkins
  *
@@ -50,26 +74,24 @@ __BEGIN_DECLS
  * @param length
  * The length of the data to hash
  *
+ * @param seed
+ * An optional hash seed (defaults to 0).
+ *
  * @returns
  * The jenkins hash for this data.
  */
+__attribute__((overloadable))
+static inline uint32_t
+os_hash_jenkins(const void *data, size_t length, uint32_t seed)
+{
+	return os_hash_jenkins_finish(os_hash_jenkins_update(data, length, seed));
+}
+
+__attribute__((overloadable))
 static inline uint32_t
 os_hash_jenkins(const void *data, size_t length)
 {
-	const uint8_t *key = (const uint8_t *)data;
-	uint32_t hash = 0;
-
-	for (size_t i = 0; i < length; i++) {
-		hash += key[i];
-		hash += (hash << 10);
-		hash ^= (hash >> 6);
-	}
-
-	hash += (hash << 3);
-	hash ^= (hash >> 11);
-	hash += (hash << 15);
-
-	return hash;
+	return os_hash_jenkins(data, length, 0);
 }
 
 /*!
@@ -97,9 +119,41 @@ os_hash_jenkins(const void *data, size_t length)
 static inline uint32_t
 os_hash_kernel_pointer(const void *pointer)
 {
-	uintptr_t key = (uintptr_t)pointer >> 4;
+	uintptr_t key = (uintptr_t)((intptr_t)pointer << 16) >> 20;
 	key *= 0x5052acdb;
 	return (uint32_t)key ^ __builtin_bswap32((uint32_t)key);
+}
+
+/*!
+ * @function os_hash_uint64
+ *
+ * @brief
+ * Hashes a 64 bit number.
+ *
+ * @discussion
+ * This is a really cheap and fast mixer.
+ *
+ * This should be not used for untrusted values from userspace,
+ * or cases when the pointer is somehow under the control of userspace.
+ *
+ * See https://zimbry.blogspot.com/2011/09/better-bit-mixing-improving-on.html
+ *
+ * @param u64
+ * The value to hash
+ *
+ * @returns
+ * The hash for this integer.
+ */
+static inline uint32_t
+os_hash_uint64(uint64_t u64)
+{
+	u64 ^= (u64 >> 31);
+	u64 *= 0x7fb5d329728ea185ull;
+	u64 ^= (u64 >> 27);
+	u64 *= 0x81dadef4bc2dd44dull;
+	u64 ^= (u64 >> 33);
+
+	return (uint32_t)u64;
 }
 
 __END_DECLS

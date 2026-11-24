@@ -741,7 +741,8 @@ int
 nop_pagein(struct vnop_pagein_args *ap)
 {
 	if (!(ap->a_flags & UPL_NOCOMMIT)) {
-		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
+		assert(ap->a_size <= UINT32_MAX);
+		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, (upl_size_t)ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
 	}
 	return EINVAL;
 }
@@ -750,7 +751,8 @@ int
 err_pagein(struct vnop_pagein_args *ap)
 {
 	if (!(ap->a_flags & UPL_NOCOMMIT)) {
-		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
+		assert(ap->a_size <= UINT32_MAX);
+		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, (upl_size_t)ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
 	}
 	return ENOTSUP;
 }
@@ -770,7 +772,8 @@ int
 nop_pageout(struct vnop_pageout_args *ap)
 {
 	if (!(ap->a_flags & UPL_NOCOMMIT)) {
-		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
+		assert(ap->a_size <= UINT32_MAX);
+		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, (upl_size_t)ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
 	}
 	return EINVAL;
 }
@@ -779,7 +782,8 @@ int
 err_pageout(struct vnop_pageout_args *ap)
 {
 	if (!(ap->a_flags & UPL_NOCOMMIT)) {
-		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
+		assert(ap->a_size <= UINT32_MAX);
+		ubc_upl_abort_range(ap->a_pl, ap->a_pl_offset, (upl_size_t)ap->a_size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
 	}
 	return ENOTSUP;
 }
@@ -897,6 +901,27 @@ nop_blockmap(__unused struct vnop_blockmap_args *ap)
 
 int
 err_blockmap(__unused struct vnop_blockmap_args *ap)
+{
+	return ENOTSUP;
+}
+
+struct vnop_monitor_args /* {
+                          *    struct vnodeop_desc *a_desc;
+                          *    vnode_t a_vp;
+                          *    uint32_t a_events;
+                          *    uint32_t a_flags;
+                          *    void *a_handle;
+                          *    vfs_context_t a_context;
+                          *} */;
+
+int
+nop_monitor(__unused struct vnop_monitor_args *ap)
+{
+	return 0;
+}
+
+int
+err_monitor(__unused struct vnop_monitor_args *ap)
 {
 	return ENOTSUP;
 }

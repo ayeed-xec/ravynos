@@ -27,6 +27,7 @@
  */
 
 #include <IOKit/IOSubMemoryDescriptor.h>
+#include <IOKit/IOLib.h>
 
 #include "IOKitKernelInternal.h"
 
@@ -134,7 +135,7 @@ IOSubMemoryDescriptor::getPhysicalSegment(IOByteCount offset, IOByteCount * leng
 	address = _parent->getPhysicalSegment( offset + _start, &actualLength, options );
 
 	if (address && length) {
-		*length = min( _length - offset, actualLength );
+		*length = IOMin( _length - offset, actualLength );
 	}
 
 	return address;
@@ -239,4 +240,11 @@ IOSubMemoryDescriptor::getPageCounts(IOByteCount * residentPageCount,
     IOByteCount * dirtyPageCount)
 {
 	return _parent->getPageCounts(residentPageCount, dirtyPageCount);
+}
+
+IOReturn
+IOSubMemoryDescriptor::getPageCounts(IOByteCount * residentPageCount,
+    IOByteCount * dirtyPageCount, IOByteCount * swappedPageCount)
+{
+	return _parent->getPageCounts(residentPageCount, dirtyPageCount, swappedPageCount);
 }

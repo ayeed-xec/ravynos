@@ -34,11 +34,9 @@
 #endif
 
 void PE_incoming_interrupt(int);
-extern void lapic_end_of_interrupt(void);
 
 
 struct i386_interrupt_handler {
-        int                     source;
 	IOInterruptHandler      handler;
 	void                    *nub;
 	void                    *target;
@@ -58,13 +56,6 @@ PE_incoming_interrupt(int interrupt)
 
 	vector = &PE_interrupt_handler;
 
-	/* An interrupt can arrive before IOKit has installed a handler; ack it at
-	 * the LAPIC rather than dereferencing NULL. */
-	if (vector->handler == NULL) {
-		lapic_end_of_interrupt();
-		return;
-	}
-
 #if CONFIG_DTRACE && DEVELOPMENT
 	DTRACE_INT5(interrupt_start, void *, vector->nub, int, 0,
 	    void *, vector->target, IOInterruptHandler, vector->handler,
@@ -82,7 +73,7 @@ PE_incoming_interrupt(int interrupt)
 
 void
 PE_install_interrupt_handler(void *nub,
-    int source,
+    __unused int source,
     void *target,
     IOInterruptHandler handler,
     void *refCon)
@@ -90,7 +81,8 @@ PE_install_interrupt_handler(void *nub,
 	i386_interrupt_handler_t        *vector;
 
 	vector = &PE_interrupt_handler;
-	vector->source = source;
+
+	/*vector->source = source; IGNORED */
 	vector->handler = handler;
 	vector->nub = nub;
 	vector->target = target;

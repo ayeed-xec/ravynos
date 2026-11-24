@@ -83,7 +83,7 @@ def ShowPciCfgBytes(bus, dev, func, offset):
     read_vals = [DoPciCfgRead(32, bus, dev, func, offset + byte) 
                     for byte in range(0, 16, 4)]
     # It would be nicer to have a shorter format that we could loop
-    # over, but each call to print(results in a newline which )
+    # over, but each call to print results in a newline which 
     # would prevent us from printing all 16 bytes on one line.
     bytes_fmt = "{:08x}:" + "{:02x} " * 16
     print(bytes_fmt.format(
@@ -141,7 +141,7 @@ def DoPciCfgScan(max_bus, dump):
         vend_dev_id = DoPciCfgRead(32, bus, dev, func, 0)
         if not (vend_dev_id > 0 and vend_dev_id < 0xffffffff):
             continue
-        if dump == False:
+        if not dump:
             class_rev_id = DoPciCfgRead(32, bus, dev, func, 8)
             print(fmt_string.format(
                 bus, dev, func,
@@ -162,9 +162,9 @@ def PciCfgRead(cmd_args=None):
         Syntax: pci_cfg_read <bits> <bus> <device> <function> <offset>
             bits: 8, 16, 32
     """
-    if cmd_args == None or len(cmd_args) < 5:
-        print(PciCfgRead.__doc__)
-        return
+    if cmd_args is None or len(cmd_args) < 5:
+        raise ArgumentError()
+
     
     bits = ArgumentStringToInt(cmd_args[0])
     bus  = ArgumentStringToInt(cmd_args[1])
@@ -195,9 +195,9 @@ def PciCfgWrite(cmd_args=None):
         Prints an error message if there was a problem
         Prints nothing upon success.
     """
-    if cmd_args == None or len(cmd_args) < 6:
-        print(PciCfgWrite.__doc__)
-        return
+    if cmd_args is None or len(cmd_args) < 6:
+        raise ArgumentError()
+
 
     bits = ArgumentStringToInt(cmd_args[0])
     bus  = ArgumentStringToInt(cmd_args[1])
@@ -206,7 +206,7 @@ def PciCfgWrite(cmd_args=None):
     offs = ArgumentStringToInt(cmd_args[4])
     write_val = ArgumentStringToInt(cmd_args[5])
 
-    if DoPciCfgWrite(bits, bus, dev, func, offs, write_val) == False:
+    if not DoPciCfgWrite(bits, bus, dev, func, offs, write_val):
         print("ERROR: Failed to write PCI config space")
 
 lldb_alias('pci_cfg_write8', 'pci_cfg_write 8')
@@ -220,9 +220,9 @@ def PciCfgDump(cmd_args=None):
         be printed out.
         Syntax: pci_cfg_dump <bus> <dev> <fuction>
     """
-    if cmd_args == None or len(cmd_args) < 3:
-        print(PciCfgDump.__doc__)
-        return
+    if cmd_args is None or len(cmd_args) < 3:
+        raise ArgumentError()
+
 
     bus  = ArgumentStringToInt(cmd_args[0])
     dev  = ArgumentStringToInt(cmd_args[1])
@@ -236,13 +236,17 @@ def PciCfgScan(cmd_args=None):
         but can be specified as an argument
         Syntax: pci_cfg_scan [max bus number]
     """
-    if cmd_args == None or len(cmd_args) == 0:
+    if cmd_args is None or len(cmd_args) == 0:
         max_bus = 8
     elif len(cmd_args) == 1:
         max_bus = ArgumentStringToInt(cmd_args[0])
     else:
-        print(PciCfgScan.__doc__)
+        raise ArgumentError()
+
+    if IsDebuggingCore():
+        print("Can't run command when debugging a coredump")
         return
+
 
     print("bus:dev:fcn: vendor device rev | class")
     print("--------------------------------------")
@@ -254,12 +258,15 @@ def PciCfgDumpAll(cmd_args=None):
         be scanned defaults to 8, but can be specified as an argument
         Syntax: pci_cfg_dump_all [max bus number]
     """
-    if cmd_args == None or len(cmd_args) == 0:
+    if cmd_args is None or len(cmd_args) == 0:
         max_bus = 8
     elif len(cmd_args) == 1:
         max_bus = ArgumentStringToInt(cmd_args[0])
     else:
-        print(PciCfgDumpAll.__doc__)
+        raise ArgumentError()
+
+    if IsDebuggingCore():
+        print("Can't run command when debugging a coredump")
         return
-    
+
     DoPciCfgScan(max_bus, True)

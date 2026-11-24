@@ -33,18 +33,12 @@ getiopolicy_np(int iotype, int scope)
 	int policy, error;
 	struct _iopol_param_t iop_param;
 
-	if ((iotype != IOPOL_TYPE_DISK && iotype != IOPOL_TYPE_VFS_ATIME_UPDATES && iotype != IOPOL_TYPE_VFS_MATERIALIZE_DATALESS_FILES) ||
-	    (scope != IOPOL_SCOPE_PROCESS && scope != IOPOL_SCOPE_THREAD)) {
-		errno = EINVAL;
-		policy = -1;
-		goto exit;
-	}
+	/* Do not sanity check iotype and scope, leave it to kernel. */
 
 	iop_param.iop_scope = scope;
 	iop_param.iop_iotype = iotype;
 	error = __iopolicysys(IOPOL_CMD_GET, &iop_param);
 	if (error != 0) {
-		errno = error;
 		policy = -1;
 		goto exit;
 	}

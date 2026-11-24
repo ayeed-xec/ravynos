@@ -67,8 +67,12 @@
 #ifndef _KERN_QUEUE_H_
 #define _KERN_QUEUE_H_
 
+#if DRIVERKIT_FRAMEWORK_INCLUDE
+#include <DriverKit/macro_help.h>
+#else
 #include <mach/mach_types.h>
 #include <kern/macro_help.h>
+#endif /* DRIVERKIT_FRAMEWORK_INCLUDE */
 
 #include <sys/cdefs.h>
 #include <string.h>
@@ -78,7 +82,7 @@ __BEGIN_DECLS
 /*
  * Queue Management APIs
  *
- * There are currently two subtly different methods of maintining
+ * There are currently two subtly different methods of maintaining
  * a queue of objects. Both APIs are contained in this file, and
  * unfortunately overlap.
  * (there is also a third way maintained in bsd/sys/queue.h)
@@ -197,24 +201,67 @@ __BEGIN_DECLS
 struct queue_entry {
 	struct queue_entry      *next;          /* next element */
 	struct queue_entry      *prev;          /* previous element */
-
-#if __arm__ && (__BIGGEST_ALIGNMENT__ > 4)
-/* For the newer ARMv7k ABI where 64-bit types are 64-bit aligned, but pointers
- * are 32-bit:
- * Since this type is so often cast to various 64-bit aligned types
- * aligning it to 64-bits will avoid -wcast-align without needing
- * to disable it entirely. The impact on memory footprint should be
- * negligible.
- */
-} __attribute__ ((aligned(8)));
-#else
 };
-#endif
 
 typedef struct queue_entry      *queue_t;
 typedef struct queue_entry      queue_head_t;
 typedef struct queue_entry      queue_chain_t;
 typedef struct queue_entry      *queue_entry_t;
+
+#if defined(KERNEL_PRIVATE) || DRIVERKIT_FRAMEWORK_INCLUDE
+
+#if KERNEL_PRIVATE
+#define __queue_element_linkage_invalid(e) \
+	ml_fatal_trap_invalid_list_linkage((unsigned long)(e))
+#else
+#define __queue_element_linkage_invalid(e) \
+	__builtin_trap()
+#endif
+
+static inline void
+__QUEUE_ELT_VALIDATE(queue_entry_t elt)
+{
+	if (elt->prev->next != elt || elt->next->prev != elt) {
+		__queue_element_linkage_invalid(elt);
+	}
+}
+
+static inline queue_entry_t
+__QUEUE_ELT_VALIDATE_NEXT(queue_entry_t elt)
+{
+	queue_entry_t __next = elt->next;
+
+	if (__next->prev != elt) {
+		__queue_element_linkage_invalid(elt);
+	}
+
+	return __next;
+}
+
+static inline queue_entry_t
+__QUEUE_ELT_VALIDATE_PREV(queue_entry_t elt)
+{
+	queue_entry_t __prev = elt->prev;
+
+	if (__prev->next != elt) {
+		__queue_element_linkage_invalid(elt);
+	}
+
+	return __prev;
+}
+
+static inline void
+__DEQUEUE_ELT_CLEANUP(queue_entry_t elt)
+{
+	elt->next = elt->prev = (queue_entry_t)NULL;
+}
+#else
+#define __QUEUE_ELT_VALIDATE(elt)       ((void)0)
+#define __QUEUE_ELT_VALIDATE_NEXT(elt)  ((elt)->next)
+#define __QUEUE_ELT_VALIDATE_PREV(elt)  ((elt)->prev)
+#define __DEQUEUE_ELT_CLEANUP(elt)      ((void)0)
+#define __queue_element_linkage_invalid(e) ((void)0)
+#endif /* !(XNU_KERNEL_PRIVATE || DRIVERKIT_FRAMEWORK_INCLUDE)*/
 
 /*
  *	enqueue puts "elt" on the "queue".
@@ -222,42 +269,10 @@ typedef struct queue_entry      *queue_entry_t;
  *	remqueue removes the specified "elt" from its queue.
  */
 
-#define enqueue(queue, elt)      enqueue_tail(queue, elt)
+#if !DRIVERKIT_FRAMEWORK_INCLUDE
+#define enqueue(queue, elt)     enqueue_tail(queue, elt)
 #define dequeue(queue)          dequeue_head(queue)
-
-#ifdef XNU_KERNEL_PRIVATE
-#include <kern/debug.h>
-static inline void
-__QUEUE_ELT_VALIDATE(queue_entry_t elt)
-{
-	queue_entry_t   elt_next, elt_prev;
-
-	if (__improbable(elt == (queue_entry_t)NULL)) {
-		panic("Invalid queue element %p", elt);
-	}
-
-	elt_next = elt->next;
-	elt_prev = elt->prev;
-
-	if (__improbable(elt_next == (queue_entry_t)NULL || elt_prev == (queue_entry_t)NULL)) {
-		panic("Invalid queue element pointers for %p: next %p prev %p", elt, elt_next, elt_prev);
-	}
-	if (__improbable(elt_next->prev != elt || elt_prev->next != elt)) {
-		panic("Invalid queue element linkage for %p: next %p next->prev %p prev %p prev->next %p",
-		    elt, elt_next, elt_next->prev, elt_prev, elt_prev->next);
-	}
-}
-
-static inline void
-__DEQUEUE_ELT_CLEANUP(queue_entry_t elt)
-{
-	(elt)->next = (queue_entry_t)NULL;
-	(elt)->prev = (queue_entry_t)NULL;
-}
-#else
-#define __QUEUE_ELT_VALIDATE(elt) do { } while (0)
-#define __DEQUEUE_ELT_CLEANUP(elt) do { } while(0)
-#endif /* !XNU_KERNEL_PRIVATE */
+#endif
 
 static __inline__ void
 enqueue_head(
@@ -266,8 +281,7 @@ enqueue_head(
 {
 	queue_entry_t   old_head;
 
-	__QUEUE_ELT_VALIDATE((queue_entry_t)que);
-	old_head = que->next;
+	old_head = __QUEUE_ELT_VALIDATE_NEXT(que);
 	elt->next = old_head;
 	elt->prev = que;
 	old_head->prev = elt;
@@ -281,8 +295,7 @@ enqueue_tail(
 {
 	queue_entry_t   old_tail;
 
-	__QUEUE_ELT_VALIDATE((queue_entry_t)que);
-	old_tail = que->prev;
+	old_tail = __QUEUE_ELT_VALIDATE_PREV(que);
 	elt->next = que;
 	elt->prev = old_tail;
 	old_tail->next = elt;
@@ -348,8 +361,7 @@ insque(
 {
 	queue_entry_t   successor;
 
-	__QUEUE_ELT_VALIDATE(pred);
-	successor = pred->next;
+	successor = __QUEUE_ELT_VALIDATE_NEXT(pred);
 	entry->next = successor;
 	entry->prev = pred;
 	successor->prev = entry;
@@ -360,14 +372,7 @@ static __inline__ void
 remque(
 	queue_entry_t elt)
 {
-	queue_entry_t   next_elt, prev_elt;
-
-	__QUEUE_ELT_VALIDATE(elt);
-	next_elt = elt->next;
-	prev_elt = elt->prev; /* next_elt may equal prev_elt (and the queue head) if elt was the only element */
-	next_elt->prev = prev_elt;
-	prev_elt->next = next_elt;
-	__DEQUEUE_ELT_CLEANUP(elt);
+	remqueue(elt);
 }
 
 /*
@@ -534,7 +539,7 @@ re_queue_tail(queue_t que, queue_entry_t elt)
 	     &((elt)->field) != (head); \
 	     elt = _nelt, _nelt = qe_element((elt)->field.next, typeof(*(elt)), field)) \
 
-#ifdef XNU_KERNEL_PRIVATE
+#if (defined(XNU_KERNEL_PRIVATE) || SCHED_TEST_HARNESS)
 
 /* Dequeue an element from head, or return NULL if the queue is empty */
 #define qe_dequeue_head(head, type, field) ({ \
@@ -572,7 +577,33 @@ re_queue_tail(queue_t que, queue_entry_t elt)
 	_tmp_element; \
 })
 
-#endif /* XNU_KERNEL_PRIVATE */
+/* Peek at the next element, or return NULL if the next element is head (indicating queue_end) */
+#define qe_queue_next(head, element, type, field) ({ \
+	queue_entry_t _tmp_entry = queue_next(&(element)->field); \
+	type *_tmp_element = (type*) NULL; \
+	if (_tmp_entry != (queue_entry_t) head) \
+	        _tmp_element = qe_element(_tmp_entry, type, field); \
+	_tmp_element; \
+})
+
+/* Peek at the prev element, or return NULL if the prev element is head (indicating queue_end) */
+#define qe_queue_prev(head, element, type, field) ({ \
+	queue_entry_t _tmp_entry = queue_prev(&(element)->field); \
+	type *_tmp_element = (type*) NULL; \
+	if (_tmp_entry != (queue_entry_t) head) \
+	        _tmp_element = qe_element(_tmp_entry, type, field); \
+	_tmp_element; \
+})
+
+#endif /* XNU_KERNEL_PRIVATE || SCHED_TEST_HARNESS */
+
+/*
+ *	Macro:		QUEUE_HEAD_INITIALIZER()
+ *	Function:
+ *		Static queue head initializer
+ */
+#define QUEUE_HEAD_INITIALIZER(name) \
+	{ &name, &name }
 
 /*
  *	Macro:		queue_init
@@ -721,6 +752,57 @@ movqueue(queue_t _old, queue_t _new)
  * may be more than one chain.
  */
 
+/* check __prev->next == __elt */
+#define __QUEUE2_CHECK_NEXT(__fail, __elt, __prev, __head, type, field)         \
+MACRO_BEGIN                                                                     \
+	if (__prev == __head) {                                                 \
+	        __fail |= __head->next != (queue_entry_t)__elt;                 \
+	} else {                                                                \
+	        __fail |= ((type)(void *)__prev)->field.next !=                 \
+	            (queue_entry_t)__elt;                                       \
+	}                                                                       \
+MACRO_END
+
+/* check __next->prev == __elt */
+#define __QUEUE2_CHECK_PREV(__fail, __elt, __next, __head, type, field)         \
+MACRO_BEGIN                                                                     \
+	if (__next == __head) {                                                 \
+	        __fail |= __head->prev != (queue_entry_t)__elt;                 \
+	} else {                                                                \
+	        __fail |= ((type)(void *)__next)->field.prev !=                 \
+	            (queue_entry_t)__elt;                                       \
+	}                                                                       \
+MACRO_END
+
+#define __QUEUE2_CHECK_FAIL(__fail, __elt)                                      \
+MACRO_BEGIN                                                                     \
+	if (__improbable(__fail)) {                                             \
+	        __queue_element_linkage_invalid(__elt);                         \
+	}                                                                       \
+MACRO_END
+
+/* sets __prev->next to __elt */
+#define __QUEUE2_SET_NEXT(__prev, __elt, __head, type, field)                   \
+MACRO_BEGIN                                                                     \
+	if (__head == __prev) {                                                 \
+	        __head->next = (queue_entry_t)__elt;                            \
+	} else {                                                                \
+	        ((type)(void *)__prev)->field.next = (queue_entry_t)__elt;      \
+	}                                                                       \
+MACRO_END
+
+/* sets __next->prev to __elt */
+#define __QUEUE2_SET_PREV(__next, __elt, __head, type, field)                   \
+MACRO_BEGIN                                                                     \
+	if (__head == __next) {                                                 \
+	        __head->prev = (queue_entry_t)__elt;                            \
+	} else {                                                                \
+	        ((type)(void *)__next)->field.prev = (queue_entry_t)__elt;      \
+	}                                                                       \
+MACRO_END
+
+
+
 /*
  *	Macro:		queue_enter
  *	Function:
@@ -743,22 +825,24 @@ movqueue(queue_t _old, queue_t _new)
  *		could cause stackshot to trip over an inconsistent queue during
  *		iteration.
  */
-#define queue_enter(head, elt, type, field)                     \
-MACRO_BEGIN                                                     \
-	queue_entry_t __prev;                                   \
-                                                                \
-	__prev = (head)->prev;                                  \
-	(elt)->field.prev = __prev;                             \
-	(elt)->field.next = head;                               \
-	__compiler_barrier();                                   \
-	if ((head) == __prev) {                                 \
-	        (head)->next = (queue_entry_t) (elt);           \
-	}                                                       \
-	else {                                                  \
-	        ((type)(void *)__prev)->field.next =            \
-	                (queue_entry_t)(elt);                   \
-	}                                                       \
-	(head)->prev = (queue_entry_t) elt;                     \
+#define queue_enter(head, elt, type, field)                                     \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __head, __prev;                                           \
+	type __elt;                                                             \
+	int __fail = 0;                                                         \
+                                                                                \
+	__elt  = (elt);                                                         \
+	__head = (head);                                                        \
+	__prev = __head->prev;                                                  \
+                                                                                \
+	__QUEUE2_CHECK_NEXT(__fail, __head, __prev, __head, type, field);       \
+	__QUEUE2_CHECK_FAIL(__fail, __head);                                    \
+                                                                                \
+	__elt->field.prev = __prev;                                             \
+	__elt->field.next = __head;                                             \
+	__compiler_barrier();                                                   \
+	__QUEUE2_SET_NEXT(__prev, __elt, __head, type, field);                  \
+	__head->prev = (queue_entry_t)__elt;                                    \
 MACRO_END
 
 /*
@@ -774,21 +858,24 @@ MACRO_END
  *	Note:
  *		This should only be used with Method 2 queue iteration (element chains)
  */
-#define queue_enter_first(head, elt, type, field)               \
-MACRO_BEGIN                                                     \
-	queue_entry_t __next;                                   \
-                                                                \
-	__next = (head)->next;                                  \
-	if ((head) == __next) {                                 \
-	        (head)->prev = (queue_entry_t) (elt);           \
-	}                                                       \
-	else {                                                  \
-	        ((type)(void *)__next)->field.prev =            \
-	                (queue_entry_t)(elt);                   \
-	}                                                       \
-	(elt)->field.next = __next;                             \
-	(elt)->field.prev = head;                               \
-	(head)->next = (queue_entry_t) elt;                     \
+#define queue_enter_first(head, elt, type, field)                               \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __head, __next;                                           \
+	type __elt;                                                             \
+	int __fail = 0;                                                         \
+                                                                                \
+	__elt  = (elt);                                                         \
+	__head = (head);                                                        \
+	__next = __head->next;                                                  \
+                                                                                \
+	__QUEUE2_CHECK_PREV(__fail, __head, __next, __head, type, field);       \
+	__QUEUE2_CHECK_FAIL(__fail, __head);                                    \
+                                                                                \
+	__elt->field.next = __next;                                             \
+	__elt->field.prev = __head;                                             \
+	__compiler_barrier();                                                   \
+	__QUEUE2_SET_PREV(__next, __elt, __head, type, field);                  \
+	__head->next = (queue_entry_t)__elt;                                    \
 MACRO_END
 
 /*
@@ -805,34 +892,30 @@ MACRO_END
  *	Note:
  *		This should only be used with Method 2 queue iteration (element chains)
  */
-#define queue_insert_before(head, elt, cur, type, field)                \
-MACRO_BEGIN                                                             \
-	queue_entry_t __prev;                                           \
-                                                                        \
-	if ((head) == (queue_entry_t)(cur)) {                           \
-	        (elt)->field.next = (head);                             \
-	        if ((head)->next == (head)) {   /* only element */      \
-	                (elt)->field.prev = (head);                     \
-	                (head)->next = (queue_entry_t)(elt);            \
-	        } else {                        /* last element */      \
-	                __prev = (elt)->field.prev = (head)->prev;      \
-	                ((type)(void *)__prev)->field.next =            \
-	                        (queue_entry_t)(elt);                   \
-	        }                                                       \
-	        (head)->prev = (queue_entry_t)(elt);                    \
-	} else {                                                        \
-	        (elt)->field.next = (queue_entry_t)(cur);               \
-	        if ((head)->next == (queue_entry_t)(cur)) {             \
-	/* first element */     \
-	                (elt)->field.prev = (head);                     \
-	                (head)->next = (queue_entry_t)(elt);            \
-	        } else {                        /* middle element */    \
-	                __prev = (elt)->field.prev = (cur)->field.prev; \
-	                ((type)(void *)__prev)->field.next =            \
-	                        (queue_entry_t)(elt);                   \
-	        }                                                       \
-	        (cur)->field.prev = (queue_entry_t)(elt);               \
-	}                                                               \
+#define queue_insert_before(head, elt, cur, type, field)                        \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __head, __cur, __prev;                                    \
+	type __elt;                                                             \
+	int __fail = 0;                                                         \
+                                                                                \
+	__elt  = (elt);                                                         \
+	__cur  = (queue_entry_t)(cur);                                          \
+	__head = (head);                                                        \
+                                                                                \
+	if (__head == __cur) {                                                  \
+	        __prev = __head->prev;                                          \
+	} else {                                                                \
+	        __prev = ((type)(void *)__cur)->field.prev;                     \
+	}                                                                       \
+                                                                                \
+	__QUEUE2_CHECK_NEXT(__fail, __cur, __prev, __head, type, field);        \
+	__QUEUE2_CHECK_FAIL(__fail, __head);                                    \
+                                                                                \
+	__elt->field.prev = __prev;                                             \
+	__elt->field.next = __cur;                                              \
+	__compiler_barrier();                                                   \
+	__QUEUE2_SET_NEXT(__prev, __elt, __head, type, field);                  \
+	__QUEUE2_SET_PREV(__cur, __elt, __head, type, field);                   \
 MACRO_END
 
 /*
@@ -849,34 +932,30 @@ MACRO_END
  *	Note:
  *		This should only be used with Method 2 queue iteration (element chains)
  */
-#define queue_insert_after(head, elt, cur, type, field)                 \
-MACRO_BEGIN                                                             \
-	queue_entry_t __next;                                           \
-                                                                        \
-	if ((head) == (queue_entry_t)(cur)) {                           \
-	        (elt)->field.prev = (head);                             \
-	        if ((head)->next == (head)) {   /* only element */      \
-	                (elt)->field.next = (head);                     \
-	                (head)->prev = (queue_entry_t)(elt);            \
-	        } else {                        /* first element */     \
-	                __next = (elt)->field.next = (head)->next;      \
-	                ((type)(void *)__next)->field.prev =            \
-	                        (queue_entry_t)(elt);                   \
-	        }                                                       \
-	        (head)->next = (queue_entry_t)(elt);                    \
-	} else {                                                        \
-	        (elt)->field.prev = (queue_entry_t)(cur);               \
-	        if ((head)->prev == (queue_entry_t)(cur)) {             \
-	/* last element */      \
-	                (elt)->field.next = (head);                     \
-	                (head)->prev = (queue_entry_t)(elt);            \
-	        } else {                        /* middle element */    \
-	                __next = (elt)->field.next = (cur)->field.next; \
-	                ((type)(void *)__next)->field.prev =            \
-	                        (queue_entry_t)(elt);                   \
-	        }                                                       \
-	        (cur)->field.next = (queue_entry_t)(elt);               \
-	}                                                               \
+#define queue_insert_after(head, elt, cur, type, field)                         \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __head, __cur, __next;                                    \
+	type __elt;                                                             \
+	int __fail = 0;                                                         \
+                                                                                \
+	__elt  = (elt);                                                         \
+	__cur  = (queue_entry_t)(cur);                                          \
+	__head = (head);                                                        \
+                                                                                \
+	if (__head == __cur) {                                                  \
+	        __next = __head->next;                                          \
+	} else {                                                                \
+	        __next = ((type)(void *)__cur)->field.next;                     \
+	}                                                                       \
+                                                                                \
+	__QUEUE2_CHECK_PREV(__fail, __cur, __next, __head, type, field);        \
+	__QUEUE2_CHECK_FAIL(__fail, __head);                                    \
+                                                                                \
+	__elt->field.prev = __cur;                                              \
+	__elt->field.next = __next;                                             \
+	__compiler_barrier();                                                   \
+	__QUEUE2_SET_NEXT(__cur, __elt, __head, type, field);                   \
+	__QUEUE2_SET_PREV(__next, __elt, __head, type, field);                  \
 MACRO_END
 
 /*
@@ -900,25 +979,26 @@ MACRO_END
  *	Note:
  *		This should only be used with Method 2 queue iteration (element chains)
  */
-#define queue_remove(head, elt, type, field)                    \
-MACRO_BEGIN                                                     \
-	queue_entry_t	__next, __prev;                         \
-                                                                \
-	__next = (elt)->field.next;                             \
-	__prev = (elt)->field.prev;                             \
-                                                                \
-	if ((head) == __next)                                   \
-	        (head)->prev = __prev;                          \
-	else                                                    \
-	        ((type)(void *)__next)->field.prev = __prev;    \
-                                                                \
-	if ((head) == __prev)                                   \
-	        (head)->next = __next;                          \
-	else                                                    \
-	        ((type)(void *)__prev)->field.next = __next;    \
-                                                                \
-	(elt)->field.next = NULL;                               \
-	(elt)->field.prev = NULL;                               \
+#define queue_remove(head, elt, type, field)                                    \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __head, __next, __prev;                                   \
+	type __elt;                                                             \
+	int __fail = 0;                                                         \
+                                                                                \
+	__elt  = (elt);                                                         \
+	__head = (head);                                                        \
+	__next = __elt->field.next;                                             \
+	__prev = __elt->field.prev;                                             \
+                                                                                \
+	__QUEUE2_CHECK_PREV(__fail, __elt, __next, __head, type, field);        \
+	__QUEUE2_CHECK_NEXT(__fail, __elt, __prev, __head, type, field);        \
+	__QUEUE2_CHECK_FAIL(__fail, __head);                                    \
+                                                                                \
+	__QUEUE2_SET_PREV(__next, __prev, __head, type, field);                 \
+	__QUEUE2_SET_NEXT(__prev, __next, __head, type, field);                 \
+	__compiler_barrier();                                                   \
+	__elt->field.next = NULL;                                               \
+	__elt->field.prev = NULL;                                               \
 MACRO_END
 
 /*
@@ -934,19 +1014,16 @@ MACRO_END
  */
 #define queue_remove_first(head, entry, type, field)            \
 MACRO_BEGIN                                                     \
-	queue_entry_t	__next;                                 \
+	queue_entry_t __hd;                                     \
+	type __entry;                                           \
                                                                 \
-	(entry) = (type)(void *) ((head)->next);                \
-	__next = (entry)->field.next;                           \
+	__hd    = (head);                                       \
+	__entry = (type)(void *)__hd->next;                     \
                                                                 \
-	if ((head) == __next)                                   \
-	        (head)->prev = (head);                          \
-	else                                                    \
-	        ((type)(void *)(__next))->field.prev = (head);  \
-	(head)->next = __next;                                  \
-                                                                \
-	(entry)->field.next = NULL;                             \
-	(entry)->field.prev = NULL;                             \
+	if ((queue_entry_t)__entry != __hd) {                   \
+	        queue_remove(__hd, __entry, type, field);       \
+	}                                                       \
+	(entry) = __entry;                                      \
 MACRO_END
 
 /*
@@ -962,19 +1039,16 @@ MACRO_END
  */
 #define queue_remove_last(head, entry, type, field)             \
 MACRO_BEGIN                                                     \
-	queue_entry_t	__prev;                                 \
+	queue_entry_t __hd;                                     \
+	type __entry;                                           \
                                                                 \
-	(entry) = (type)(void *) ((head)->prev);                \
-	__prev = (entry)->field.prev;                           \
+	__hd    = (head);                                       \
+	__entry = (type)(void *)__hd->prev;                     \
                                                                 \
-	if ((head) == __prev)                                   \
-	        (head)->next = (head);                          \
-	else                                                    \
-	        ((type)(void *)(__prev))->field.next = (head);  \
-	(head)->prev = __prev;                                  \
-                                                                \
-	(entry)->field.next = NULL;                             \
-	(entry)->field.prev = NULL;                             \
+	if ((queue_entry_t)__entry != __hd) {                   \
+	        queue_remove(__hd, __entry, type, field);       \
+	}                                                       \
+	(entry) = __entry;                                      \
 MACRO_END
 
 /*
@@ -1013,6 +1087,56 @@ MACRO_BEGIN                                                     \
 	} else {                                                \
 	        queue_init(new);                                \
 	}                                                       \
+MACRO_END
+
+/*
+ *	Macro:		queue_extend_last
+ *	Function:
+ *		Move the elements of a source queue to the end of a destination queue.
+ *	Note:
+ *		This should only be used with Method 2 queue iteration (element chains)
+ */
+#define queue_extend_last(dst, src, type, field)                                \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __src = (src);                                            \
+	queue_entry_t __dst = (dst);                                            \
+	if (queue_empty(__dst)) {                                               \
+	        queue_new_head(__src, __dst, type, field);                      \
+	        queue_init(__src);                                              \
+	} else if (!queue_empty(__src)) {                                       \
+	        ((type)(void *)queue_first(__src))->field.prev =                \
+	                queue_last(__dst);                                      \
+	        ((type)(void *)queue_last(__dst))->field.next =                 \
+	                queue_first(__src);                                     \
+	        queue_last(__dst) = queue_last(__src);                          \
+	        ((type)(void *)queue_last(__dst))->field.next = __dst;          \
+	        queue_init(__src);                                              \
+	}                                                                       \
+MACRO_END
+
+/*
+ *	Macro:		queue_extend_first
+ *	Function:
+ *		Move the elements of a source queue to the beginning of a destination queue.
+ *	Note:
+ *		This should only be used with Method 2 queue iteration (element chains)
+ */
+#define queue_extend_first(dst, src, type, field)                               \
+MACRO_BEGIN                                                                     \
+	queue_entry_t __src = (src);                                            \
+	queue_entry_t __dst = (dst);                                            \
+	if (queue_empty(__dst)) {                                               \
+	        queue_new_head(__src, __dst, type, field);                      \
+	        queue_init(__src);                                              \
+	} else if (!queue_empty(__src)) {                                       \
+	        ((type)(void *)queue_first(__dst))->field.prev =                \
+	                queue_last(__src);                                      \
+	        ((type)(void *)queue_last(__src))->field.next =                 \
+	                queue_first(__dst);                                     \
+	        queue_first(__dst) = queue_first(__src);                        \
+	        ((type)(void *)queue_first(__dst))->field.prev = __dst;         \
+	        queue_init(__src);                                              \
+	}                                                                       \
 MACRO_END
 
 /*

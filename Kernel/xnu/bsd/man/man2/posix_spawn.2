@@ -212,9 +212,8 @@ or
 .Fn posix_spawnp
 call, it is entered as follows:
 .Bd -literal -offset indent
-main(argc, argv, envp)
-int argc;
-char **argv, **envp;
+.Ft int
+.Fn main "int argc" "char **argv" "char **envp";
 .Ed
 .Pp
 where
@@ -327,6 +326,10 @@ file that is currently open for writing or reading by some process.
 .\" ==========
 .It Bq Er EBADARCH
 The new process file has no architectures appropriate for the current system.
+.\" ==========
+.It Bq Er EBADF
+Bad file descriptor for one or more
+.Fa file_actions .
 .El
 .Pp
 Additionally, they may fail for any of the reasons listed in

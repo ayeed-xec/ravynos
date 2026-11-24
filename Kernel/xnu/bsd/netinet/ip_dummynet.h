@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2013 Apple Inc. All rights reserved.
+ * Copyright (c) 2000-2024 Apple Inc. All rights reserved.
  *
  * @APPLE_OSREFERENCE_LICENSE_HEADER_START@
  *
@@ -131,15 +131,16 @@ typedef u_int64_t dn_key;       /* sorting key */
  * is non-zero if we want to support extract from the middle.
  */
 struct dn_heap_entry {
-	dn_key key;     /* sorting key. Topmost element is smallest one */
-	void *object;   /* object pointer */
+	dn_key key;      /* sorting key. Topmost element is smallest one */
+	size_t obj_size; /* size of the pointed object */
+	void * object  __sized_by_or_null(obj_size);   /* object pointer */
 };
 
 struct dn_heap {
-	int size;
-	int elements;
-	int offset; /* XXX if > 0 this is the offset of direct ptr to obj */
-	struct dn_heap_entry *p; /* really an array of "size" entries */
+	int size;              /* Number of allocated entries in the heap */
+	int elements;          /* Number of elements in the heap */
+	int offset;            /* XXX if > 0 this is the offset of direct ptr to obj */
+	struct dn_heap_entry *__counted_by_or_null(size) p; /* really an array of "size" entries */
 };
 
 /*
@@ -157,7 +158,6 @@ struct dn_heap {
 #include <netinet6/ip6_var.h>   /* for ip6_out_args */
 
 struct dn_pkt_tag {
-	struct ip_fw        *dn_ipfw_rule;      /* matching IPFW rule */
 	void                *dn_pf_rule;        /* matching PF rule */
 	int                 dn_dir;             /* action when packet comes out. */
 #define DN_TO_IP_OUT    1
@@ -185,9 +185,6 @@ struct dn_pkt_tag {
 	u_int32_t           dn_unfragpartlen;   /* for ip6_output */
 	struct ip6_exthdrs  dn_exthdrs;         /* for ip6_output */
 	int                 dn_flags;           /* flags, for ip[6]_output */
-	int                 dn_client;
-#define DN_CLIENT_IPFW  1
-#define DN_CLIENT_PF    2
 	union {
 		struct ip_out_args      _dn_ipoa;/* output args, for ip_output. MUST COPY */
 		struct ip6_out_args     _dn_ip6oa;/* output args, for ip_output. MUST COPY */
@@ -286,7 +283,7 @@ struct dn_flow_queue {
 	int avg;                /* average queue length est. (scaled) */
 	int count;              /* arrivals since last RED drop */
 	int random;             /* random value (scaled) */
-	u_int32_t q_time;       /* start of queue idle time */
+	u_int64_t q_time;       /* start of queue idle time */
 
 	/* WF2Q+ support */
 	struct dn_flow_set *fs; /* parent flow set */
@@ -337,7 +334,7 @@ struct dn_flow_set {
 	/* hash table of queues onto this flow_set */
 	int rq_size;            /* number of slots */
 	int rq_elements;        /* active elements */
-	struct dn_flow_queue **rq; /* array of rq_size entries */
+	struct dn_flow_queue **__counted_by_or_null(rq_size + 1) rq; /* array of rq_size entries */
 
 	u_int32_t last_expired; /* do not expire too frequently */
 	int backlogged;         /* #active queues for this flowset */
@@ -355,7 +352,7 @@ struct dn_flow_set {
 	u_int c_2;              /* max_p*min_th/(max_th-min_th) (scaled) */
 	u_int c_3;              /* for GRED, (1-max_p)/max_th (scaled) */
 	u_int c_4;              /* for GRED, 1 - 2*max_p (scaled) */
-	u_int * w_q_lookup;     /* lookup table for computing (1-w_q)^t */
+	u_int * __counted_by_or_null(lookup_depth) w_q_lookup;     /* lookup table for computing (1-w_q)^t */
 	u_int lookup_depth;     /* depth of lookup table */
 	int lookup_step;        /* granularity inside the lookup table */
 	int lookup_weight;      /* equal to (1-w_q)^t / (1-w_q)^(t+1) */
@@ -414,14 +411,13 @@ SLIST_HEAD(dn_pipe_head, dn_pipe);
 
 #ifdef BSD_KERNEL_PRIVATE
 extern uint32_t my_random(void);
-void ip_dn_init(void); /* called from raw_ip.c:load_ipfw() */
+void ip_dn_init(void);
 
 typedef int ip_dn_ctl_t(struct sockopt *); /* raw_ip.c */
 typedef int ip_dn_io_t(struct mbuf *m, int pipe_nr, int dir,
-    struct ip_fw_args *fwa, int );
+    struct ip_fw_args *fwa);
 extern  ip_dn_ctl_t *ip_dn_ctl_ptr;
 extern  ip_dn_io_t *ip_dn_io_ptr;
-void dn_ipfw_rule_delete(void *);
 #define DUMMYNET_LOADED (ip_dn_io_ptr != NULL)
 
 #pragma pack(4)
@@ -673,27 +669,12 @@ struct dn_pipe_64 {             /* a pipe */
 	struct dn_flow_set_64 fs; /* used with fixed-rate flows */
 };
 
-/*
- * Return the IPFW rule associated with the dummynet tag; if any.
- * Make sure that the dummynet tag is not reused by lower layers.
- */
-static __inline struct ip_fw *
-ip_dn_claim_rule(struct mbuf *m)
-{
-	struct m_tag *mtag = m_tag_locate(m, KERNEL_MODULE_TAG_ID,
-	    KERNEL_TAG_TYPE_DUMMYNET, NULL);
-	if (mtag != NULL) {
-		mtag->m_tag_type = KERNEL_TAG_TYPE_NONE;
-		return ((struct dn_pkt_tag *)(mtag + 1))->dn_ipfw_rule;
-	} else {
-		return NULL;
-	}
-}
-
 #include <sys/eventhandler.h>
 /* Dummynet event handling declarations */
 extern struct eventhandler_lists_ctxt dummynet_evhdlr_ctxt;
 extern void dummynet_init(void);
+
+extern void dummynet_register_m_tag(void);
 
 struct dn_pipe_mini_config {
 	uint32_t bandwidth;
@@ -738,6 +719,8 @@ enum {
 	DUMMYNET_PIPE_DELETE,
 	DUMMYNET_NLC_DISABLED,
 };
+
+extern const char *dummynet_event2str(int);
 
 enum    { DN_INOUT, DN_IN, DN_OUT };
 /*

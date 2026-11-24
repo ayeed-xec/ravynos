@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2006 Apple Computer, Inc. All rights reserved.
+ * Copyright (c) 2000-2020 Apple Inc. All rights reserved.
  *
  * @APPLE_OSREFERENCE_LICENSE_HEADER_START@
  *
@@ -56,7 +56,6 @@
 
 #include <mach/mach_types.h>
 #include <mach/memory_object_types.h>
-#include <mach/memory_object_control.h>
 #include <mach/vm_map.h>
 #include <mach/mach_vm.h>
 #include <mach/upl.h>
@@ -65,31 +64,27 @@
 #include <vm/vm_map.h>
 #include <vm/vm_kern.h>
 #include <kern/zalloc.h>
-#include <kern/kalloc.h>
 #include <libkern/libkern.h>
+#include <kern/telemetry.h>
 
 #include <vm/vnode_pager.h>
 #include <vm/vm_pageout.h>
+#include <vm/vm_ubc.h>
 
 #include <kern/assert.h>
 #include <sys/kdebug.h>
-#include <nfs/nfs_conf.h>
-#include <nfs/rpcv2.h>
-#include <nfs/nfsproto.h>
 #include <nfs/nfs.h>
 
-#include <vm/vm_protos.h>
+#include <vm/vm_protos_internal.h>
 
+#include <sys/kdebug.h>
+#include <sys/kdebug_triage.h>
 #include <vfs/vfs_disk_conditioner.h>
 
 void
-vnode_pager_throttle()
+vnode_pager_throttle(void)
 {
-	struct uthread *ut;
-
-	ut = get_bsdthread_info(current_thread());
-
-	if (ut->uu_lowpri_window) {
+	if (current_uthread()->uu_lowpri_window) {
 		throttle_lowpri_io(1);
 	}
 }
@@ -99,6 +94,19 @@ vnode_pager_isSSD(vnode_t vp)
 {
 	return disk_conditioner_mount_is_ssd(vp->v_mount);
 }
+
+#if FBDP_DEBUG_OBJECT_NO_PAGER
+bool
+vnode_pager_forced_unmount(vnode_t vp)
+{
+	mount_t mnt;
+	mnt = vnode_mount(vp);
+	if (!mnt) {
+		return false;
+	}
+	return vfs_isforce(mnt);
+}
+#endif /* FBDP_DEBUG_OBJECT_NO_PAGER */
 
 #if CONFIG_IOSCHED
 void
@@ -122,7 +130,7 @@ vnode_pager_issue_reprioritize_io(struct vnode *devvp, uint64_t blkno, uint32_t 
 
 	set_tier.extents = &extent;
 	set_tier.extentsCount = 1;
-	set_tier.tier = priority;
+	set_tier.tier = (uint8_t)priority;
 
 	error = VNOP_IOCTL(devvp, DKIOCSETTIER, (caddr_t)&set_tier, 0, vfs_context_kernel());
 	return;
@@ -312,6 +320,26 @@ vnode_pageout(struct vnode *vp,
 
 	isize = (int)size;
 
+	/*
+	 * This call is non-blocking and does not ever fail but it can
+	 * only be made when there is other explicit synchronization
+	 * with reclaiming of the vnode which, in this path, is provided
+	 * by the paging in progress counter.
+	 *
+	 * In addition, this may also be entered via explicit ubc_msync
+	 * calls or vm_swapfile_io where the existing iocount provides
+	 * the necessary synchronization. Ideally we would not take an
+	 * additional iocount here in the cases where an explcit iocount
+	 * has already been taken but this call doesn't cause a deadlock
+	 * as other forms of vnode_get* might if this thread has already
+	 * taken an iocount.
+	 */
+	error = vnode_getalways_from_pager(vp);
+	if (error != 0) {
+		/* This can't happen */
+		panic("vnode_getalways returned %d for vp %p", error, vp);
+	}
+
 	if (isize <= 0) {
 		result    = PAGER_ERROR;
 		error_ret = EINVAL;
@@ -333,18 +361,18 @@ vnode_pageout(struct vnode *vp,
 		 * just go ahead and call vnop_pageout since
 		 * it has already sorted out the dirty ranges
 		 */
-		KERNEL_DEBUG_CONSTANT_IST(KDEBUG_TRACE,
-		    (MACHDBG_CODE(DBG_MACH_VM, 1)) | DBG_FUNC_START,
-		    size, 1, 0, 0, 0);
+		KDBG_RELEASE(
+			VMDBG_CODE(DBG_VM_VNODE_PAGEOUT) | DBG_FUNC_START,
+			size, 1);
 
 		if ((error_ret = VNOP_PAGEOUT(vp, upl, upl_offset, (off_t)f_offset,
 		    (size_t)size, flags, ctx))) {
 			result = PAGER_ERROR;
 		}
 
-		KERNEL_DEBUG_CONSTANT_IST(KDEBUG_TRACE,
-		    (MACHDBG_CODE(DBG_MACH_VM, 1)) | DBG_FUNC_END,
-		    size, 1, 0, 0, 0);
+		KDBG_RELEASE(
+			VMDBG_CODE(DBG_VM_VNODE_PAGEOUT) | DBG_FUNC_END,
+			size, 1);
 
 		goto out;
 	}
@@ -359,17 +387,15 @@ vnode_pageout(struct vnode *vp,
 			 * via 'f_offset' and 'size' into a UPL... this allows the filesystem to first
 			 * take any locks it needs, before effectively locking the pages into a UPL...
 			 */
-			KERNEL_DEBUG_CONSTANT_IST(KDEBUG_TRACE,
-			    (MACHDBG_CODE(DBG_MACH_VM, 1)) | DBG_FUNC_START,
-			    size, (int)f_offset, 0, 0, 0);
+			KDBG_RELEASE(VMDBG_CODE(DBG_VM_VNODE_PAGEOUT) | DBG_FUNC_START,
+			    size, (int)f_offset);
 
 			if ((error_ret = VNOP_PAGEOUT(vp, NULL, upl_offset, (off_t)f_offset,
 			    size, flags, ctx))) {
 				result = PAGER_ERROR;
 			}
-			KERNEL_DEBUG_CONSTANT_IST(KDEBUG_TRACE,
-			    (MACHDBG_CODE(DBG_MACH_VM, 1)) | DBG_FUNC_END,
-			    size, 0, 0, 0, 0);
+			KDBG_RELEASE(VMDBG_CODE(DBG_VM_VNODE_PAGEOUT) | DBG_FUNC_END,
+			    size);
 
 			goto out;
 		}
@@ -431,13 +457,10 @@ vnode_pageout(struct vnode *vp,
 		 * of it's pages
 		 */
 		for (offset = upl_offset; isize; isize -= PAGE_SIZE, offset += PAGE_SIZE) {
-#if CONFIG_NFS_CLIENT
 			if (vp->v_tag == VT_NFS) {
 				/* check with nfs if page is OK to drop */
 				error = nfs_buf_page_inval(vp, (off_t)f_offset);
-			} else
-#endif /* CONFIG_NFS_CLIENT */
-			{
+			} else {
 				blkno = ubc_offtoblk(vp, (off_t)f_offset);
 				error = buf_invalblkno(vp, blkno, 0);
 			}
@@ -488,13 +511,10 @@ vnode_pageout(struct vnode *vp,
 			 * Note we must not sleep here if the buffer is busy - that is
 			 * a lock inversion which causes deadlock.
 			 */
-#if CONFIG_NFS_CLIENT
 			if (vp->v_tag == VT_NFS) {
 				/* check with nfs if page is OK to drop */
 				error = nfs_buf_page_inval(vp, (off_t)f_offset);
-			} else
-#endif /* CONFIG_NFS_CLIENT */
-			{
+			} else {
 				blkno = ubc_offtoblk(vp, (off_t)f_offset);
 				error = buf_invalblkno(vp, blkno, 0);
 			}
@@ -528,9 +548,8 @@ vnode_pageout(struct vnode *vp,
 		}
 		xsize = num_of_pages * PAGE_SIZE;
 
-		KERNEL_DEBUG_CONSTANT_IST(KDEBUG_TRACE,
-		    (MACHDBG_CODE(DBG_MACH_VM, 1)) | DBG_FUNC_START,
-		    xsize, (int)f_offset, 0, 0, 0);
+		KDBG_RELEASE(VMDBG_CODE(DBG_VM_VNODE_PAGEOUT) | DBG_FUNC_START,
+		    xsize, (int)f_offset);
 
 		if ((error = VNOP_PAGEOUT(vp, upl, offset, (off_t)f_offset,
 		    xsize, flags, ctx))) {
@@ -539,9 +558,8 @@ vnode_pageout(struct vnode *vp,
 			}
 			result = PAGER_ERROR;
 		}
-		KERNEL_DEBUG_CONSTANT_IST(KDEBUG_TRACE,
-		    (MACHDBG_CODE(DBG_MACH_VM, 1)) | DBG_FUNC_END,
-		    xsize, 0, 0, 0, 0);
+		KDBG_RELEASE(VMDBG_CODE(DBG_VM_VNODE_PAGEOUT) | DBG_FUNC_END,
+		    xsize, error);
 
 		f_offset += xsize;
 		offset   += xsize;
@@ -549,11 +567,44 @@ vnode_pageout(struct vnode *vp,
 		pg_index += num_of_pages;
 	}
 out:
+	vnode_put_from_pager(vp);
+
 	if (errorp) {
 		*errorp = error_ret;
 	}
 
 	return result;
+}
+
+static uint64_t
+ktriage_encode_v_tag_and_error(vnode_t vp, int error)
+{
+	uint64_t tag = vp->v_tag;
+	uint32_t ktriage_error = (uint32_t)error;
+	return tag << 32 | ktriage_error;
+}
+
+int
+vnode_get_ids(struct vnode *vp, uint64_t *fsid_out, uint64_t *fsobj_id_out);
+int
+vnode_get_ids(struct vnode *vp, uint64_t *fsid_out, uint64_t *fsobj_id_out)
+{
+	struct vnode_attr *attr = kalloc_type(struct vnode_attr, Z_WAITOK | Z_ZERO);
+	if (!attr) {
+		return ENOMEM;
+	}
+
+	VATTR_INIT(attr);
+	VATTR_WANTED(attr, va_fsid64);
+	VATTR_WANTED(attr, va_fsid);
+	VATTR_WANTED(attr, va_fileid);
+	int error = vnode_getattr(vp, attr, vfs_context_current());
+	if (error == 0) {
+		*fsid_out = vnode_get_va_fsid(attr);
+		*fsobj_id_out = attr->va_fileid;
+	}
+	kfree_type(struct vnode_attr, attr);
+	return error;
 }
 
 
@@ -574,16 +625,26 @@ vnode_pagein(
 	int             start_pg;
 	int             last_pg;
 	int             first_pg;
-	int             xsize;
-	int             must_commit = 1;
-	int             ignore_valid_page_check = 0;
+	bool            must_commit = !(flags & UPL_NOCOMMIT);
+	bool const      ignore_valid_page_check = flags & UPL_IGNORE_VALID_PAGE_CHECK;
 
-	if (flags & UPL_NOCOMMIT) {
-		must_commit = 0;
-	}
-
-	if (flags & UPL_IGNORE_VALID_PAGE_CHECK) {
-		ignore_valid_page_check = 1;
+	/*
+	 * This call is non-blocking and does not ever fail but it can
+	 * only be made when there is other explicit synchronization
+	 * with reclaiming of the vnode which, in this path, is provided
+	 * by the paging in progress counter.
+	 *
+	 * In addition, this may also be entered via vm_swapfile_io
+	 * where the existing iocount provides the necessary synchronization.
+	 * Ideally we would not take an additional iocount here in the cases
+	 * where an explcit iocount has already been taken but this call
+	 * doesn't cause a deadlock as other forms of vnode_get* might if
+	 * this thread has already taken an iocount.
+	 */
+	error = vnode_getalways_from_pager(vp);
+	if (error != 0) {
+		/* This can't happen */
+		panic("vnode_getalways returned %d for vp %p", error, vp);
 	}
 
 	if (UBCINFOEXISTS(vp) == 0) {
@@ -594,6 +655,9 @@ vnode_pagein(
 			ubc_upl_abort_range(upl, upl_offset, size, UPL_ABORT_FREE_ON_EMPTY | UPL_ABORT_ERROR);
 		}
 
+		ktriage_record(thread_tid(current_thread()),
+		    KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_VNODEPAGEIN_NO_UBCINFO),
+		    ktriage_encode_v_tag_and_error(vp, 0));
 		goto out;
 	}
 	if (upl == (upl_t)NULL) {
@@ -620,6 +684,9 @@ vnode_pagein(
 			if ((error = VNOP_PAGEIN(vp, NULL, upl_offset, (off_t)f_offset,
 			    size, flags, vfs_context_current()))) {
 				set_thread_pagein_error(current_thread(), error);
+				ktriage_record(thread_tid(current_thread()),
+				    KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_VNODEPAGEIN_FSPAGEIN_FAIL),
+				    ktriage_encode_v_tag_and_error(vp, error));
 				result = PAGER_ERROR;
 				error  = PAGER_ERROR;
 			}
@@ -630,6 +697,9 @@ vnode_pagein(
 		if (upl == (upl_t)NULL) {
 			result =  PAGER_ABSENT;
 			error = PAGER_ABSENT;
+			ktriage_record(thread_tid(current_thread()),
+			    KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_VNODEPAGEIN_NO_UPL),
+			    ktriage_encode_v_tag_and_error(vp, 0));
 			goto out;
 		}
 		ubc_upl_range_needed(upl, upl_offset / PAGE_SIZE, 1);
@@ -642,7 +712,7 @@ vnode_pagein(
 		 * are responsible for commiting/aborting it
 		 * regardless of what the caller has passed in
 		 */
-		must_commit = 1;
+		must_commit = true;
 	} else {
 		pl = ubc_upl_pageinfo(upl);
 		first_pg = upl_offset / PAGE_SIZE;
@@ -682,7 +752,7 @@ vnode_pagein(
 			}
 		}
 
-		if (ignore_valid_page_check == 1) {
+		if (ignore_valid_page_check) {
 			start_pg = last_pg;
 		} else {
 			/*
@@ -702,7 +772,7 @@ vnode_pagein(
 			 * commit this range of pages back to the
 			 * cache unchanged
 			 */
-			xsize = (last_pg - start_pg) * PAGE_SIZE;
+			int xsize = (last_pg - start_pg) * PAGE_SIZE;
 
 			if (must_commit) {
 				ubc_upl_abort_range(upl, start_pg * PAGE_SIZE, xsize, UPL_ABORT_FREE_ON_EMPTY);
@@ -739,7 +809,7 @@ vnode_pagein(
 		}
 		if (last_pg > start_pg) {
 			int xoff;
-			xsize = (last_pg - start_pg) * PAGE_SIZE;
+			int xsize = (last_pg - start_pg) * PAGE_SIZE;
 			xoff  = start_pg * PAGE_SIZE;
 
 			if ((error = VNOP_PAGEIN(vp, upl, (upl_offset_t) xoff,
@@ -764,21 +834,20 @@ vnode_pagein(
 					}
 				}
 				set_thread_pagein_error(current_thread(), error);
+				ktriage_record(thread_tid(current_thread()),
+				    KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_VNODEPAGEIN_FSPAGEIN_FAIL),
+				    ktriage_encode_v_tag_and_error(vp, error));
 				result = PAGER_ERROR;
 				error  = PAGER_ERROR;
 			}
 		}
 	}
 out:
+	vnode_put_from_pager(vp);
+
 	if (errorp) {
 		*errorp = result;
 	}
 
 	return error;
-}
-
-void *
-upl_get_internal_page_list(upl_t upl)
-{
-	return UPL_GET_INTERNAL_PAGE_LIST(upl);
 }

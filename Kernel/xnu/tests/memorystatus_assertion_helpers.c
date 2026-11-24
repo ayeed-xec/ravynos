@@ -88,7 +88,7 @@ check_properties(pid_t pid, int32_t expected_priority, int32_t expected_limit_mb
 		T_LOG("state is 0x%x\n", actual_state);
 		log_state(actual_state);
 
-		T_ASSERT_FAIL("check_properties: %s", test);
+		T_FAIL("check_properties: %s", test);
 	} else {
 		T_PASS("check_properties: %s ok", test);
 		return true;
@@ -236,4 +236,8 @@ log_state(uint32_t state)
 	T_LOG("\t%s kMemorystatusSupportsIdleExit", ((state & kMemorystatusSupportsIdleExit) ? "IS " : "NOT"));
 	T_LOG("\t%s kMemorystatusDirty", ((state & kMemorystatusDirty)            ? "IS " : "NOT"));
 	T_LOG("\t%s kMemorystatusAssertion", ((state & kMemorystatusAssertion)        ? "IS " : "NOT"));
+	T_LOG("\t%s kMemorystatusActive", ((state & kMemorystatusActive)                ? "IS " : "NOT"));
+	T_LOG("\t%s kMemorystatusRelaunchLow", ((state & kMemorystatusRelaunchLow)      ? "IS " : "NOT"));
+	T_LOG("\t%s kMemorystatusRelaunchMed", ((state & kMemorystatusRelaunchMed)      ? "IS " : "NOT"));
+	T_LOG("\t%s kMemorystatusRelaunchHigh", ((state & kMemorystatusRelaunchHigh)    ? "IS " : "NOT"));
 }

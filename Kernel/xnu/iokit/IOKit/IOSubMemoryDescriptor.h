@@ -30,6 +30,7 @@
 #define _IOSUBMEMORYDESCRIPTOR_H
 
 #include <IOKit/IOMemoryDescriptor.h>
+#include <libkern/c++/OSPtr.h>
 
 /*! @class IOSubMemoryDescriptor : public IOMemoryDescriptor
  *   @abstract The IOSubMemoryDescriptor object describes a memory area made up of a portion of another IOMemoryDescriptor.
@@ -56,7 +57,7 @@ public:
  *       kIOMemoryDirectionMask (options:direction)	This nibble indicates the I/O direction to be associated with the descriptor, which may affect the operation of the prepare and complete methods on some architectures.
  *   @result The created IOMemoryDescriptor on success, to be released by the caller, or zero on failure. */
 
-	static IOSubMemoryDescriptor *      withSubRange(IOMemoryDescriptor *of,
+	static OSPtr<IOSubMemoryDescriptor>       withSubRange(IOMemoryDescriptor *of,
 	    IOByteCount offset,
 	    IOByteCount length,
 	    IOOptionBits options);
@@ -118,6 +119,17 @@ public:
 
 	IOReturn getPageCounts(IOByteCount * residentPageCount,
 	    IOByteCount * dirtyPageCount);
+
+/*! @function getPageCounts
+ *   @abstract Retrieve the number of resident, dirty, and swapped pages encompassed by an IOMemoryDescriptor.
+ *   @param residentPageCount - If non-null, a pointer to a byte count that will return the number of resident pages encompassed by this IOMemoryDescriptor.
+ *   @param dirtyPageCount - If non-null, a pointer to a byte count that will return the number of resident, dirty pages encompassed by this IOMemoryDescriptor.
+ *   @param swappedPageCount - If non-null, a pointer to a byte count that will return the number of swapped pages encompassed by this IOMemoryDescriptor.
+ *   @result An IOReturn code. */
+
+	IOReturn getPageCounts( IOByteCount * residentPageCount,
+	    IOByteCount * dirtyPageCount,
+	    IOByteCount * swappedPageCount );
 };
 
 #endif /* !_IOSUBMEMORYDESCRIPTOR_H */

@@ -56,9 +56,7 @@
 
 #include <mach/boolean.h>
 #include <mach/thread_switch.h>
-#include <ipc/ipc_port.h>
-#include <ipc/ipc_space.h>
-#include <kern/counters.h>
+#include <kern/counter.h>
 #include <kern/ipc_kobject.h>
 #include <kern/processor.h>
 #include <kern/sched.h>
@@ -75,6 +73,10 @@
 #include <mach/mach_syscalls.h>
 #include <sys/kdebug.h>
 #include <kern/ast.h>
+
+#if DEVELOPMENT || DEBUG
+SCALABLE_COUNTER_DECLARE(mach_eventlink_handoff_success_count);
+#endif /* DEVELOPMENT || DEBUG */
 
 static void thread_depress_abstime(uint64_t interval);
 static void thread_depress_ms(mach_msg_timeout_t interval);
@@ -131,8 +133,6 @@ swtch(
 	}
 	enable_preemption();
 
-	counter(c_swtch_block++);
-
 	thread_yield_with_continuation((thread_continue_t)swtch_continue, NULL);
 }
 
@@ -169,8 +169,6 @@ swtch_pri(
 		return FALSE;
 	}
 	enable_preemption();
-
-	counter(c_swtch_pri_block++);
 
 	thread_depress_abstime(thread_depress_time);
 
@@ -211,7 +209,7 @@ thread_switch(
 	boolean_t                       depress_option = FALSE;
 	boolean_t                       wait_option = FALSE;
 	wait_interrupt_t                interruptible = THREAD_ABORTSAFE;
-	port_to_thread_options_t        ptt_options = PORT_TO_THREAD_NOT_CURRENT_THREAD;
+	port_intrans_options_t        ptt_options = PORT_INTRANS_THREAD_NOT_CURRENT_THREAD;
 
 	/*
 	 *	Validate and process option.
@@ -237,12 +235,12 @@ thread_switch(
 	case SWITCH_OPTION_OSLOCK_DEPRESS:
 		depress_option = TRUE;
 		interruptible |= THREAD_WAIT_NOREPORT;
-		ptt_options |= PORT_TO_THREAD_IN_CURRENT_TASK;
+		ptt_options |= PORT_INTRANS_THREAD_IN_CURRENT_TASK;
 		break;
 	case SWITCH_OPTION_OSLOCK_WAIT:
 		wait_option = TRUE;
 		interruptible |= THREAD_WAIT_NOREPORT;
-		ptt_options |= PORT_TO_THREAD_IN_CURRENT_TASK;
+		ptt_options |= PORT_INTRANS_THREAD_IN_CURRENT_TASK;
 		break;
 	default:
 		return KERN_INVALID_ARGUMENT;
@@ -279,11 +277,15 @@ thread_switch(
 		/* This may return a different thread if the target is pushing on something */
 		thread_t pulled_thread = thread_run_queue_remove_for_handoff(thread);
 
-		KERNEL_DEBUG_CONSTANT(MACHDBG_CODE(DBG_MACH_SCHED, MACH_SCHED_THREAD_SWITCH) | DBG_FUNC_NONE,
+		KDBG_RELEASE(MACHDBG_CODE(DBG_MACH_SCHED, MACH_SCHED_THREAD_SWITCH) | DBG_FUNC_NONE,
 		    thread_tid(thread), thread->state,
-		    pulled_thread ? TRUE : FALSE, 0, 0);
+		    pulled_thread ? TRUE : FALSE);
 
 		if (pulled_thread != THREAD_NULL) {
+#if DEVELOPMENT || DEBUG
+			counter_inc_preemption_disabled(&mach_eventlink_handoff_success_count);
+#endif /* DEVELOPMENT || DEBUG */
+
 			/* We can't be dropping the last ref here */
 			thread_deallocate_safe(thread);
 
@@ -334,21 +336,25 @@ thread_yield_with_continuation(
 	__builtin_unreachable();
 }
 
-
 /* This function is called after an assert_wait(), therefore it must not
  * cause another wait until after the thread_run() or thread_block()
  *
+ * Following are the calling convention for thread ref deallocation.
  *
- * When called with a NULL continuation, the thread ref is consumed
- * (thread_handoff_deallocate calling convention) else it is up to the
- * continuation to do the cleanup (thread_handoff_parameter calling convention)
- * and it instead doesn't return.
+ * 1) If no continuation is provided, then thread ref is consumed.
+ * (thread_handoff_deallocate convention).
+ *
+ * 2) If continuation is provided with option THREAD_HANDOFF_SETRUN_NEEDED
+ * then thread ref is always consumed.
+ *
+ * 3) If continuation is provided with option THREAD_HANDOFF_NONE then thread
+ * ref is not consumed and it is upto the continuation to deallocate
+ * the thread reference.
  */
 static wait_result_t
 thread_handoff_internal(thread_t thread, thread_continue_t continuation,
-    void *parameter)
+    void *parameter, thread_handoff_option_t option)
 {
-	thread_t deallocate_thread = THREAD_NULL;
 	thread_t self = current_thread();
 
 	/*
@@ -357,17 +363,22 @@ thread_handoff_internal(thread_t thread, thread_continue_t continuation,
 	if (thread != THREAD_NULL) {
 		spl_t s = splsched();
 
-		thread_t pulled_thread = thread_run_queue_remove_for_handoff(thread);
+		thread_t pulled_thread = thread_prepare_for_handoff(thread, option);
 
-		KERNEL_DEBUG_CONSTANT(MACHDBG_CODE(DBG_MACH_SCHED, MACH_SCHED_THREAD_SWITCH) | DBG_FUNC_NONE,
+		KDBG_RELEASE(MACHDBG_CODE(DBG_MACH_SCHED, MACH_SCHED_THREAD_SWITCH) | DBG_FUNC_NONE,
 		    thread_tid(thread), thread->state,
-		    pulled_thread ? TRUE : FALSE, 0, 0);
+		    pulled_thread ? TRUE : FALSE);
+
+		/* Deallocate thread ref if needed */
+		if (continuation == NULL || (option & THREAD_HANDOFF_SETRUN_NEEDED)) {
+			/* Use the safe version of thread deallocate */
+			thread_deallocate_safe(thread);
+		}
 
 		if (pulled_thread != THREAD_NULL) {
-			if (continuation == NULL) {
-				/* We can't be dropping the last ref here */
-				thread_deallocate_safe(thread);
-			}
+#if DEVELOPMENT || DEBUG
+			counter_inc_preemption_disabled(&mach_eventlink_handoff_success_count);
+#endif /* DEVELOPMENT || DEBUG */
 
 			int result = thread_run(self, continuation, parameter, pulled_thread);
 
@@ -376,32 +387,25 @@ thread_handoff_internal(thread_t thread, thread_continue_t continuation,
 		}
 
 		splx(s);
-
-		deallocate_thread = thread;
-		thread = THREAD_NULL;
 	}
 
 	int result = thread_block_parameter(continuation, parameter);
-	if (deallocate_thread != THREAD_NULL) {
-		thread_deallocate(deallocate_thread);
-	}
-
 	return result;
 }
 
 void
 thread_handoff_parameter(thread_t thread, thread_continue_t continuation,
-    void *parameter)
+    void *parameter, thread_handoff_option_t option)
 {
-	thread_handoff_internal(thread, continuation, parameter);
+	thread_handoff_internal(thread, continuation, parameter, option);
 	panic("NULL continuation passed to %s", __func__);
 	__builtin_unreachable();
 }
 
 wait_result_t
-thread_handoff_deallocate(thread_t thread)
+thread_handoff_deallocate(thread_t thread, thread_handoff_option_t option)
 {
-	return thread_handoff_internal(thread, NULL, NULL);
+	return thread_handoff_internal(thread, NULL, NULL, option);
 }
 
 /*
@@ -418,6 +422,14 @@ thread_handoff_deallocate(thread_t thread)
  * to userspace.
  * POLLDEPRESS can be active anywhere up until thread termination.
  */
+
+void
+thread_depress_timer_setup(thread_t self)
+{
+	self->depress_timer = kalloc_type(struct timer_call,
+	    Z_ZERO | Z_WAITOK | Z_NOFAIL);
+	timer_call_setup(self->depress_timer, thread_depress_expire, self);
+}
 
 /*
  * Depress thread's priority to lowest possible for the specified interval,
@@ -443,7 +455,7 @@ thread_depress_abstime(uint64_t interval)
 			uint64_t deadline;
 
 			clock_absolutetime_interval_to_deadline(interval, &deadline);
-			if (!timer_call_enter(&self->depress_timer, deadline, TIMER_CALL_USER_CRITICAL)) {
+			if (!timer_call_enter(self->depress_timer, deadline, TIMER_CALL_USER_CRITICAL)) {
 				self->depress_timer_active++;
 			}
 		}
@@ -535,7 +547,7 @@ thread_depress_abort_locked(thread_t thread)
 
 	thread_recompute_sched_pri(thread, SETPRI_LAZY);
 
-	if (timer_call_cancel(&thread->depress_timer)) {
+	if (timer_call_cancel(thread->depress_timer)) {
 		thread->depress_timer_active--;
 	}
 
@@ -567,12 +579,13 @@ thread_poll_yield(thread_t self)
 		thread_lock(self);
 
 		self->computation_epoch   = abstime;
+		self->computation_interrupt_epoch = recount_current_thread_interrupt_time_mach();
 		self->computation_metered = 0;
 
 		uint64_t yield_expiration = abstime +
 		    (total_computation >> sched_poll_yield_shift);
 
-		if (!timer_call_enter(&self->depress_timer, yield_expiration,
+		if (!timer_call_enter(self->depress_timer, yield_expiration,
 		    TIMER_CALL_USER_CRITICAL)) {
 			self->depress_timer_active++;
 		}

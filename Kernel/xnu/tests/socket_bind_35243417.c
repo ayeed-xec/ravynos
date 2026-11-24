@@ -8,6 +8,16 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+
+#include "net_test_lib.h"
+
+T_GLOBAL_META(
+	T_META_NAMESPACE("xnu.net"),
+	T_META_RADAR_COMPONENT_NAME("xnu"),
+	T_META_RADAR_COMPONENT_VERSION("networking"),
+	T_META_OWNER("dieter"));
+
+
 static int
 sockv6_open(void)
 {
@@ -87,6 +97,9 @@ loop_done:
 	T_ASSERT_TRUE(bound_count == bind_attempts,
 	    "number of successful binds %d (out of %d)",
 	    bound_count, bind_attempts);
+
+	force_zone_gc();
+
 	return success;
 }
 
@@ -94,14 +107,16 @@ loop_done:
 T_DECL(socket_bind_35243417,
     "bind IPv6 only UDP socket, then bind IPv6 socket.",
     T_META_ASROOT(false),
-    T_META_CHECK_LEAKS(false))
+    T_META_CHECK_LEAKS(false),
+    T_META_TAG_VM_PREFERRED)
 {
 	alloc_and_bind_ports(1, 65534, 10);
 }
 
 T_DECL(socket_bind_35243417_root,
     "bind IPv6 only UDP socket, then bind IPv6 socket.",
-    T_META_ASROOT(true))
+    T_META_ASROOT(true),
+    T_META_TAG_VM_PREFERRED)
 {
 	alloc_and_bind_ports(1, 65534, 10);
 }

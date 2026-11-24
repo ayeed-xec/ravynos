@@ -70,6 +70,7 @@
 #include <sys/vnode.h>
 #include <sys/vnode_internal.h>
 #include <security/mac_internal.h>
+#include <sys/kauth.h>
 
 #include <sys/param.h>
 
@@ -78,9 +79,6 @@
 #include "nullfs.h"
 
 #define NULLFS_ENTITLEMENT "com.apple.private.nullfs_allow"
-
-#define SIZEOF_MEMBER(type, member) (sizeof(((type *)0)->member))
-#define MAX_MNT_FROM_LENGTH (SIZEOF_MEMBER(struct vfsstatfs, f_mntfromname))
 
 static int
 nullfs_vfs_getlowerattr(mount_t mp, struct vfs_attr * vfap, vfs_context_t ctx)
@@ -110,7 +108,9 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 	struct vnode *lowerrootvp = NULL, *vp = NULL;
 	struct vfsstatfs * sp   = NULL;
 	struct null_mount * xmp = NULL;
-	char data[MAXPATHLEN];
+	struct null_mount_conf conf = {0};
+	char path[MAXPATHLEN];
+
 	size_t count;
 	struct vfs_attr vfa;
 	/* set defaults (arbitrary since this file system is readonly) */
@@ -139,14 +139,23 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 	}
 
 	/* check entitlement */
-	if (!IOTaskHasEntitlement(current_task(), NULLFS_ENTITLEMENT)) {
+	if (!IOCurrentTaskHasEntitlement(NULLFS_ENTITLEMENT)) {
 		return EPERM;
+	}
+
+	/*
+	 * Get configuration
+	 */
+	error = copyin(user_data, &conf, sizeof(conf));
+	if (error) {
+		NULLFSDEBUG("nullfs: error copying configuration form user %d\n", error);
+		goto error;
 	}
 
 	/*
 	 * Get argument
 	 */
-	error = copyinstr(user_data, data, MAXPATHLEN - 1, &count);
+	error = copyinstr(user_data + sizeof(conf), path, MAXPATHLEN - 1, &count);
 	if (error) {
 		NULLFSDEBUG("nullfs: error copying data form user %d\n", error);
 		goto error;
@@ -154,15 +163,15 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 
 	/* This could happen if the system is configured for 32 bit inodes instead of
 	 * 64 bit */
-	if (count > MAX_MNT_FROM_LENGTH) {
+	if (count > sizeof(vfs_statfs(mp)->f_mntfromname)) {
 		error = EINVAL;
-		NULLFSDEBUG("nullfs: path to translocate too large for this system %d vs %d\n", count, MAX_MNT_FROM_LENGTH);
+		NULLFSDEBUG("nullfs: path to translocate too large for this system %ld vs %ld\n", count, sizeof(vfs_statfs(mp)->f_mntfromname));
 		goto error;
 	}
 
-	error = vnode_lookup(data, 0, &lowerrootvp, ctx);
+	error = vnode_lookup(path, 0, &lowerrootvp, ctx);
 	if (error) {
-		NULLFSDEBUG("lookup %s -> %d\n", data, error);
+		NULLFSDEBUG("lookup %s -> %d\n", path, error);
 		goto error;
 	}
 
@@ -177,13 +186,15 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 		goto error;
 	}
 
-	NULLFSDEBUG("mount %s\n", data);
+	NULLFSDEBUG("mount %s\n", path);
 
-	MALLOC(xmp, struct null_mount *, sizeof(*xmp), M_TEMP, M_WAITOK | M_ZERO);
-	if (xmp == NULL) {
-		error = ENOMEM;
-		goto error;
-	}
+	xmp = kalloc_type(struct null_mount, Z_WAITOK | Z_ZERO | Z_NOFAIL);
+
+	/*
+	 * Grab the uid/gid of the caller, which may be used for unveil later
+	 */
+	xmp->uid = kauth_cred_getuid(cred);
+	xmp->gid = kauth_cred_getgid(cred);
 
 	/*
 	 * Save reference to underlying FS
@@ -203,10 +214,7 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 	vnode_ref(vp);
 	vnode_put(vp);
 
-	error = nullfs_init_lck(&xmp->nullm_lock);
-	if (error) {
-		goto error;
-	}
+	nullfs_init_lck(&xmp->nullm_lock);
 
 	xmp->nullm_rootvp = vp;
 
@@ -229,11 +237,14 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 
 	/* fill in the stat block */
 	sp = vfs_statfs(mp);
-	strlcpy(sp->f_mntfromname, data, MAX_MNT_FROM_LENGTH);
+	strlcpy(sp->f_mntfromname, path, sizeof(sp->f_mntfromname));
 
 	sp->f_flags = flags;
 
 	xmp->nullm_flags = NULLM_CASEINSENSITIVE; /* default to case insensitive */
+
+	// Set the flags that are requested
+	xmp->nullm_flags |= conf.flags & NULLM_UNVEIL;
 
 	error = nullfs_vfs_getlowerattr(vnode_mount(lowerrootvp), &vfa, ctx);
 	if (error == 0) {
@@ -289,7 +300,7 @@ nullfs_mount(struct mount * mp, __unused vnode_t devvp, user_addr_t user_data, v
 
 error:
 	if (xmp) {
-		FREE(xmp, M_TEMP);
+		kfree_type(struct null_mount, xmp);
 	}
 	if (lowerrootvp) {
 		vnode_getwithref(lowerrootvp);
@@ -320,7 +331,7 @@ nullfs_unmount(struct mount * mp, int mntflags, __unused vfs_context_t ctx)
 	NULLFSDEBUG("nullfs_unmount: mp = %p\n", (void *)mp);
 
 	/* check entitlement or superuser*/
-	if (!IOTaskHasEntitlement(current_task(), NULLFS_ENTITLEMENT) &&
+	if (!IOCurrentTaskHasEntitlement(NULLFS_ENTITLEMENT) &&
 	    vfs_context_suser(ctx) != 0) {
 		return EPERM;
 	}
@@ -369,7 +380,7 @@ nullfs_unmount(struct mount * mp, int mntflags, __unused vfs_context_t ctx)
 
 	nullfs_destroy_lck(&mntdata->nullm_lock);
 
-	FREE(mntdata, M_TEMP);
+	kfree_type(struct null_mount, mntdata);
 
 	uint64_t vflags = vfs_flags(mp);
 	vfs_setflags(mp, vflags & ~MNT_LOCAL);
@@ -407,6 +418,7 @@ nullfs_vfs_getattr(struct mount * mp, struct vfs_attr * vfap, vfs_context_t ctx)
 	struct null_mount * null_mp = MOUNTTONULLMOUNT(mp);
 	vol_capabilities_attr_t capabilities;
 	struct vfsstatfs * sp = vfs_statfs(mp);
+	vfs_context_t ectx = nullfs_get_patched_context(null_mp, ctx);
 
 	struct timespec tzero = {.tv_sec = 0, .tv_nsec = 0};
 
@@ -417,7 +429,7 @@ nullfs_vfs_getattr(struct mount * mp, struct vfs_attr * vfap, vfs_context_t ctx)
 	capabilities.capabilities[VOL_CAPABILITIES_FORMAT] = VOL_CAP_FMT_FAST_STATFS | VOL_CAP_FMT_HIDDEN_FILES;
 	capabilities.valid[VOL_CAPABILITIES_FORMAT]        = VOL_CAP_FMT_FAST_STATFS | VOL_CAP_FMT_HIDDEN_FILES;
 
-	if (nullfs_vfs_getlowerattr(vnode_mount(null_mp->nullm_lowerrootvp), &vfa, ctx) == 0) {
+	if (nullfs_vfs_getlowerattr(vnode_mount(null_mp->nullm_lowerrootvp), &vfa, ectx) == 0) {
 		if (VFSATTR_IS_SUPPORTED(&vfa, f_capabilities)) {
 			memcpy(&capabilities, &vfa.f_capabilities, sizeof(capabilities));
 			/* don't support vget */
@@ -527,6 +539,8 @@ nullfs_vfs_getattr(struct mount * mp, struct vfs_attr * vfap, vfs_context_t ctx)
 			vnode_put(coveredvp);
 		}
 	}
+
+	nullfs_cleanup_patched_context(null_mp, ectx);
 
 	return 0;
 }

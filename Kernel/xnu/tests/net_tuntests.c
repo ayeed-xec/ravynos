@@ -33,10 +33,11 @@
 
 #include <skywalk/os_skywalk_private.h> // for SK_FEATURE_*
 
-T_GLOBAL_META(T_META_NAMESPACE("xnu.net.tun"));
-
 /* Disable all these test until <rdar://problem/49124468> is fixed */
-T_GLOBAL_META(T_META_ENABLED(false));
+T_GLOBAL_META(T_META_NAMESPACE("xnu.net.tun"),
+    T_META_RADAR_COMPONENT_NAME("xnu"),
+    T_META_RADAR_COMPONENT_VERSION("networking"),
+    T_META_ENABLED(false));
 
 #if 0
 #undef T_QUIET
@@ -89,9 +90,7 @@ static int g_OPT_GET_CHANNEL_UUID = -1;
 static int g_OPT_IFNAME = -1;
 static char *g_CONTROL_NAME = NULL;
 
-static int create_tunsock_old(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[]);
-static int create_tunsock_new(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[]);
-static int (*create_tunsock)(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[]);
+static int create_tunsock(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[]);
 
 static void
 setup_ipsec_test(void)
@@ -103,7 +102,6 @@ setup_ipsec_test(void)
 	g_OPT_GET_CHANNEL_UUID = IPSEC_OPT_GET_CHANNEL_UUID;
 	g_OPT_IFNAME = IPSEC_OPT_IFNAME;
 	g_CONTROL_NAME = IPSEC_CONTROL_NAME;
-	create_tunsock = create_tunsock_new;
 	g_is_ipsec_test = true;
 }
 
@@ -117,7 +115,6 @@ setup_utun_test(void)
 	g_OPT_GET_CHANNEL_UUID = UTUN_OPT_GET_CHANNEL_UUID;
 	g_OPT_IFNAME = UTUN_OPT_IFNAME;
 	g_CONTROL_NAME = UTUN_CONTROL_NAME;
-	create_tunsock = create_tunsock_old;
 	g_is_utun_test = true;
 }
 
@@ -398,159 +395,10 @@ create_sa(const char ifname[IFXNAMSIZ], uint8_t type, uint32_t spi, struct in_ad
 	T_QUIET; T_EXPECT_EQ(slen, (ssize_t)sizeof(addcmd), NULL);
 }
 
-/* This version of the test expects channels to be enabled after connect.
- * Once the utun driver is converted, switch to create_tunsock_new
- */
-static int
-create_tunsock_old(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[])
-{
-	int tunsock;
-	struct ctl_info kernctl_info;
-	struct sockaddr_ctl kernctl_addr;
-	uuid_t scratchuuid[channel_count];
-	if (!uuid) {
-		uuid = scratchuuid;
-	}
-	socklen_t uuidlen;
-
-startover:
-
-	T_QUIET; T_EXPECT_POSIX_SUCCESS(tunsock = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL), NULL);
-
-	memset(&kernctl_info, 0, sizeof(kernctl_info));
-	strlcpy(kernctl_info.ctl_name, g_CONTROL_NAME, sizeof(kernctl_info.ctl_name));
-	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(ioctl(tunsock, CTLIOCGINFO, &kernctl_info), NULL);
-
-	memset(&kernctl_addr, 0, sizeof(kernctl_addr));
-	kernctl_addr.sc_len = sizeof(kernctl_addr);
-	kernctl_addr.sc_family = AF_SYSTEM;
-	kernctl_addr.ss_sysaddr = AF_SYS_CONTROL;
-	kernctl_addr.sc_id = kernctl_info.ctl_id;
-	kernctl_addr.sc_unit = 0;
-
-	T_LOG("%s: enable_netif = %d, enable_flowswitch = %d, channel_count = %d",
-	    __func__, enable_netif, enable_flowswitch, channel_count);
-
-	T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_NETIF,
-	    &enable_netif, sizeof(enable_netif)), EINVAL, NULL);
-	T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_FLOWSWITCH,
-	    &enable_flowswitch, sizeof(enable_flowswitch)), EINVAL, NULL);
-	T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_CHANNEL,
-	    &channel_count, sizeof(channel_count)), EINVAL, NULL);
-	for (int i = 0; i < channel_count; i++) {
-		uuid_clear(uuid[i]);
-	}
-	uuidlen = sizeof(uuid_t) * (unsigned int)channel_count;
-	T_QUIET; T_EXPECT_POSIX_FAILURE(getsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_GET_CHANNEL_UUID,
-	    uuid, &uuidlen), EINVAL, NULL);
-	T_QUIET; T_EXPECT_EQ_ULONG((unsigned long)uuidlen, sizeof(uuid_t) * (unsigned long)channel_count, NULL);
-	for (int i = 0; i < channel_count; i++) {
-		T_QUIET; T_EXPECT_TRUE(uuid_is_null(uuid[i]), NULL);
-	}
-
-	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(bind(tunsock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr)), NULL);
-
-	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_NETIF,
-	    &enable_netif, sizeof(enable_netif)), NULL);
-	T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_FLOWSWITCH,
-	    &enable_flowswitch, sizeof(enable_flowswitch)), EINVAL, NULL);
-	T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_CHANNEL,
-	    &channel_count, sizeof(channel_count)), EINVAL, NULL);
-	for (int i = 0; i < channel_count; i++) {
-		uuid_clear(uuid[i]);
-	}
-	uuidlen = sizeof(uuid_t) * (unsigned int)channel_count;
-	T_QUIET; T_EXPECT_POSIX_FAILURE(getsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_GET_CHANNEL_UUID,
-	    uuid, &uuidlen), ENXIO, NULL);
-	T_QUIET; T_EXPECT_EQ_ULONG((unsigned long)uuidlen, sizeof(uuid_t) * (unsigned long)channel_count, NULL);
-	for (int i = 0; i < channel_count; i++) {
-		T_QUIET; T_EXPECT_TRUE(uuid_is_null(uuid[i]), NULL);
-	}
-
-	int error = connect(tunsock, (struct sockaddr *)&kernctl_addr, sizeof(kernctl_addr));
-	if (error == -1 && errno == EBUSY) {
-		/* XXX remove this retry nonsense when this is fixed:
-		 * <rdar://problem/37340313> creating an interface without specifying specific interface name should not return EBUSY
-		 */
-		close(tunsock);
-		T_LOG("connect got EBUSY, sleeping 1 second before retry");
-		sleep(1);
-		goto startover;
-	}
-	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(error, "connect()");
-
-	T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_NETIF,
-	    &enable_netif, sizeof(enable_netif)), EINVAL, NULL);
-
-	if (is_netagent_enabled()) {
-		if (enable_netif) {
-			T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_FLOWSWITCH,
-			    &enable_flowswitch, sizeof(enable_flowswitch)), NULL);
-		} else {
-			T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_FLOWSWITCH,
-			    &enable_flowswitch, sizeof(enable_flowswitch)), ENOENT, NULL);
-		}
-	} else {
-		T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_FLOWSWITCH,
-		    &enable_flowswitch, sizeof(enable_flowswitch)), ENOTSUP, NULL);
-	}
-
-	if (channel_count) {
-		if (g_is_ipsec_test && !enable_netif) {
-			/* ipsec doesn't support channels without a netif */
-			T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_CHANNEL,
-			    &channel_count, sizeof(channel_count)), EOPNOTSUPP, NULL);
-			for (int i = 0; i < channel_count; i++) {
-				uuid_clear(uuid[i]);
-			}
-			uuidlen = sizeof(uuid_t) * (unsigned int)channel_count;
-			T_QUIET; T_EXPECT_POSIX_FAILURE(getsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_GET_CHANNEL_UUID,
-			    uuid, &uuidlen), ENXIO, NULL);
-			T_QUIET; T_EXPECT_EQ_ULONG((unsigned long)uuidlen, sizeof(uuid_t) * (unsigned long)channel_count, NULL);
-			for (int i = 0; i < channel_count; i++) {
-				T_QUIET; T_EXPECT_TRUE(uuid_is_null(uuid[i]), NULL);
-			}
-		} else {
-			T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_CHANNEL,
-			    &channel_count, sizeof(channel_count)), NULL);
-			for (int i = 0; i < channel_count; i++) {
-				uuid_clear(uuid[i]);
-			}
-			uuidlen = sizeof(uuid_t) * (unsigned int)channel_count;
-			T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(getsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_GET_CHANNEL_UUID,
-			    uuid, &uuidlen), NULL);
-			T_QUIET; T_EXPECT_EQ_ULONG((unsigned long)uuidlen, sizeof(uuid_t) * (unsigned long)channel_count, NULL);
-			for (int i = 0; i < channel_count; i++) {
-				T_QUIET; T_EXPECT_FALSE(uuid_is_null(uuid[i]), NULL);
-			}
-		}
-	} else {
-		T_QUIET; T_EXPECT_POSIX_FAILURE(setsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_ENABLE_CHANNEL,
-		    &channel_count, sizeof(channel_count)), ENXIO, NULL);
-		for (int i = 0; i < channel_count; i++) {
-			uuid_clear(uuid[i]);
-		}
-		uuidlen = sizeof(uuid_t) * (unsigned int)channel_count;
-		T_QUIET; T_EXPECT_POSIX_FAILURE(getsockopt(tunsock, SYSPROTO_CONTROL, g_OPT_GET_CHANNEL_UUID,
-		    uuid, &uuidlen), ENXIO, NULL);
-		T_QUIET; T_EXPECT_EQ_ULONG((unsigned long)uuidlen, sizeof(uuid_t) * (unsigned long)channel_count, NULL);
-		for (int i = 0; i < channel_count; i++) {
-			T_QUIET; T_EXPECT_TRUE(uuid_is_null(uuid[i]), NULL);
-		}
-	}
-
-	check_enables(tunsock, enable_netif, enable_flowswitch, channel_count, uuid);
-
-	//T_LOG("Returning tunsock %d", tunsock);
-
-	return tunsock;
-}
-
 /* This version of the test expects channels to be enabled before connect
- * Once the utun driver is converted, rename this to just create_tunsock
  */
 static int
-create_tunsock_new(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[])
+create_tunsock(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[])
 {
 	int tunsock;
 	struct ctl_info kernctl_info;
@@ -695,8 +543,6 @@ startover:
 	return tunsock;
 }
 
-static int (*create_tunsock)(int enable_netif, int enable_flowswitch, int channel_count, uuid_t uuid[]) = create_tunsock_new;
-
 #if 0
 static void
 ipsec_stats(void)
@@ -735,13 +581,13 @@ permute_enables(void)
 	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(close(tunsock), NULL);
 }
 
-T_DECL(ipsec_enables, "This test checks combinations of netif/channel/flowswitch on ipsec")
+T_DECL(ipsec_enables, "This test checks combinations of netif/channel/flowswitch on ipsec", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	permute_enables();
 }
 
-T_DECL(utun_enables, "This test checks combinations of netif/channel/flowswitch on utun")
+T_DECL(utun_enables, "This test checks combinations of netif/channel/flowswitch on utun", T_META_TAG_VM_PREFERRED)
 {
 	setup_utun_test();
 	permute_enables();
@@ -785,13 +631,13 @@ setup_tunsock(int channel_count, uuid_t uuids[])
 	}
 }
 
-T_DECL(setup_ipsec, "This test sets up an ipsec interface")
+T_DECL(setup_ipsec, "This test sets up an ipsec interface", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	setup_tunsock(1, NULL);
 }
 
-T_DECL(setup_utun, "This test sets up a utun interface")
+T_DECL(setup_utun, "This test sets up a utun interface", T_META_TAG_VM_PREFERRED)
 {
 	setup_utun_test();
 	setup_tunsock(1, NULL);
@@ -1029,19 +875,19 @@ xfer_1_packet_singly(int channel_count, int type)
 	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(close(kq), NULL);
 }
 
-T_DECL(ipsec35889979u1s, "transfers 1 packet at a time of each sevice class over udp to a single ring")
+T_DECL(ipsec35889979u1s, "transfers 1 packet at a time of each sevice class over udp to a single ring", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_singly(1, SOCK_DGRAM);
 }
 
-T_DECL(ipsec35889979u4s, "transfers 1 packet at a time of each sevice class over udp to 4 rings")
+T_DECL(ipsec35889979u4s, "transfers 1 packet at a time of each sevice class over udp to 4 rings", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_singly(4, SOCK_DGRAM);
 }
 
-T_DECL(ipsec35889979t1s, "transfers 1 packet at a time of each sevice class over tcp to a single ring")
+T_DECL(ipsec35889979t1s, "transfers 1 packet at a time of each sevice class over tcp to a single ring", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_singly(1, SOCK_STREAM);
@@ -1052,7 +898,7 @@ T_DECL(ipsec35889979t4s, "transfers 1 packet at a time of each sevice class over
     /* This test will fail because tcp syn packets get elevated
      * due to ack prioritization
      */
-    T_META_ENABLED(false))
+    T_META_ENABLED(false), T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_singly(4, SOCK_STREAM);
@@ -1146,19 +992,19 @@ xfer_1_packet_together(int channel_count, int type)
 	T_QUIET; T_WITH_ERRNO; T_EXPECT_POSIX_ZERO(close(kq), NULL);
 }
 
-T_DECL(ipsec35889979u1m, "transfers 1 packet together of each sevice class over udp to a single ring")
+T_DECL(ipsec35889979u1m, "transfers 1 packet together of each sevice class over udp to a single ring", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_together(1, SOCK_DGRAM);
 }
 
-T_DECL(ipsec35889979u4m, "transfers 1 packet together of each sevice class over udp to 4 rings")
+T_DECL(ipsec35889979u4m, "transfers 1 packet together of each sevice class over udp to 4 rings", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_together(4, SOCK_DGRAM);
 }
 
-T_DECL(ipsec35889979t1m, "transfers 1 packet together of each sevice class over tcp to a single ring")
+T_DECL(ipsec35889979t1m, "transfers 1 packet together of each sevice class over tcp to a single ring", T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_together(1, SOCK_STREAM);
@@ -1168,7 +1014,7 @@ T_DECL(ipsec35889979t4m, "transfers 1 packet together of each sevice class over 
     /* This test will fail because tcp syn packets get elevated
      * due to ack prioritization
      */
-    T_META_ENABLED(false))
+    T_META_ENABLED(false), T_META_TAG_VM_PREFERRED)
 {
 	setup_ipsec_test();
 	xfer_1_packet_together(4, SOCK_STREAM);

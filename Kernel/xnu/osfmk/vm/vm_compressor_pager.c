@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2020 Apple Inc. All rights reserved.
  *
  * @APPLE_OSREFERENCE_LICENSE_HEADER_START@
  *
@@ -70,10 +70,15 @@
 #include <mach/upl.h>
 
 #include <vm/memory_object.h>
-#include <vm/vm_compressor_pager.h>
+#include <vm/vm_compressor_internal.h>
+#include <vm/vm_compressor_pager_internal.h>
 #include <vm/vm_external.h>
+#include <vm/vm_fault.h>
 #include <vm/vm_pageout.h>
-#include <vm/vm_protos.h>
+#include <vm/vm_protos_internal.h>
+#include <vm/vm_object_internal.h>
+
+#include <sys/kdebug_triage.h>
 
 /* memory_object interfaces */
 void compressor_memory_object_reference(memory_object_t mem_obj);
@@ -102,23 +107,10 @@ kern_return_t compressor_memory_object_data_initialize(
 	memory_object_t         mem_obj,
 	memory_object_offset_t  offset,
 	memory_object_cluster_size_t            size);
-kern_return_t compressor_memory_object_data_unlock(
-	__unused memory_object_t                mem_obj,
-	__unused memory_object_offset_t offset,
-	__unused memory_object_size_t           size,
-	__unused vm_prot_t              desired_access);
-kern_return_t compressor_memory_object_synchronize(
-	memory_object_t         mem_obj,
-	memory_object_offset_t  offset,
-	memory_object_size_t            length,
-	__unused vm_sync_t              flags);
 kern_return_t compressor_memory_object_map(
 	__unused memory_object_t        mem_obj,
 	__unused vm_prot_t              prot);
 kern_return_t compressor_memory_object_last_unmap(memory_object_t mem_obj);
-kern_return_t compressor_memory_object_data_reclaim(
-	__unused memory_object_t        mem_obj,
-	__unused boolean_t              reclaim_backing_store);
 
 const struct memory_object_pager_ops compressor_pager_ops = {
 	.memory_object_reference = compressor_memory_object_reference,
@@ -128,11 +120,9 @@ const struct memory_object_pager_ops compressor_pager_ops = {
 	.memory_object_data_request = compressor_memory_object_data_request,
 	.memory_object_data_return = compressor_memory_object_data_return,
 	.memory_object_data_initialize = compressor_memory_object_data_initialize,
-	.memory_object_data_unlock = compressor_memory_object_data_unlock,
-	.memory_object_synchronize = compressor_memory_object_synchronize,
 	.memory_object_map = compressor_memory_object_map,
 	.memory_object_last_unmap = compressor_memory_object_last_unmap,
-	.memory_object_data_reclaim = compressor_memory_object_data_reclaim,
+	.memory_object_backing_object = NULL,
 	.memory_object_pager_name = "compressor pager"
 };
 
@@ -148,7 +138,7 @@ struct {
 	uint64_t        transfer;
 } compressor_pager_stats;
 
-typedef int compressor_slot_t;
+typedef int compressor_slot_t; /* stand-in for c_slot_mapping */
 
 typedef struct compressor_pager {
 	/* mandatory generic header */
@@ -156,7 +146,11 @@ typedef struct compressor_pager {
 
 	/* pager-specific data */
 	lck_mtx_t                       cpgr_lock;
-	unsigned int                    cpgr_references;
+#if MEMORY_OBJECT_HAS_REFCOUNT
+#define cpgr_references                 cpgr_hdr.mo_ref
+#else
+	os_ref_atomic_t                 cpgr_references;
+#endif
 	unsigned int                    cpgr_num_slots;
 	unsigned int                    cpgr_num_slots_occupied;
 	union {
@@ -176,18 +170,18 @@ typedef struct compressor_pager {
 	}                                                               \
 	MACRO_END
 
-zone_t compressor_pager_zone;
+/* embedded slot pointers in compressor_pager get packed, so VA restricted */
+static ZONE_DEFINE_TYPE(compressor_pager_zone, "compressor_pager",
+    struct compressor_pager, ZC_NOENCRYPT | ZC_VM);
 
-lck_grp_t       compressor_pager_lck_grp;
-lck_grp_attr_t  compressor_pager_lck_grp_attr;
-lck_attr_t      compressor_pager_lck_attr;
+LCK_GRP_DECLARE(compressor_pager_lck_grp, "compressor_pager");
 
 #define compressor_pager_lock(_cpgr_) \
 	lck_mtx_lock(&(_cpgr_)->cpgr_lock)
 #define compressor_pager_unlock(_cpgr_) \
 	lck_mtx_unlock(&(_cpgr_)->cpgr_lock)
 #define compressor_pager_lock_init(_cpgr_) \
-	lck_mtx_init(&(_cpgr_)->cpgr_lock, &compressor_pager_lck_grp, &compressor_pager_lck_attr)
+	lck_mtx_init(&(_cpgr_)->cpgr_lock, &compressor_pager_lck_grp, LCK_ATTR_NULL)
 #define compressor_pager_lock_destroy(_cpgr_) \
 	lck_mtx_destroy(&(_cpgr_)->cpgr_lock, &compressor_pager_lck_grp)
 
@@ -197,13 +191,54 @@ lck_attr_t      compressor_pager_lck_attr;
 /* forward declarations */
 unsigned int compressor_pager_slots_chunk_free(compressor_slot_t *chunk,
     int num_slots,
-    int flags,
+    vm_compressor_options_t flags,
     int *failures);
 void compressor_pager_slot_lookup(
 	compressor_pager_t      pager,
 	boolean_t               do_alloc,
 	memory_object_offset_t  offset,
 	compressor_slot_t       **slot_pp);
+
+#if     defined(__LP64__)
+
+/* restricted VA zones for slots */
+
+#define NUM_SLOTS_ZONES         3
+
+static const size_t compressor_slots_zones_sizes[NUM_SLOTS_ZONES] = {
+	16,
+	64,
+	COMPRESSOR_SLOTS_CHUNK_SIZE
+};
+
+static const char * compressor_slots_zones_names[NUM_SLOTS_ZONES] = {
+	"compressor_slots.16",
+	"compressor_slots.64",
+	"compressor_slots.512"
+};
+
+static zone_t
+    compressor_slots_zones[NUM_SLOTS_ZONES];
+
+#endif /* defined(__LP64__) */
+
+static void
+zfree_slot_array(compressor_slot_t *slots, size_t size);
+static compressor_slot_t *
+zalloc_slot_array(size_t size, zalloc_flags_t);
+
+static inline unsigned int
+compressor_pager_num_chunks(
+	compressor_pager_t      pager)
+{
+	unsigned int num_chunks;
+
+	num_chunks = pager->cpgr_num_slots / COMPRESSOR_SLOTS_PER_CHUNK;
+	if (num_chunks * COMPRESSOR_SLOTS_PER_CHUNK < pager->cpgr_num_slots) {
+		num_chunks++;  /* do the equivalent of ceil() instead of trunc() for the above division */
+	}
+	return num_chunks;
+}
 
 kern_return_t
 compressor_memory_object_init(
@@ -231,17 +266,6 @@ compressor_memory_object_init(
 }
 
 kern_return_t
-compressor_memory_object_synchronize(
-	__unused memory_object_t        mem_obj,
-	__unused memory_object_offset_t offset,
-	__unused memory_object_size_t   length,
-	__unused vm_sync_t              flags)
-{
-	panic("compressor_memory_object_synchronize: memory_object_synchronize no longer supported\n");
-	return KERN_FAILURE;
-}
-
-kern_return_t
 compressor_memory_object_map(
 	__unused memory_object_t        mem_obj,
 	__unused vm_prot_t              prot)
@@ -255,15 +279,6 @@ compressor_memory_object_last_unmap(
 	__unused memory_object_t        mem_obj)
 {
 	panic("compressor_memory_object_last_unmap");
-	return KERN_FAILURE;
-}
-
-kern_return_t
-compressor_memory_object_data_reclaim(
-	__unused memory_object_t        mem_obj,
-	__unused boolean_t              reclaim_backing_store)
-{
-	panic("compressor_memory_object_data_reclaim");
 	return KERN_FAILURE;
 }
 
@@ -312,8 +327,7 @@ compressor_memory_object_reference(
 	}
 
 	compressor_pager_lock(pager);
-	assert(pager->cpgr_references > 0);
-	pager->cpgr_references++;
+	os_ref_retain_locked_raw(&pager->cpgr_references, NULL);
 	compressor_pager_unlock(pager);
 }
 
@@ -337,7 +351,7 @@ compressor_memory_object_deallocate(
 	}
 
 	compressor_pager_lock(pager);
-	if (--pager->cpgr_references > 0) {
+	if (os_ref_release_locked_raw(&pager->cpgr_references, NULL) > 0) {
 		compressor_pager_unlock(pager);
 		return;
 	}
@@ -357,11 +371,11 @@ compressor_memory_object_deallocate(
 	compressor_pager_unlock(pager);
 
 	/* free the compressor slots */
-	int num_chunks;
-	int i;
+	unsigned int num_chunks;
+	unsigned int i;
 	compressor_slot_t *chunk;
 
-	num_chunks = (pager->cpgr_num_slots + COMPRESSOR_SLOTS_PER_CHUNK - 1) / COMPRESSOR_SLOTS_PER_CHUNK;
+	num_chunks = compressor_pager_num_chunks(pager);
 	if (num_chunks > 1) {
 		/* we have an array of chunks */
 		for (i = 0; i < num_chunks; i++) {
@@ -374,11 +388,11 @@ compressor_memory_object_deallocate(
 					0,
 					NULL);
 				pager->cpgr_slots.cpgr_islots[i] = NULL;
-				kfree(chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
+				zfree_slot_array(chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
 			}
 		}
-		kfree(pager->cpgr_slots.cpgr_islots,
-		    num_chunks * sizeof(pager->cpgr_slots.cpgr_islots[0]));
+		kfree_type(compressor_slot_t *, num_chunks,
+		    pager->cpgr_slots.cpgr_islots);
 		pager->cpgr_slots.cpgr_islots = NULL;
 	} else if (pager->cpgr_num_slots > 2) {
 		chunk = pager->cpgr_slots.cpgr_dslots;
@@ -389,7 +403,7 @@ compressor_memory_object_deallocate(
 			0,
 			NULL);
 		pager->cpgr_slots.cpgr_dslots = NULL;
-		kfree(chunk,
+		zfree_slot_array(chunk,
 		    (pager->cpgr_num_slots *
 		    sizeof(pager->cpgr_slots.cpgr_dslots[0])));
 	} else {
@@ -428,7 +442,7 @@ compressor_memory_object_data_request(
 	}
 
 	if ((uint32_t)(offset / PAGE_SIZE) != (offset / PAGE_SIZE)) {
-		panic("%s: offset 0x%llx overflow\n",
+		panic("%s: offset 0x%llx overflow",
 		    __FUNCTION__, (uint64_t) offset);
 		return KERN_FAILURE;
 	}
@@ -492,17 +506,6 @@ compressor_memory_object_data_initialize(
 	return KERN_SUCCESS;
 }
 
-kern_return_t
-compressor_memory_object_data_unlock(
-	__unused memory_object_t                mem_obj,
-	__unused memory_object_offset_t offset,
-	__unused memory_object_size_t           size,
-	__unused vm_prot_t              desired_access)
-{
-	panic("compressor_memory_object_data_unlock()");
-	return KERN_FAILURE;
-}
-
 
 /*ARGSUSED*/
 kern_return_t
@@ -536,32 +539,30 @@ compressor_memory_object_create(
 	memory_object_t         *new_mem_obj)
 {
 	compressor_pager_t      pager;
-	int                     num_chunks;
+	unsigned int            num_chunks;
 
 	if ((uint32_t)(new_size / PAGE_SIZE) != (new_size / PAGE_SIZE)) {
 		/* 32-bit overflow for number of pages */
-		panic("%s: size 0x%llx overflow\n",
+		panic("%s: size 0x%llx overflow",
 		    __FUNCTION__, (uint64_t) new_size);
 		return KERN_INVALID_ARGUMENT;
 	}
 
-	pager = (compressor_pager_t) zalloc(compressor_pager_zone);
-	if (pager == NULL) {
-		return KERN_RESOURCE_SHORTAGE;
-	}
+	pager = zalloc_flags(compressor_pager_zone, Z_WAITOK | Z_NOFAIL);
 
 	compressor_pager_lock_init(pager);
-	pager->cpgr_references = 1;
+	os_ref_init_raw(&pager->cpgr_references, NULL);
 	pager->cpgr_num_slots = (uint32_t)(new_size / PAGE_SIZE);
 	pager->cpgr_num_slots_occupied = 0;
 
-	num_chunks = (pager->cpgr_num_slots + COMPRESSOR_SLOTS_PER_CHUNK - 1) / COMPRESSOR_SLOTS_PER_CHUNK;
+	num_chunks = compressor_pager_num_chunks(pager);
 	if (num_chunks > 1) {
-		pager->cpgr_slots.cpgr_islots = kalloc(num_chunks * sizeof(pager->cpgr_slots.cpgr_islots[0]));
-		bzero(pager->cpgr_slots.cpgr_islots, num_chunks * sizeof(pager->cpgr_slots.cpgr_islots[0]));
+		/* islots points to an array of chunks pointer. every chunk has 512/sizeof(int)=128 slot_mapping */
+		pager->cpgr_slots.cpgr_islots = kalloc_type(compressor_slot_t *,
+		    num_chunks, Z_WAITOK | Z_ZERO);
 	} else if (pager->cpgr_num_slots > 2) {
-		pager->cpgr_slots.cpgr_dslots = kalloc(pager->cpgr_num_slots * sizeof(pager->cpgr_slots.cpgr_dslots[0]));
-		bzero(pager->cpgr_slots.cpgr_dslots, pager->cpgr_num_slots * sizeof(pager->cpgr_slots.cpgr_dslots[0]));
+		pager->cpgr_slots.cpgr_dslots = zalloc_slot_array(pager->cpgr_num_slots *
+		    sizeof(pager->cpgr_slots.cpgr_dslots[0]), Z_WAITOK | Z_ZERO);
 	} else {
 		pager->cpgr_slots.cpgr_eslots[0] = 0;
 		pager->cpgr_slots.cpgr_eslots[1] = 0;
@@ -574,6 +575,7 @@ compressor_memory_object_create(
 	pager->cpgr_hdr.mo_ikot = IKOT_MEMORY_OBJECT;
 	pager->cpgr_hdr.mo_pager_ops = &compressor_pager_ops;
 	pager->cpgr_hdr.mo_control = MEMORY_OBJECT_CONTROL_NULL;
+	pager->cpgr_hdr.mo_last_unmap_ctid = 0;
 
 	*new_mem_obj = (memory_object_t) pager;
 	return KERN_SUCCESS;
@@ -584,11 +586,11 @@ unsigned int
 compressor_pager_slots_chunk_free(
 	compressor_slot_t       *chunk,
 	int                     num_slots,
-	int                     flags,
+	vm_compressor_options_t flags,
 	int                     *failures)
 {
 	int i;
-	int retval;
+	vm_decompress_result_t retval;
 	unsigned int num_slots_freed;
 
 	if (failures) {
@@ -599,10 +601,11 @@ compressor_pager_slots_chunk_free(
 		if (chunk[i] != 0) {
 			retval = vm_compressor_free(&chunk[i], flags);
 
-			if (retval == 0) {
+			if (retval == DECOMPRESS_SUCCESS) {
 				num_slots_freed++;
 			} else {
-				if (retval == -2) {
+				assert3s(retval, <, 0); /* it's not DECOMPRESS_SUCCESS_* */
+				if (retval == DECOMPRESS_NEED_BLOCK) {
 					assert(flags & C_DONT_BLOCK);
 				}
 
@@ -615,24 +618,26 @@ compressor_pager_slots_chunk_free(
 	return num_slots_freed;
 }
 
+/* check if this pager has a slot_mapping spot for this page, if so give its position, if not, make place for it */
 void
 compressor_pager_slot_lookup(
 	compressor_pager_t      pager,
 	boolean_t               do_alloc,
 	memory_object_offset_t  offset,
-	compressor_slot_t       **slot_pp)
+	compressor_slot_t       **slot_pp /* OUT */)
 {
-	int                     num_chunks;
+	unsigned int            num_chunks;
 	uint32_t                page_num;
-	int                     chunk_idx;
+	unsigned int            chunk_idx;
 	int                     slot_idx;
 	compressor_slot_t       *chunk;
 	compressor_slot_t       *t_chunk;
 
+	/* offset is relative to the pager, first page of the first vm_object that created the pager has an offset of 0 */
 	page_num = (uint32_t)(offset / PAGE_SIZE);
 	if (page_num != (offset / PAGE_SIZE)) {
 		/* overflow */
-		panic("%s: offset 0x%llx overflow\n",
+		panic("%s: offset 0x%llx overflow",
 		    __FUNCTION__, (uint64_t) offset);
 		*slot_pp = NULL;
 		return;
@@ -642,15 +647,15 @@ compressor_pager_slot_lookup(
 		*slot_pp = NULL;
 		return;
 	}
-	num_chunks = (pager->cpgr_num_slots + COMPRESSOR_SLOTS_PER_CHUNK - 1) / COMPRESSOR_SLOTS_PER_CHUNK;
+	num_chunks = compressor_pager_num_chunks(pager);
 	if (num_chunks > 1) {
 		/* we have an array of chunks */
 		chunk_idx = page_num / COMPRESSOR_SLOTS_PER_CHUNK;
 		chunk = pager->cpgr_slots.cpgr_islots[chunk_idx];
 
 		if (chunk == NULL && do_alloc) {
-			t_chunk = kalloc(COMPRESSOR_SLOTS_CHUNK_SIZE);
-			bzero(t_chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
+			t_chunk = zalloc_slot_array(COMPRESSOR_SLOTS_CHUNK_SIZE,
+			    Z_WAITOK | Z_ZERO);
 
 			compressor_pager_lock(pager);
 
@@ -672,7 +677,7 @@ compressor_pager_slot_lookup(
 			compressor_pager_unlock(pager);
 
 			if (t_chunk) {
-				kfree(t_chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
+				zfree_slot_array(t_chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
 			}
 		}
 		if (chunk == NULL) {
@@ -690,20 +695,56 @@ compressor_pager_slot_lookup(
 	}
 }
 
-void
-vm_compressor_pager_init(void)
+#if defined(__LP64__)
+__startup_func
+static void
+vm_compressor_slots_init(void)
 {
-	lck_grp_attr_setdefault(&compressor_pager_lck_grp_attr);
-	lck_grp_init(&compressor_pager_lck_grp, "compressor_pager", &compressor_pager_lck_grp_attr);
-	lck_attr_setdefault(&compressor_pager_lck_attr);
+	for (unsigned int idx = 0; idx < NUM_SLOTS_ZONES; idx++) {
+		compressor_slots_zones[idx] = zone_create(
+			compressor_slots_zones_names[idx],
+			compressor_slots_zones_sizes[idx],
+			ZC_VM);
+	}
+}
+STARTUP(ZALLOC, STARTUP_RANK_MIDDLE, vm_compressor_slots_init);
+#endif /* defined(__LP64__) */
 
-	compressor_pager_zone = zinit(sizeof(struct compressor_pager),
-	    10000 * sizeof(struct compressor_pager),
-	    8192, "compressor_pager");
-	zone_change(compressor_pager_zone, Z_CALLERACCT, FALSE);
-	zone_change(compressor_pager_zone, Z_NOENCRYPT, TRUE);
+static compressor_slot_t *
+zalloc_slot_array(size_t size, zalloc_flags_t flags)
+{
+#if defined(__LP64__)
+	compressor_slot_t *slots = NULL;
 
-	vm_compressor_init();
+	assert(size <= COMPRESSOR_SLOTS_CHUNK_SIZE);
+	for (unsigned int idx = 0; idx < NUM_SLOTS_ZONES; idx++) {
+		if (size > compressor_slots_zones_sizes[idx]) {
+			continue;
+		}
+		slots = zalloc_flags(compressor_slots_zones[idx], flags);
+		break;
+	}
+	return slots;
+#else  /* defined(__LP64__) */
+	return kalloc_data(size, flags);
+#endif /* !defined(__LP64__) */
+}
+
+static void
+zfree_slot_array(compressor_slot_t *slots, size_t size)
+{
+#if defined(__LP64__)
+	assert(size <= COMPRESSOR_SLOTS_CHUNK_SIZE);
+	for (unsigned int idx = 0; idx < NUM_SLOTS_ZONES; idx++) {
+		if (size > compressor_slots_zones_sizes[idx]) {
+			continue;
+		}
+		zfree(compressor_slots_zones[idx], slots);
+		break;
+	}
+#else  /* defined(__LP64__) */
+	kfree_data(slots, size);
+#endif /* !defined(__LP64__) */
 }
 
 kern_return_t
@@ -713,10 +754,12 @@ vm_compressor_pager_put(
 	ppnum_t                         ppnum,
 	void                            **current_chead,
 	char                            *scratch_buf,
-	int                             *compressed_count_delta_p)
+	int                             *compressed_count_delta_p, /* OUT */
+	vm_compressor_options_t         flags)
 {
-	compressor_pager_t      pager;
-	compressor_slot_t       *slot_p;
+	compressor_pager_t pager;
+	compressor_slot_t *slot_p;
+	kern_return_t kr;
 
 	compressor_pager_stats.put++;
 
@@ -732,13 +775,15 @@ vm_compressor_pager_put(
 
 	compressor_pager_lookup(mem_obj, pager);
 
-	if ((uint32_t)(offset / PAGE_SIZE) != (offset / PAGE_SIZE)) {
-		/* overflow */
-		panic("%s: offset 0x%llx overflow\n",
-		    __FUNCTION__, (uint64_t) offset);
+	uint32_t dummy_conv;
+	if (os_convert_overflow(offset / PAGE_SIZE, &dummy_conv)) {
+		/* overflow, page number doesn't fit in a uint32 */
+		panic("%s: offset 0x%llx overflow", __FUNCTION__, (uint64_t) offset);
 		return KERN_RESOURCE_SHORTAGE;
 	}
 
+	/* we're looking for the slot_mapping that corresponds to the offset, which vm_compressor_put() is then going to
+	 * set a value into after it allocates the slot. if the slot_mapping doesn't exist, this will create it */
 	compressor_pager_slot_lookup(pager, TRUE, offset, &slot_p);
 
 	if (slot_p == NULL) {
@@ -753,7 +798,7 @@ vm_compressor_pager_put(
 		 * the "backing_object" had some pages paged out and the
 		 * "object" had an equivalent page resident.
 		 */
-		vm_compressor_free(slot_p, 0);
+		vm_compressor_free(slot_p, flags);
 		*compressed_count_delta_p -= 1;
 	}
 
@@ -763,12 +808,11 @@ vm_compressor_pager_put(
 	 * disconnected.
 	 */
 
-	if (vm_compressor_put(ppnum, slot_p, current_chead, scratch_buf)) {
-		return KERN_RESOURCE_SHORTAGE;
+	kr = vm_compressor_put(ppnum, slot_p, current_chead, scratch_buf, flags);
+	if (kr == KERN_SUCCESS) {
+		*compressed_count_delta_p += 1;
 	}
-	*compressed_count_delta_p += 1;
-
-	return KERN_SUCCESS;
+	return kr;
 }
 
 
@@ -778,7 +822,7 @@ vm_compressor_pager_get(
 	memory_object_offset_t  offset,
 	ppnum_t                 ppnum,
 	int                     *my_fault_type,
-	int                     flags,
+	vm_compressor_options_t flags,
 	int                     *compressed_count_delta_p)
 {
 	compressor_pager_t      pager;
@@ -790,7 +834,7 @@ vm_compressor_pager_get(
 	*compressed_count_delta_p = 0;
 
 	if ((uint32_t)(offset / PAGE_SIZE) != (offset / PAGE_SIZE)) {
-		panic("%s: offset 0x%llx overflow\n",
+		panic("%s: offset 0x%llx overflow",
 		    __FUNCTION__, (uint64_t) offset);
 		return KERN_MEMORY_ERROR;
 	}
@@ -802,9 +846,11 @@ vm_compressor_pager_get(
 
 	if (offset / PAGE_SIZE >= pager->cpgr_num_slots) {
 		/* out of range */
+		ktriage_record(thread_tid(current_thread()), KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_COMPRESSOR_GET_OUT_OF_RANGE), 0 /* arg */);
 		kr = KERN_MEMORY_FAILURE;
 	} else if (slot_p == NULL || *slot_p == 0) {
 		/* compressor does not have this page */
+		ktriage_record(thread_tid(current_thread()), KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_COMPRESSOR_GET_NO_PAGE), 0 /* arg */);
 		kr = KERN_MEMORY_ERROR;
 	} else {
 		/* compressor does have this page */
@@ -814,15 +860,19 @@ vm_compressor_pager_get(
 
 	if (kr == KERN_SUCCESS) {
 		int     retval;
-
+		bool unmodified = (vm_compressor_is_slot_compressed(slot_p) == false);
 		/* get the page from the compressor */
-		retval = vm_compressor_get(ppnum, slot_p, flags);
-		if (retval == -1) {
+		retval = vm_compressor_get(ppnum, slot_p, (unmodified ? (flags | C_PAGE_UNMODIFIED) : flags));
+		if (retval <= DECOMPRESS_FIRST_FAIL_CODE) {
+			ktriage_record(thread_tid(current_thread()), KDBG_TRIAGE_EVENTID(KDBG_TRIAGE_SUBSYS_VM, KDBG_TRIAGE_RESERVED, KDBG_TRIAGE_VM_COMPRESSOR_DECOMPRESS_FAILED), (uintptr_t)retval /* arg */);
 			kr = KERN_MEMORY_FAILURE;
-		} else if (retval == 1) {
+		} else if (retval == DECOMPRESS_SUCCESS_SWAPPEDIN) {
 			*my_fault_type = DBG_COMPRESSOR_SWAPIN_FAULT;
-		} else if (retval == -2) {
+		} else if (retval == DECOMPRESS_NEED_BLOCK) {
 			assert((flags & C_DONT_BLOCK));
+			/*
+			 * Not a fatal failure because we just retry with a blocking get later. So we skip ktriage to avoid noise.
+			 */
 			kr = KERN_FAILURE;
 		}
 	}
@@ -858,7 +908,7 @@ vm_compressor_pager_state_clr(
 
 	if ((uint32_t)(offset / PAGE_SIZE) != (offset / PAGE_SIZE)) {
 		/* overflow */
-		panic("%s: offset 0x%llx overflow\n",
+		panic("%s: offset 0x%llx overflow",
 		    __FUNCTION__, (uint64_t) offset);
 		return 0;
 	}
@@ -870,9 +920,11 @@ vm_compressor_pager_state_clr(
 
 	num_slots_freed = 0;
 	if (slot_p && *slot_p != 0) {
-		vm_compressor_free(slot_p, 0);
-		num_slots_freed++;
-		assert(*slot_p == 0);
+		vm_decompress_result_t result = vm_compressor_free(slot_p, 0);
+		if (result == DECOMPRESS_SUCCESS) {
+			num_slots_freed++;
+			assert(*slot_p == 0);
+		}
 	}
 
 	return num_slots_freed;
@@ -892,7 +944,7 @@ vm_compressor_pager_state_get(
 
 	if ((uint32_t)(offset / PAGE_SIZE) != (offset / PAGE_SIZE)) {
 		/* overflow */
-		panic("%s: offset 0x%llx overflow\n",
+		panic("%s: offset 0x%llx overflow",
 		    __FUNCTION__, (uint64_t) offset);
 		return VM_EXTERNAL_STATE_ABSENT;
 	}
@@ -917,12 +969,12 @@ vm_compressor_pager_state_get(
 unsigned int
 vm_compressor_pager_reap_pages(
 	memory_object_t         mem_obj,
-	int                     flags)
+	vm_compressor_options_t flags)
 {
 	compressor_pager_t      pager;
-	int                     num_chunks;
+	unsigned int            num_chunks;
 	int                     failures;
-	int                     i;
+	unsigned int            i;
 	compressor_slot_t       *chunk;
 	unsigned int            num_slots_freed;
 
@@ -936,7 +988,7 @@ vm_compressor_pager_reap_pages(
 	/* reap the compressor slots */
 	num_slots_freed = 0;
 
-	num_chunks = (pager->cpgr_num_slots + COMPRESSOR_SLOTS_PER_CHUNK - 1) / COMPRESSOR_SLOTS_PER_CHUNK;
+	num_chunks = compressor_pager_num_chunks(pager);
 	if (num_chunks > 1) {
 		/* we have an array of chunks */
 		for (i = 0; i < num_chunks; i++) {
@@ -950,7 +1002,7 @@ vm_compressor_pager_reap_pages(
 					&failures);
 				if (failures == 0) {
 					pager->cpgr_slots.cpgr_islots[i] = NULL;
-					kfree(chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
+					zfree_slot_array(chunk, COMPRESSOR_SLOTS_CHUNK_SIZE);
 				}
 			}
 		}
@@ -990,27 +1042,23 @@ vm_compressor_pager_transfer(
 	compressor_pager_stats.transfer++;
 
 	/* find the compressor slot for the destination */
-	assert((uint32_t) dst_offset == dst_offset);
 	compressor_pager_lookup(dst_mem_obj, dst_pager);
 	assert(dst_offset / PAGE_SIZE < dst_pager->cpgr_num_slots);
-	compressor_pager_slot_lookup(dst_pager, TRUE, (uint32_t) dst_offset,
-	    &dst_slot_p);
+	compressor_pager_slot_lookup(dst_pager, TRUE, dst_offset, &dst_slot_p);
 	assert(dst_slot_p != NULL);
 	assert(*dst_slot_p == 0);
 
 	/* find the compressor slot for the source */
-	assert((uint32_t) src_offset == src_offset);
 	compressor_pager_lookup(src_mem_obj, src_pager);
 	assert(src_offset / PAGE_SIZE < src_pager->cpgr_num_slots);
-	compressor_pager_slot_lookup(src_pager, FALSE, (uint32_t) src_offset,
-	    &src_slot_p);
+	compressor_pager_slot_lookup(src_pager, FALSE, src_offset, &src_slot_p);
 	assert(src_slot_p != NULL);
 	assert(*src_slot_p != 0);
 
 	/* transfer the slot from source to destination */
 	vm_compressor_transfer(dst_slot_p, src_slot_p);
-	OSAddAtomic(-1, &src_pager->cpgr_num_slots_occupied);
-	OSAddAtomic(+1, &dst_pager->cpgr_num_slots_occupied);
+	os_atomic_dec(&src_pager->cpgr_num_slots_occupied, relaxed);
+	os_atomic_inc(&dst_pager->cpgr_num_slots_occupied, relaxed);
 }
 
 memory_object_offset_t
@@ -1019,9 +1067,9 @@ vm_compressor_pager_next_compressed(
 	memory_object_offset_t  offset)
 {
 	compressor_pager_t      pager;
-	uint32_t                num_chunks;
+	unsigned int            num_chunks;
 	uint32_t                page_num;
-	uint32_t                chunk_idx;
+	unsigned int            chunk_idx;
 	uint32_t                slot_idx;
 	compressor_slot_t       *chunk;
 
@@ -1037,9 +1085,7 @@ vm_compressor_pager_next_compressed(
 		return (memory_object_offset_t) -1;
 	}
 
-	num_chunks = ((pager->cpgr_num_slots + COMPRESSOR_SLOTS_PER_CHUNK - 1) /
-	    COMPRESSOR_SLOTS_PER_CHUNK);
-
+	num_chunks = compressor_pager_num_chunks(pager);
 	if (num_chunks == 1) {
 		if (pager->cpgr_num_slots > 2) {
 			chunk = pager->cpgr_slots.cpgr_dslots;
@@ -1051,8 +1097,8 @@ vm_compressor_pager_next_compressed(
 		    slot_idx++) {
 			if (chunk[slot_idx] != 0) {
 				/* found a non-NULL slot in this chunk */
-				return (memory_object_offset_t) (slot_idx *
-				       PAGE_SIZE);
+				return (memory_object_offset_t) slot_idx *
+				       PAGE_SIZE;
 			}
 		}
 		return (memory_object_offset_t) -1;
@@ -1085,8 +1131,8 @@ vm_compressor_pager_next_compressed(
 					/* went beyond end of object */
 					return (memory_object_offset_t) -1;
 				}
-				return (memory_object_offset_t) (next_slot *
-				       PAGE_SIZE);
+				return (memory_object_offset_t) next_slot *
+				       PAGE_SIZE;
 			}
 		}
 	}
@@ -1114,6 +1160,7 @@ vm_compressor_pager_get_count(
 	return pager->cpgr_num_slots_occupied;
 }
 
+/* Add page count to the counter in the pager */
 void
 vm_compressor_pager_count(
 	memory_object_t mem_obj,
@@ -1143,8 +1190,8 @@ vm_compressor_pager_count(
 	 */
 	if (shared_lock) {
 		vm_object_lock_assert_shared(object);
-		OSAddAtomic(compressed_count_delta,
-		    &pager->cpgr_num_slots_occupied);
+		os_atomic_add(&pager->cpgr_num_slots_occupied, compressed_count_delta,
+		    relaxed);
 	} else {
 		vm_object_lock_assert_exclusive(object);
 		pager->cpgr_num_slots_occupied += compressed_count_delta;
@@ -1176,3 +1223,66 @@ vm_compressor_pager_relocate(
 	return vm_compressor_relocate(current_chead, slot_p);
 }
 #endif /* CONFIG_FREEZE */
+
+#if DEVELOPMENT || DEBUG
+
+kern_return_t
+vm_compressor_pager_inject_error(memory_object_t mem_obj,
+    memory_object_offset_t offset)
+{
+	kern_return_t result = KERN_FAILURE;
+	compressor_slot_t *slot_p;
+	compressor_pager_t pager;
+
+	assert(mem_obj);
+
+	compressor_pager_lookup(mem_obj, pager);
+	if (pager != NULL) {
+		compressor_pager_slot_lookup(pager, FALSE, offset, &slot_p);
+		if (slot_p != NULL && *slot_p != 0) {
+			vm_compressor_inject_error(slot_p);
+			result = KERN_SUCCESS;
+		}
+	}
+
+	return result;
+}
+
+
+/*
+ * Write debugging information about the pager to the given buffer
+ * returns: true on success, false if there was not enough space
+ * argument size - in: bytes free in the buffer, out: bytes written
+ */
+kern_return_t
+vm_compressor_pager_dump(memory_object_t mem_obj,     /* IN */
+    __unused char *buf,                               /* IN buffer to write to */
+    __unused size_t *size,                           /* IN-OUT */
+    bool *is_compressor,                              /* OUT */
+    unsigned int *slot_count)                         /* OUT */
+{
+	compressor_pager_t pager = NULL;
+	compressor_pager_lookup(mem_obj, pager);
+
+	*size = 0;
+	if (pager == NULL) {
+		*is_compressor = false;
+		*slot_count = 0;
+		return KERN_SUCCESS;
+	}
+	*is_compressor = true;
+	*slot_count = pager->cpgr_num_slots_occupied;
+
+	/*
+	 *  size_t insize = *size;
+	 *  unsigned int needed_size = 0; // pager->cpgr_num_slots_occupied * sizeof(compressor_slot_t) / sizeof(int);
+	 *  if (needed_size > insize) {
+	 *       return KERN_NO_SPACE;
+	 *  }
+	 *  TODO: not fully implemented yet, need to dump out the mappings
+	 * size = 0;
+	 */
+	return KERN_SUCCESS;
+}
+
+#endif

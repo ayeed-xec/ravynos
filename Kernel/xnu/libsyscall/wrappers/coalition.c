@@ -57,6 +57,12 @@ coalition_info_resource_usage(uint64_t cid, struct coalition_resource_usage *cru
 }
 
 int
+coalition_info_debug_info(uint64_t cid, struct coalinfo_debuginfo *cru, size_t sz)
+{
+	return __coalition_info(COALITION_INFO_GET_DEBUG_INFO, &cid, cru, &sz);
+}
+
+int
 coalition_info_set_name(uint64_t cid, const char *name, size_t size)
 {
 	return __coalition_info(COALITION_INFO_SET_NAME, &cid, (void *)name, &size);
@@ -67,6 +73,12 @@ coalition_info_set_efficiency(uint64_t cid, uint64_t flags)
 {
 	size_t size = sizeof(flags);
 	return __coalition_info(COALITION_INFO_SET_EFFICIENCY, &cid, (void *)&flags, &size);
+}
+
+int
+coalition_info_pid_list(uint64_t cid, pid_t *pid_list, size_t *size_inout)
+{
+	return __coalition_info(COALITION_INFO_PID_LIST, &cid, pid_list, size_inout);
 }
 
 int

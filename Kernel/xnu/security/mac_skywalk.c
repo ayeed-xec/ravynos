@@ -36,8 +36,11 @@ int
 mac_skywalk_flow_check_connect(proc_t proc, void *flow, const struct sockaddr *addr, int type, int protocol)
 {
 	int error;
+	kauth_cred_t cred;
 
-	MAC_CHECK(skywalk_flow_check_connect, proc_ucred(proc), flow, addr, type, protocol);
+	cred = kauth_cred_proc_ref(proc);
+	MAC_CHECK(skywalk_flow_check_connect, cred, flow, addr, type, protocol);
+	kauth_cred_unref(&cred);
 	return error;
 }
 
@@ -45,7 +48,10 @@ int
 mac_skywalk_flow_check_listen(proc_t proc, void *flow, const struct sockaddr *addr, int type, int protocol)
 {
 	int error;
+	kauth_cred_t cred;
 
-	MAC_CHECK(skywalk_flow_check_listen, proc_ucred(proc), flow, addr, type, protocol);
+	cred = kauth_cred_proc_ref(proc);
+	MAC_CHECK(skywalk_flow_check_listen, cred, flow, addr, type, protocol);
+	kauth_cred_unref(&cred);
 	return error;
 }

@@ -35,6 +35,7 @@
 #include <kern/debug.h>
 #include <kern/sched_prim.h>
 #include <kern/task.h>
+#include <machine/machine_routines.h>
 
 #if CONFIG_CSR
 #include <sys/codesign.h>
@@ -104,7 +105,7 @@ dtrace_fasttrap_fork(proc_t *p, proc_t *cp)
  * duty to resume the task.
  */
 
-lck_mtx_t dtrace_procwaitfor_lock;
+LCK_MTX_DECLARE_ATTR(dtrace_procwaitfor_lock, &dtrace_lck_grp, &dtrace_lck_attr);
 
 typedef struct dtrace_proc_awaited_entry {
 	struct dtrace_procdesc			*pdesc;
@@ -152,8 +153,8 @@ dtrace_proc_exec_notification(proc_t *p) {
 	static char execpath[MAXPATHLEN];
 
 	ASSERT(p);
-	ASSERT(p->p_pid != -1);
-	ASSERT(current_task() != p->task);
+	ASSERT(proc_getpid(p) != -1);
+	ASSERT(current_task() != proc_task(p));
 
 	lck_mtx_lock(&dtrace_procwaitfor_lock);
 
@@ -162,7 +163,7 @@ dtrace_proc_exec_notification(proc_t *p) {
 		char *pname = p->p_comm;
 
 		/* Already matched with another process. */
-		if ((entry->pdesc->p_pid != -1))
+		if (((entry->pdesc->p_pid) != -1))
 			continue;
 
 		/* p_comm is too short, use the execpath. */
@@ -182,8 +183,8 @@ dtrace_proc_exec_notification(proc_t *p) {
 		}
 
 		if (!strcmp(entry->pdesc->p_name, pname)) {
-			entry->pdesc->p_pid = p->p_pid;
-			task_pidsuspend(p->task);
+			entry->pdesc->p_pid = proc_getpid(p);
+			task_pidsuspend(proc_task(p));
 			wakeup(entry);
 		}
 	}
@@ -203,7 +204,7 @@ dtrace_proc_waitfor(dtrace_procdesc_t* pdesc) {
 	 * Never trust user input, compute the length of the process name and ensure the
 	 * string is null terminated.
 	 */
-	pdesc->p_name_length = strnlen(pdesc->p_name, sizeof(pdesc->p_name));
+	pdesc->p_name_length = (int) strnlen(pdesc->p_name, sizeof(pdesc->p_name));
 	if (pdesc->p_name_length >= (int) sizeof(pdesc->p_name))
 		return -1;
 
@@ -325,8 +326,47 @@ dtrace_is_valid_ptrauth_key(uint64_t key)
 	return (key == ptrauth_key_asia) || (key == ptrauth_key_asib) ||
 	    (key == ptrauth_key_asda) || (key == ptrauth_key_asdb);
 #else
-	return (0);
+	return (1);
 #endif /* __has_feature(ptrauth_calls) */
+}
+
+uint64_t
+dtrace_physmem_read(uint64_t addr, size_t size)
+{
+	switch (size) {
+	case 1:
+		return (uint64_t)ml_phys_read_byte_64((addr64_t)addr);
+	case 2:
+		return (uint64_t)ml_phys_read_half_64((addr64_t)addr);
+	case 4:
+		return (uint64_t)ml_phys_read_64((addr64_t)addr);
+	case 8:
+		return (uint64_t)ml_phys_read_double_64((addr64_t)addr);
+	}
+	DTRACE_CPUFLAG_SET(CPU_DTRACE_ILLOP);
+
+	return (0);
+}
+
+void
+dtrace_physmem_write(uint64_t addr, uint64_t data, size_t size)
+{
+	switch (size) {
+	case 1:
+		ml_phys_write_byte_64((addr64_t)addr, (unsigned int)data);
+		break;
+	case 2:
+		ml_phys_write_half_64((addr64_t)addr, (unsigned int)data);
+		break;
+	case 4:
+		ml_phys_write_64((addr64_t)addr, (unsigned int)data);
+		break;
+	case 8:
+		ml_phys_write_double_64((addr64_t)addr, (unsigned long long)data);
+		break;
+	default:
+		DTRACE_CPUFLAG_SET(CPU_DTRACE_ILLOP);
+	}
 }
 
 static minor_t next_minor = 0;
@@ -354,10 +394,10 @@ dtrace_state_get(minor_t minor)
 dtrace_state_t*
 dtrace_state_allocate(minor_t minor)
 {
-	dtrace_state_t *state = _MALLOC(sizeof(dtrace_state_t), M_TEMP, M_ZERO | M_WAITOK);
+	dtrace_state_t *state = kalloc_type(dtrace_state_t, Z_ZERO | Z_WAITOK);
 	if (dtrace_casptr(&dtrace_clients[minor], NULL, state) != NULL) {
 		// We have been raced by another client for this number, abort
-		_FREE(state, M_TEMP);
+		kfree_type(dtrace_state_t, state);
 		return NULL;
 	}
 	return state;
@@ -368,14 +408,7 @@ dtrace_state_free(minor_t minor)
 {
 	dtrace_state_t *state = dtrace_clients[minor];
 	dtrace_clients[minor] = NULL;
-	_FREE(state, M_TEMP);
-}
-
-
-
-void
-dtrace_restriction_policy_load(void)
-{
+	kfree_type(dtrace_state_t, state);
 }
 
 /*
@@ -406,7 +439,8 @@ dtrace_are_restrictions_relaxed(void)
 boolean_t
 dtrace_fbt_probes_restricted(void)
 {
-
+	if (!ml_unsafe_kernel_text())
+		return TRUE;
 #if CONFIG_CSR
 	if (dtrace_is_restricted() && !dtrace_are_restrictions_relaxed())
 		return TRUE;
@@ -419,6 +453,8 @@ boolean_t
 dtrace_sdt_probes_restricted(void)
 {
 
+	if (!ml_unsafe_kernel_text())
+		return TRUE;
 	return FALSE;
 }
 

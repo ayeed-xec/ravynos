@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2008 Apple Inc. All rights reserved.
+ * Copyright (c) 2000-2019 Apple Inc. All rights reserved.
  *
  * @APPLE_OSREFERENCE_LICENSE_HEADER_START@
  *
@@ -64,8 +64,10 @@
 #ifndef _SYS_UIO_H_
 #define _SYS_UIO_H_
 
+#include <Availability.h>
 #include <sys/cdefs.h>
 #include <sys/_types.h>
+#include <sys/_types/_off_t.h>
 
 /*
  * [XSI] The ssize_t and size_t types shall be defined as described
@@ -76,7 +78,7 @@
 
 /*
  * [XSI] Structure whose address is passed as the second parameter to the
- * readv() and writev() functions.
+ * readv(), preadv(), writev() and pwritev() functions.
  */
 #include <sys/_types/_iovec_t.h>
 
@@ -117,9 +119,16 @@ enum uio_seg {
 	UIO_SYSSPACE32          = 11    /* deprecated */
 };
 
+enum {
+	UIOF_USERSPACE          = (1 << UIO_USERSPACE),
+	UIOF_SYSSPACE           = (1 << UIO_SYSSPACE),
+	UIOF_USERSPACE32        = (1 << UIO_USERSPACE32),
+	UIOF_USERSPACE64        = (1 << UIO_USERSPACE64),
+	UIOF_SYSSPACE32         = (1 << UIO_SYSSPACE32),
+};
+
 #define UIO_SEG_IS_USER_SPACE( a_uio_seg )  \
-	( (a_uio_seg) == UIO_USERSPACE64 || (a_uio_seg) == UIO_USERSPACE32 || \
-	  (a_uio_seg) == UIO_USERSPACE )
+	((1 << a_uio_seg) & (UIOF_USERSPACE64 | UIOF_USERSPACE32 | UIOF_USERSPACE))
 
 
 __BEGIN_DECLS
@@ -153,6 +162,11 @@ void uio_reset( uio_t a_uio,
  */
 uio_t uio_duplicate( uio_t a_uio );
 
+/*
+ * uio_restore - restore a uio to the state it was in the provided snapshot.
+ *      returns 0 if it was successful else non zero.
+ */
+int uio_restore(uio_t uio, uio_t snapshot_uio);
 
 /*
  * uio_free - free a uio_t allocated via uio_create.
@@ -244,7 +258,7 @@ user_size_t uio_curriovlen( uio_t a_uio );
 #define UIO_MAXIOV      1024            /* max 1K of iov's */
 #define UIO_SMALLIOV    8               /* 8 on stack, else malloc */
 
-extern int uiomove(const char * cp, int n, struct uio *uio);
+extern int uiomove(const char *__sized_by(n) cp, int n, struct uio *uio);
 extern int uiomove64(const __uint64_t cp, int n, struct uio *uio);
 __END_DECLS
 
@@ -255,7 +269,16 @@ __END_DECLS
 __BEGIN_DECLS
 ssize_t readv(int, const struct iovec *, int) __DARWIN_ALIAS_C(readv);
 ssize_t writev(int, const struct iovec *, int) __DARWIN_ALIAS_C(writev);
+
+#if (!defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE)) || defined(_DARWIN_C_SOURCE)
+
+ssize_t preadv(int, const struct iovec *, int, off_t) __DARWIN_NOCANCEL(preadv) __API_AVAILABLE(macos(10.16), ios(14.0), watchos(7.0), tvos(14.0));
+ssize_t pwritev(int, const struct iovec *, int, off_t) __DARWIN_NOCANCEL(pwritev) __API_AVAILABLE(macos(10.16), ios(14.0), watchos(7.0), tvos(14.0));
+
+#endif /* #if (!defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE)) || defined(_DARWIN_C_SOURCE) */
+
 __END_DECLS
+
 #endif /* !KERNEL */
 
 #endif /* !_SYS_UIO_H_ */

@@ -26,6 +26,7 @@
  * @APPLE_OSREFERENCE_LICENSE_HEADER_END@
  */
 
+#pragma once
 
 #define kPMSetAggressiveness            0
 #define kPMGetAggressiveness            1
@@ -43,5 +44,14 @@
 #define kPMSleepWakeWatchdogEnable      13
 #define kPMSleepWakeDebugTrig           14
 #define kPMSetDisplayPowerOn            15
+#define kPMSetDisplayState              16
+#define kPMRequestIdleSleepRevert       17
+#define kPMSetLDMHibernationDisable     18
+#define kPMGetAssertionLog              19
+#define kPMSetAssertionLogThreshold     20
 
-#define kNumPMMethods                   16
+#define kNumPMMethods                   21
+
+enum IOPMUserClientNotificationType {
+	IOPMUserClientNotificationType_AssertionLog,
+};
