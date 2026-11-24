@@ -6,44 +6,115 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <Foundation/NSHTTPCookieStorage.h>
-#import <Foundation/NSRaise.h>
+#import <Foundation/NSHTTPCookie.h>
+#import <Foundation/NSMutableArray.h>
+#import <Foundation/NSLock.h>
 
 @implementation NSHTTPCookieStorage
 
-+(NSHTTPCookieStorage *)sharedHTTPCookieStorage {
-   NSUnimplementedMethod();
-   return nil;
++sharedHTTPCookieStorage {
+    static NSHTTPCookieStorage *shared=nil;
+
+    if(shared==nil)
+        shared=NSAllocateObject(self,0,NULL);
+
+    return shared;
+}
+
+- init {
+    [super init];
+
+    _cookies=[NSMutableArray array];
+    _acceptPolicy=NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain;
+
+    return self;
+}
+
+-(void)dealloc {
+    [_cookies release];
+
+    [super dealloc];
 }
 
 -(NSHTTPCookieAcceptPolicy)cookieAcceptPolicy {
-   NSUnimplementedMethod();
-   return 0;
+    return _acceptPolicy;
 }
 
 -(void)setCookieAcceptPolicy:(NSHTTPCookieAcceptPolicy)value {
-   NSUnimplementedMethod();
+    _acceptPolicy=value;
 }
 
 -(NSArray *)cookies {
-   NSUnimplementedMethod();
-   return nil;
+    return [NSArray arrayWithArray:_cookies];
 }
 
 -(NSArray *)cookiesForURL:(NSURL *)url {
-   NSUnimplementedMethod();
-   return nil;
+    NSString *host=[url host];
+    NSString *path=[url path];
+
+    if(path==nil)
+        path=@"/";
+
+    NSMutableArray *result=[NSMutableArray array];
+
+    for(NSHTTPCookie *cookie in [[self cookies] copy]) {
+        NSString *cookieDomain=[cookie domain];
+
+        BOOL domainMatches=NO;
+
+        if([cookieDomain hasPrefix:@"."])
+            domainMatches=[host hasSuffix:cookieDomain];
+        else
+            domainMatches=[host isEqualToString:cookieDomain];
+
+        if(!domainMatches)
+            continue;
+
+        NSString *cookiePath=[cookie path];
+
+        if(![path hasPrefix:cookiePath])
+            continue;
+
+        NSDate *expires=[cookie expiresDate];
+
+        if(expires!=nil && [expires timeIntervalSinceNow]<0)
+            continue;
+
+        [result addObject:cookie];
+    }
+
+    return result;
 }
 
 -(void)setCookie:(NSHTTPCookie *)value {
-   NSUnimplementedMethod();
+    if(value==nil)
+        return;
+
+    for(NSHTTPCookie *cookie in _cookies) {
+        if([cookie name]==nil || [value name]==nil)
+            continue;
+
+        if([cookie name] == [value name] && [cookie domain] == [value domain] && [cookie path] == [value path]) {
+            [_cookies removeObject:cookie];
+            break;
+        }
+    }
+
+    [_cookies addObject:value];
 }
 
 -(void)setCookies:(NSArray *)cookies forURL:(NSURL *)url mainDocumentURL:(NSURL *)mainDocumentURL {
-   NSUnimplementedMethod();
+    for(NSHTTPCookie *cookie in cookies)
+        [self setCookie:cookie];
 }
 
 -(void)deleteCookie:(NSHTTPCookie *)value {
-   NSUnimplementedMethod();
+    for(NSHTTPCookie *cookie in [[self cookies] copy]) {
+        if([cookie name] == [value name] && [cookie domain] == [value domain] && [cookie path] == [value path]) {
+            [_cookies removeObject:cookie];
+            break;
+        }
+    }
 }
 
 @end
