@@ -61,11 +61,13 @@ Priorities: P1 = before first P2 kernel boot, P2 = before P2 release, P3 = hygie
 - Pin toolchain versions (clang, byacc, flex, ld64.lld) with checksums in
   BLOCKERS.md; GPL policy is already clean (byacc/public-domain yaccpar, no
   bison, no darling code) — add a CI grep for GPL markers to keep it that way.
-- Loader robustness: `stub.c` walks the module's load commands without bounds
-  checks against `mod_end` (ncmds/cmdsize are attacker-controlled only if the
-  boot image itself is untrusted, but validate anyway) and `verify.py` reports
-  `__LINKEDIT` as `--x` (ld64.lld artifact; harmless for a static image, note
-  only).
+- Loader robustness: `stub.c` now rejects a load command with `cmdsize < 8`
+  (a corrupt or truncated module would spin the walk forever) and NX-flags
+  segments that are neither writable nor executable, so only __TEXT-class
+  segments map executable. Remaining: bounds-check the walk against `mod_end`
+  (ncmds/cmdsize are attacker-controlled only if the boot image itself is
+  untrusted, but validate anyway). `verify.py` reports `__LINKEDIT` as `--x`
+  (ld64.lld artifact; harmless for a static image, note only).
 
 ## FreeBSD driver version policy (2026-11-25)
 - Drivers stay on FreeBSD 11.4 (pre-iflib, drop-in). Upgrading to FreeBSD 15 / iflib

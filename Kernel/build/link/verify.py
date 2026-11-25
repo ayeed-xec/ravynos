@@ -135,6 +135,8 @@ def main():
                 if filesize > vmsize_rounded:
                     fail("__LINKEDIT filesize 0x%x > page-rounded vmsize 0x%x"
                          % (filesize, vmsize_rounded))
+                if fileoff + filesize > len(data):
+                    fail("__LINKEDIT: data beyond EOF")
             else:
                 if filesize > vmsize:
                     fail("segment %s: filesize 0x%x > vmsize 0x%x" % (name, filesize, vmsize))
@@ -168,7 +170,9 @@ def main():
 
     (rax, rbx, rcx, rdx, rdi, rsi, rbp, rsp, r8, r9, r10, r11, r12, r13, r14,
      r15, rip, rflags, cs, fs, gs) = unixthread
-    t_vmaddr, t_vmsize, t_fileoff, t_filesize, _ = segments["__TEXT"]
+    t_vmaddr, t_vmsize, t_fileoff, t_filesize, t_initprot = segments["__TEXT"]
+    if not t_initprot & VM_PROT_EXECUTE:
+        fail("__TEXT initprot %s is not executable" % prot_str(t_initprot))
     if not (t_vmaddr <= rip < t_vmaddr + t_vmsize):
         fail("entry rip 0x%x not inside __TEXT vm range" % rip)
     if rflags & 0x2 == 0:

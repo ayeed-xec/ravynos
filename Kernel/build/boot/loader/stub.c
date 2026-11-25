@@ -113,6 +113,8 @@ void c_entry(u32 mbi, u32 magic) {
     for (u32 i = 0; i < ncmds; i++) {
         u32 cmd = *(u32 *)(base + off);
         u32 csz = *(u32 *)(base + off + 4);
+        if (csz < 8)
+            fail("macho-loader: ERROR load command size < 8 (corrupt module)\n");
         if (cmd == LC_SEGMENT_64) {
             u64 vmaddr = *(u64 *)(base + off + 24);
             u64 vmsize = *(u64 *)(base + off + 32);
@@ -147,6 +149,8 @@ void c_entry(u32 mbi, u32 magic) {
                         if (initprot & VM_PROT_EXEC)
                             fail("macho-loader: ERROR segment is write+execute (W^X)\n");
                         e |= PTE_WRITE | PTE_NX;
+                    } else if (!(initprot & VM_PROT_EXEC)) {
+                        e |= PTE_NX;
                     }
                     pt_payload[i] = e;
                 }

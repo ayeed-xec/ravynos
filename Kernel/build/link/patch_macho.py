@@ -92,6 +92,8 @@ def main():
                 struct.pack_into("<i", raw, 60, prot)
                 raw = bytes(raw)
             segments[name] = (vmaddr, vmsize, fileoff, filesize)
+        elif cmd == LC_UNIXTHREAD:
+            die("LC_UNIXTHREAD already present; nothing to convert")
         elif cmd == LC_MAIN:
             (entryoff,) = struct.unpack_from("<I", raw, 8)
         if cmd in DROP:
@@ -141,6 +143,11 @@ def main():
 
     new = b"".join(cmds)
     new_sizeof = len(new)
+    # Growing the load-command block would shift every section fileoff that
+    # follows it; only a shrinking rewrite keeps segment offsets valid.
+    if new_sizeof > sizeofcmds:
+        die("rewritten load commands (%d bytes) exceed original block (%d bytes)"
+            % (new_sizeof, sizeofcmds))
 
     flags = (flags & ~(MH_DYLDLINK | MH_PIE)) | MH_NOUNDEFS | MH_TWOLEVEL | MH_NOMULTIDEFS
     struct.pack_into("<8I", data, 0, magic, cputype, cpusubtype, MH_EXECUTE,
