@@ -58,4 +58,16 @@ typedef mach_port_t     eventlink_consume_ref_t;
 #endif
 #endif
 
+/*
+ * osfmk's kern/thread_call.h typedef is hidden from bsd consumers: bsd/net
+ * headers use thread_call_t but the tree's own include order never provides
+ * it (kern/thread.h exposes it only under MACH_KERNEL_PRIVATE, which must
+ * stay off for bsd files). The SDK build gets it from clang modules
+ * (USE_CLANG_TYPES); define the same opaque handle here.
+ */
+#ifndef _SHIM_THREAD_CALL_T
+#define _SHIM_THREAD_CALL_T
+typedef struct thread_call *thread_call_t;
+#endif
+
 #endif

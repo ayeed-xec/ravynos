@@ -53,6 +53,14 @@
 #endif
 
 /*
+ * MASTER option: traffic management support (config/MASTER:71). tcp_var.h
+ * gates CLEAR_IAJ_STATE and the iaj_rcv_ts field on it.
+ */
+#ifndef TRAFFIC_MGT
+#define TRAFFIC_MGT 1
+#endif
+
+/*
  * Lock internals: the real build compiles the lock users with LOCK_PRIVATE
  * so machine/locks.h exposes lock_get_timebase() and the adaptive-spin
  * helpers used by kern/locks_internal.h.

@@ -2,6 +2,25 @@
 
 Updated: 2026-11-25. Tool: clang 21.1.8 (Ubuntu), flex/byacc (no bison: GPL skeleton).
 
+## Closed 2026-11-25 (evening round)
+
+- `bsd/kern/bsd_init.c`: 0 errors. Two root causes fixed:
+  1. `thread_call_t` was undeclared in bsd compiles — bsd/net headers use it
+     but nothing in the include chain provides it (kern/thread.h exposes it
+     only under MACH_KERNEL_PRIVATE). Stand-in typedef added to
+     `config-include/kernel_base_types.h` (the clang-modules equivalent).
+  2. `#define TCP_SYN_COOKIE_DISABLED(tp)` used `tp->t_mpflags & TMPF_MPTCP_TRUE`
+     unguarded while the `t_mpflags` member and TMPF_* defines sit behind
+     `#if MPTCP` (tcp_var.h:741, 2007). Now preprocessor-gated on MPTCP
+     (tcp_var.h:923). Same class of fix in mptcp_var.h: `tptomptp()` touches
+     `tp->t_mptcb` unguarded; now `#if MPTCP` (mptcp_var.h:460).
+- `osfmk/kern/zalloc.c` was already 0 errors before this round (link driver
+  regression, exit 0).
+- Added to `kernel_config.h`: TRAFFIC_MGT=1 (MASTER:71, gates
+  CLEAR_IAJ_STATE/iaj_rcv_ts), MACH_BSD=1 made explicit.
+- Still failing: none of the audited files. Next WP-A1 step: object-compile
+  (`compile.sh -c`) of the same files, then the mig-generated headers build.
+
 ## Solved this session
 
 - mig (migcom) now builds on Linux: see `Kernel/build/mig/`. Apple's
