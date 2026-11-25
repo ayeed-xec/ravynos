@@ -6,10 +6,11 @@ CC=${CC:-gcc}
 GUEST="$DIR/../link/guest_kernel"
 
 if [ ! -f "$GUEST" ]; then
-	echo "build.sh: $GUEST missing; run ../link/link.sh ../link/stub/main.o first" >&2
+	echo "build.sh: $GUEST missing; run sh Kernel/build/link/stub/build.sh first" >&2
 	exit 1
 fi
 
+rm -f "$OUT/test.iso"
 mkdir -p "$OUT/isodir/boot/grub"
 
 "$CC" -m64 -ffreestanding -fno-pie -fno-stack-protector -mno-red-zone -c \
@@ -30,5 +31,5 @@ menuentry "ravynOS" {
 }
 CFG
 cp "$OUT/kernel.elf" "$OUT/isodir/boot/kernel.elf"
-grub-mkrescue -o "$OUT/test.iso" "$OUT/isodir" --compress=no 2>/dev/null
+grub-mkrescue -o "$OUT/test.iso" "$OUT/isodir" --compress=no || exit 1
 echo "built $OUT/test.iso"
