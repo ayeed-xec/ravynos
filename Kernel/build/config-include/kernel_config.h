@@ -54,6 +54,14 @@
 #define CONFIG_IPC_TABLE_ENTRIES_SIZE_MAX 7340032
 #endif
 
+/*
+ * MASTER option: kernel ipc map size in pages (config/MASTER:299-300, the
+ * medium/large/xlarge value). Sizes the kernel's own ipc_space map in ipc_init.c.
+ */
+#ifndef CONFIG_IPC_KERNEL_MAP_SIZE
+#define CONFIG_IPC_KERNEL_MAP_SIZE 64
+#endif
+
 #ifndef CONFIG_IPC_TABLE_REQUEST_SIZE_MAX
 #define CONFIG_IPC_TABLE_REQUEST_SIZE_MAX 2097152
 #endif

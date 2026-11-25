@@ -70,4 +70,10 @@ typedef mach_port_t     eventlink_consume_ref_t;
 typedef struct thread_call *thread_call_t;
 #endif
 
+#ifndef _SHIM_SCHED_PERFCONTROL_OPTIONS
+#define _SHIM_SCHED_PERFCONTROL_OPTIONS
+typedef uint64_t sched_perfcontrol_preferred_pset_options_t;
+typedef sched_perfcontrol_preferred_pset_options_t sched_perfcontrol_preferred_cluster_options_t;
+#endif
+
 #endif
