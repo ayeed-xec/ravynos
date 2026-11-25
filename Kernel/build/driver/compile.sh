@@ -32,7 +32,14 @@ if [ $# -eq 0 ]; then
 		"$XNU/osfmk/kern/zalloc.h" \
 		"$XNU/osfmk/kern/task.h" \
 		"$XNU/osfmk/kern/thread.h" \
-		"$XNU/osfmk/kern/startup.c"
+		"$XNU/osfmk/kern/startup.c" \
+		"$XNU/bsd/sys/systm.h" \
+		"$XNU/bsd/sys/param.h" \
+		"$XNU/bsd/sys/proc.h" \
+		"$XNU/bsd/sys/lock.h" \
+		"$XNU/bsd/sys/kernel.h" \
+		"$XNU/bsd/sys/malloc.h" \
+		"$XNU/bsd/net/kpi_interface.h"
 fi
 
 for f in "$@"; do
