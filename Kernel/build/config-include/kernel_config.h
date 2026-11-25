@@ -18,4 +18,36 @@
 #define CONFIG_PROC_RESOURCE_LIMITS 1
 #define CONFIG_MACF 1
 
+/*
+ * bsd private driver declarations (dev/busvar.h pseudo_inits etc.)
+ * come from DRIVER_PRIVATE in the real build.
+ */
+#ifndef DRIVER_PRIVATE
+#define DRIVER_PRIVATE 1
+#endif
+
+/*
+ * Zone-map sizing: the real build derives this per-platform in the
+ * MASTER/MakeInc.def flow. Syntax-check stand-in value only; revisit
+ * when the kernel links.
+ */
+#ifndef CONFIG_ZONE_MAP_MIN
+#define CONFIG_ZONE_MAP_MIN (512UL << 20)
+#endif
+
+/*
+ * MASTER option: Multipath TCP (config/MASTER:75). The real build
+ * passes -DMPTCP=1 to every bsd file that needs it.
+ */
+#ifndef MPTCP
+#define MPTCP 1
+#endif
+
+/*
+ * MASTER option: BSD subsystem on top of Mach (config/MASTER:651).
+ */
+#ifndef MACH_BSD
+#define MACH_BSD 1
+#endif
+
 #endif

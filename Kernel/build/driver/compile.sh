@@ -15,6 +15,14 @@ CONFIG="$BUILD/config-include"
 
 for f in "$@"; do
 	echo "== $f"
+	case "$f" in
+		*/osfmk/*|*/iokit/*)
+			PRIV="-DMACH_KERNEL_PRIVATE -DMACH_KERNEL -DBSD_KERNEL_PRIVATE"
+			;;
+		*/bsd/*)
+			PRIV="-DMACH_KERNEL -DBSD_KERNEL_PRIVATE -DBSD_BUILD"
+			;;
+	esac
 	"$CC" -target x86_64-apple-darwin -fsyntax-only \
 		-std=gnu17 -Ulinux \
 		-Wno-deprecated-non-prototype \
@@ -22,12 +30,16 @@ for f in "$@"; do
 		-D__XNU_PRIVATE_UNTRUSTED__ \
 		-DPRIVATE -DPRIVATE_EXTERNAL -D_MACHDEP -DBSD_COMPONENTS \
 		-DKERNEL -DKERNEL_PRIVATE -DXNU_KERNEL_PRIVATE \
-		-DMACH_KERNEL_PRIVATE -DBSD_KERNEL_PRIVATE \
+		$PRIV \
 		-DCONFIG_KERNEL -DKERNEL_BUILD \
 		-DAPPLE_ARCH=x86_64 -D__i386__ -D__x86_64__ \
 		-include "$CONFIG/kernel_config.h" \
 		-include "$CONFIG/kernel_base_types.h" \
 		-include stddef.h \
+		-include "$XNU/osfmk/kern/ledger.h" \
+		-include "$XNU/osfmk/kern/ipc_host.h" \
+		-include "$XNU/san/memory/memintrinsics.h" \
+		-include skywalk/os_packet.h \
 		"-I$CONFIG" \
 		"-I$XNU/bsd/machine" \
 		"-I$XNU/bsd/i386" \
