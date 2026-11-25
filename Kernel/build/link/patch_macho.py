@@ -82,6 +82,15 @@ def main():
             name = raw[8:24].split(b"\x00", 1)[0].decode("ascii", "replace")
             (vmaddr, vmsize, fileoff, filesize, _maxp, _initp, _n,
              _sf) = struct.unpack_from("<QQQQiiII", raw, 24)
+            if name == "__DATA":
+                # ld64.lld leaves execute (prot bit 0) set on __DATA;
+                # nothing in the guest writes self-modifying code, so
+                # clamp maxprot=initprot=rw- for the W^X gate.
+                raw = bytearray(raw)
+                prot = struct.unpack_from("<i", raw, 60)[0] & ~0x1
+                struct.pack_into("<i", raw, 56, prot)
+                struct.pack_into("<i", raw, 60, prot)
+                raw = bytes(raw)
             segments[name] = (vmaddr, vmsize, fileoff, filesize)
         elif cmd == LC_MAIN:
             (entryoff,) = struct.unpack_from("<I", raw, 8)
@@ -105,7 +114,14 @@ def main():
 
     if "__DATA" in segments:
         d_vmaddr, d_vmsize, _f, _fs = segments["__DATA"]
-        rsp = d_vmaddr + d_vmsize
+        if d_vmsize > 0:
+            rsp = d_vmaddr + d_vmsize
+        else:
+            # __DATA exists but is empty (BSS-only guest); the loader maps
+            # undeclared payload pages present|write|nx by default, so park
+            # the kernel stack on the last such page instead of in a
+            # read-only or exec-only segment.
+            rsp = 0x100000000 + 2 * 1024 * 1024 - 0x10
     else:
         # No __DATA from lld (only __TEXT + R-only __LINKEDIT). The boot
         # loader maps [0x100000000, +2MB) and gives pages outside declared
