@@ -37,10 +37,12 @@
 
 /*
  * MASTER option: Multipath TCP (config/MASTER:75). The real build
- * passes -DMPTCP=1 to every bsd file that needs it.
+ * passes -DMPTCP=1 to every bsd file that needs it. Default off:
+ * no BSD code in this tree exercises it, and a 1 default hid real
+ * missing-definition errors behind dead code.
  */
 #ifndef MPTCP
-#define MPTCP 1
+#define MPTCP 0
 #endif
 
 /*

@@ -107,7 +107,11 @@ def main():
         d_vmaddr, d_vmsize, _f, _fs = segments["__DATA"]
         rsp = d_vmaddr + d_vmsize
     else:
-        rsp = t_vmaddr + t_vmsize
+        # No __DATA from lld (only __TEXT + R-only __LINKEDIT). The boot
+        # loader maps [0x100000000, +2MB) and gives pages outside declared
+        # segments present|write|nx by default; park the kernel stack there
+        # instead of inside the read-only __LINKEDIT page.
+        rsp = 0x100000000 + 2 * 1024 * 1024 - 0x10
 
     state = [0] * 21
     state[7] = rsp

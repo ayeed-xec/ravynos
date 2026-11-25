@@ -12,6 +12,16 @@ typedef unsigned long long u64;
 #define LC_SEGMENT_64 0x19
 #define LC_UNIXTHREAD 0x5
 
+#define PAYLOAD_BASE 0x100000000ULL
+#define PTE_PRESENT 0x1ULL
+#define PTE_WRITE 0x2ULL
+#define PTE_NX (0x1ULL << 63)
+#define VM_PROT_READ 1
+#define VM_PROT_WRITE 2
+#define VM_PROT_EXEC 4
+
+extern u64 pt_payload[];
+
 extern char stack_top[];
 
 static void outb(u16 p, u8 v) { __asm__ volatile("outb %0, %w1" : : "a"(v), "Nd"(p)); }
@@ -67,6 +77,13 @@ void c_entry(u32 mbi, u32 magic) {
     puts_("macho-loader: 64-bit C entry, grub magic=0x");
     puthex(magic);
     puts_("\n");
+    /*
+     * VA 0x100000000 is the high-half identity of physical 0-2MB
+     * (pml3_low[4] -> pdt_high[0] -> pt_payload): PTE address = i*4096.
+     * Default present|write|nx until segment perms land.
+     */
+    for (u32 i = 0; i < 512; i++)
+        pt_payload[i] = (u64)i * 4096 | PTE_PRESENT | PTE_WRITE | PTE_NX;
     u8 *p = (u8 *)(u64)mbi + 8;
     struct mb2_module *mod = 0;
     for (;;) {
@@ -101,20 +118,38 @@ void c_entry(u32 mbi, u32 magic) {
             u64 vmsize = *(u64 *)(base + off + 32);
             u64 fileoff = *(u64 *)(base + off + 40);
             u64 filesize = *(u64 *)(base + off + 48);
+            u32 initprot = *(u32 *)(base + off + 60);
             puts_("macho-loader: segment 0x");
             puthex(vmaddr);
             puts_(" filesz 0x");
             puthex(filesize);
             puts_(" memsz 0x");
             puthex(vmsize);
+            puts_(" initprot ");
+            putc_('0' + initprot);
             puts_("\n");
             if (vmsize != 0 && vmaddr != 0) {
+                if (vmaddr < PAYLOAD_BASE ||
+                    vmaddr + vmsize > PAYLOAD_BASE + 2 * 1024 * 1024)
+                    fail("macho-loader: ERROR segment outside 2MB payload window\n");
                 u8 *dst = (u8 *)vmaddr;
                 u8 *src = base + fileoff;
                 for (u64 i = 0; i < filesize; i++)
                     dst[i] = src[i];
                 for (u64 i = filesize; i < vmsize; i++)
                     dst[i] = 0;
+                /* per-segment perms: exec pages lose write, data pages lose exec */
+                u32 first = (u32)((vmaddr - PAYLOAD_BASE) >> 12);
+                u32 last = (u32)(((vmaddr - PAYLOAD_BASE) + vmsize - 1) >> 12);
+                for (u32 i = first; i <= last; i++) {
+                    u64 e = (u64)i * 4096 | PTE_PRESENT;
+                    if (initprot & VM_PROT_WRITE) {
+                        if (initprot & VM_PROT_EXEC)
+                            fail("macho-loader: ERROR segment is write+execute (W^X)\n");
+                        e |= PTE_WRITE | PTE_NX;
+                    }
+                    pt_payload[i] = e;
+                }
             }
         } else if (cmd == LC_UNIXTHREAD) {
             u64 *regs = (u64 *)(base + off + 16);

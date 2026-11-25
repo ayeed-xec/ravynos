@@ -32,6 +32,10 @@ pdt:
 	.skip 4096
 pdt_high:
 	.skip 4096
+	.align 4096
+	.globl pt_payload
+pt_payload:
+	.skip 4096
 	.align 16
 stack_bottom:
 	.skip 65536
@@ -61,7 +65,7 @@ _start:
 	mov	%eax, %cr4
 	mov	$0xC0000080, %ecx
 	rdmsr
-	or	$0x100, %eax
+	or	$0x900, %eax		/* LME | NXE */
 	wrmsr
 	lgdt	gdt_desc32
 	mov	%cr0, %eax
@@ -90,10 +94,14 @@ fill_tables:
 	or	$3, %eax
 	mov	%eax, 4*8(%edi)
 	mov	$pdt_high, %edi
-	mov	$0x83, %eax
+	/* first 2MB of the payload window: 4K pages, perms set in C */
+	mov	$pt_payload, %eax
+	or	$3, %eax
 	mov	%eax, (%edi)
-	add	$0x200000, %eax
+	mov	$0x200083, %eax		/* 2MB page at phys 0x200000, NX */
 	mov	%eax, 8(%edi)
+	mov	$0x80000000, %eax
+	mov	%eax, 12(%edi)
 	mov	$pml4, %edi
 	mov	$pml3_low, %eax
 	or	$3, %eax
