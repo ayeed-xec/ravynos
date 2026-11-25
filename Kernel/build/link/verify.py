@@ -26,6 +26,9 @@ LC_MAIN = 0x80000028
 X86_THREAD_STATE64 = 4
 X86_THREAD_STATE64_COUNT = 42
 
+VM_PROT_WRITE = 2
+VM_PROT_EXECUTE = 1
+
 FORBIDDEN = {
     LC_MAIN: "LC_MAIN (must be LC_UNIXTHREAD)",
     LC_DYLD_INFO: "LC_DYLD_INFO",
@@ -117,6 +120,10 @@ def main():
                      prot_str(maxprot), prot_str(initprot), nsects))
             if name in segments:
                 fail("duplicate segment %s" % name)
+            for label, prot in (("maxprot", maxprot), ("initprot", initprot)):
+                if (prot & VM_PROT_WRITE) and (prot & VM_PROT_EXECUTE):
+                    fail("segment %s: %s %s is write+execute (W^X)"
+                         % (name, label, prot_str(prot)))
             segments[name] = (vmaddr, vmsize, fileoff, filesize, initprot)
             if name == "__PAGEZERO":
                 if vmaddr != 0 or fileoff != 0 or filesize != 0:

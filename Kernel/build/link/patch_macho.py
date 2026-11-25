@@ -59,6 +59,8 @@ def main():
         die("bad magic 0x%08x" % magic)
     if filetype != MH_EXECUTE:
         die("not MH_EXECUTE")
+    if cputype != 0x01000007:
+        die("cputype 0x%08x (want x86_64)" % cputype)
 
     end = 32 + sizeofcmds
     if end > len(data):
@@ -70,6 +72,8 @@ def main():
     dropped = []
     off = 32
     for _ in range(ncmds):
+        if off + 8 > end:
+            die("load command overruns header block")
         cmd, cmdsize = struct.unpack_from("<2I", data, off)
         if cmdsize < 8 or off + cmdsize > end:
             die("load command 0x%x bad size" % cmd)
@@ -121,7 +125,6 @@ def main():
     flags = (flags & ~(MH_DYLDLINK | MH_PIE)) | MH_NOUNDEFS | MH_TWOLEVEL | MH_NOMULTIDEFS
     struct.pack_into("<8I", data, 0, magic, cputype, cpusubtype, MH_EXECUTE,
                      len(cmds), new_sizeof, flags, reserved)
-    data[end:32 + new_sizeof + (end - (32 + new_sizeof))] = b""
     data[32 + new_sizeof:end] = bytes(end - (32 + new_sizeof))
     data[32:32 + new_sizeof] = new
     with open(path, "wb") as f:
