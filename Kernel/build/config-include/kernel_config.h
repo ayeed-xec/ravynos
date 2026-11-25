@@ -28,6 +28,54 @@
 #endif
 
 /*
+ * MASTER option: deferred VM reclaim (config/MASTER:373), default-on for
+ * x86_64 desktop kernels. Gates kern/task.c suspend hooks and
+ * vm/vm_reclaim.c.
+ */
+#ifndef CONFIG_DEFERRED_RECLAIM
+#define CONFIG_DEFERRED_RECLAIM 1
+#endif
+
+/*
+ * MASTER option: max tasks (config/MASTER:662, the medium/large/xlarge
+ * value, paired with CONFIG_THREAD_MAX above). thread_group.h sizes
+ * THREAD_GROUP_MAX from it.
+ */
+#ifndef CONFIG_TASK_MAX
+#define CONFIG_TASK_MAX 1024
+#endif
+
+/*
+ * MASTER options: ipc table limits (config/MASTER:291-294, the
+ * medium/large/xlarge values, matching CONFIG_TASK_MAX above).
+ * Used by ipc_entry.c and ipc_port.c table sizing.
+ */
+#ifndef CONFIG_IPC_TABLE_ENTRIES_SIZE_MAX
+#define CONFIG_IPC_TABLE_ENTRIES_SIZE_MAX 7340032
+#endif
+
+#ifndef CONFIG_IPC_TABLE_REQUEST_SIZE_MAX
+#define CONFIG_IPC_TABLE_REQUEST_SIZE_MAX 2097152
+#endif
+
+/*
+ * MASTER option: kernel-event hash sizes (config/MASTER:185, the
+ * medium/large/xlarge value). Sizes the kqueue/knote hash in kern_event.c.
+ */
+#ifndef CONFIG_KN_HASHSIZE
+#define CONFIG_KN_HASHSIZE 64
+#endif
+
+/*
+ * Deployment target: the x86_64 desktop build (config/MASTER.x86_64 with
+ * PLATFORM_FOR_CONFIG=MacOSX, makedefs/MakeInc.def:133). Gates the
+ * progress-meter console path and task policy fields.
+ */
+#ifndef XNU_TARGET_OS_OSX
+#define XNU_TARGET_OS_OSX 1
+#endif
+
+/*
  * bsd private driver declarations (dev/busvar.h pseudo_inits etc.)
  * come from DRIVER_PRIVATE in the real build.
  */
@@ -78,12 +126,54 @@
 #endif
 
 /*
- * Lock internals: the real build compiles the lock users with LOCK_PRIVATE
- * so machine/locks.h exposes lock_get_timebase() and the adaptive-spin
- * helpers used by kern/locks_internal.h.
+ * MASTER option: U32 syscall arg munging (config/MASTER:743). Required on
+ * x86_64; bsd_i386.c errors out without it.
+ */#ifndef CONFIG_REQUIRES_U32_MUNGING
+#define CONFIG_REQUIRES_U32_MUNGING 1
+#endif
+
+/*
+ * MASTER option: DEBUG is off for release kernels (config/MASTER:646 is a
+ * commented-out option); x86_64 pmap.c initializes no_shared_cr3 from it.
  */
-#ifndef LOCK_PRIVATE
-#define LOCK_PRIVATE 1
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+#ifndef DEVELOPMENT
+#define DEVELOPMENT 1
+#endif
+
+/*
+ * MASTER option (debug/development builds): zone allocation logging.
+ * zalloc_internal.h gates the z_btlog members on it, matching zalloc.c's
+ * ZALLOC_ENABLE_LOGGING use sites.
+ */
+#if DEBUG || DEVELOPMENT
+#define ZONE_ENABLE_LOGGING 1
+#endif
+
+/*
+ * MASTER option: CONFIG_MAX_CLUSTERS=8 (config/MASTER:216, large/xlarge
+ * cluster size); bsd/sys/ubc_internal.h sizes the upl cluster arrays with it.
+ */
+#ifndef CONFIG_MAX_CLUSTERS
+#define CONFIG_MAX_CLUSTERS 8
+#endif
+
+/*
+ * The kernel is the sanctioned in-process consumer of the CoreEntitlements
+ * private API (libkern/libkern/amfi/amfi.h includes CoreEntitlementsPriv.h);
+ * the guard exists for out-of-tree adopters.
+ */
+#ifndef CORE_ENTITLEMENTS_I_KNOW_WHAT_IM_DOING
+#define CORE_ENTITLEMENTS_I_KNOW_WHAT_IM_DOING 1
+#endif
+
+/*
+ * ipc_port watchport element API and IPC importance propagation.
+ */
+#ifndef IMPORTANCE_INHERITANCE
+#define IMPORTANCE_INHERITANCE 1
 #endif
 
 /*

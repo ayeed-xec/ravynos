@@ -119,6 +119,8 @@
 #include <kern/recount.h>
 #include <kern/sched_prim.h>    /* for thread_wakeup */
 #include <kern/ipc_tt.h>
+#include <kern/sync_sema.h>
+#include <kern/task_ident.h>
 #include <kern/host.h>
 #include <kern/clock.h>
 #include <kern/timer.h>
@@ -165,6 +167,7 @@
 
 #include <sys/kdebug.h>
 #include <sys/proc_ro.h>
+#include <sys/proc.h>
 #include <sys/resource.h>
 #include <sys/signalvar.h> /* for coredump */
 #include <sys/bsdtask_info.h>
@@ -220,7 +223,6 @@ size_t task_struct_size;
 
 extern int large_corpse_count;
 
-extern boolean_t proc_send_synchronous_EXC_RESOURCE(void *p);
 extern boolean_t proc_is_simulated(const proc_t);
 
 static void task_port_no_senders(ipc_port_t, mach_msg_type_number_t);
@@ -526,9 +528,7 @@ int hwm_user_cores = 0; /* high watermark violations generate user core files */
 #endif
 
 #ifdef MACH_BSD
-extern uint32_t proc_platform(const struct proc *);
 extern uint32_t proc_sdk(struct proc *);
-extern void     proc_getexecutableuuid(void *, unsigned char *, unsigned long);
 extern int      proc_pid(struct proc *p);
 extern int      proc_selfpid(void);
 extern struct proc *current_proc(void);

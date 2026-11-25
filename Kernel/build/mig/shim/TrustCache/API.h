@@ -44,4 +44,10 @@ typedef enum {
 
 typedef uint64_t TCCapabilities_t;
 
+typedef enum {
+	kTCReturnSuccess = 0,
+	kTCReturnError = 1,
+	kTCReturnNotFound = 2,
+} TCReturn_t;
+
 #endif

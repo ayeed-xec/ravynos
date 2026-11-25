@@ -49,14 +49,36 @@ for f in "$@"; do
 	esac
 	echo "== $f"
 	case "$f" in
+		*/osfmk/vm/*)
+			PRIV="-DMACH_KERNEL_PRIVATE -DMACH_KERNEL -DVM_UNSAFE_TYPES"
+			;;
 		*/osfmk/*|*/iokit/*)
 			PRIV="-DMACH_KERNEL_PRIVATE -DMACH_KERNEL"
+			;;
+		*/pexpert/*)
+			PRIV="-DMACH_KERNEL -DPEXPERT_KERNEL_PRIVATE"
 			;;
 		*/bsd/*)
 			PRIV="-DMACH_KERNEL -DBSD_KERNEL_PRIVATE -DBSD_BUILD"
 			;;
 		*)
 			PRIV=""
+			;;
+	esac
+	case "$f" in
+		*/bsd/*|*/osfmk/vm/*)
+			SKYWALK_INC="-include skywalk/os_packet.h"
+			;;
+		*)
+			SKYWALK_INC=""
+			;;
+	esac
+	case "$f" in
+		*/osfmk/kern/locks.c|*/osfmk/kern/lock_mtx.c|*/osfmk/kern/lock_rw.c|\
+*/osfmk/kern/lock_rw_old.c|*/osfmk/kern/lock_ticket.c|*/osfmk/kern/lock_ptr.c|\
+*/osfmk/kern/lock_group.c|*/osfmk/i386/locks_i386.c|*/osfmk/i386/locks_i386_opt.c|\
+*/osfmk/i386/lock_ticket_pv.c|*/osfmk/vm/vm_entry_lock.c)
+			PRIV="$PRIV -DLOCK_PRIVATE"
 			;;
 	esac
 	case "$MODE" in
@@ -70,8 +92,16 @@ for f in "$@"; do
 			ACTION="-fsyntax-only"
 			;;
 	esac
+	case "$f" in
+		*.cpp|*.cc|*.cxx|*.hpp)
+			STDLANG="-std=gnu++17"
+			;;
+		*)
+			STDLANG="-std=gnu17"
+			;;
+	esac
 	"$CC" -target x86_64-apple-darwin $ACTION \
-		-std=gnu17 -Ulinux \
+		$STDLANG -Ulinux \
 		-Wno-deprecated-non-prototype \
 		-fno-builtin \
 		-D__XNU_PRIVATE_UNTRUSTED__ \
@@ -79,14 +109,17 @@ for f in "$@"; do
 		-DKERNEL -DKERNEL_PRIVATE -DXNU_KERNEL_PRIVATE \
 		$PRIV \
 		-DCONFIG_KERNEL -DKERNEL_BUILD \
-		-DAPPLE_ARCH=x86_64 -D__i386__ -D__x86_64__ \
+		-DAPPLE_ARCH=x86_64 -D__i386__ -D__x86_64__ -Di386 -Dx86_64 \
+		-DKERNEL_BASE_OFFSET=0x100000 \
 		-include "$CONFIG/kernel_config.h" \
+		-include "$CONFIG/mach_kdp.h" \
 		-include "$CONFIG/kernel_base_types.h" \
+		-include "$XNU/bsd/sys/_types/_caddr_t.h" \
 		-include stddef.h \
 		-include "$XNU/osfmk/kern/ledger.h" \
 		-include "$XNU/osfmk/kern/ipc_host.h" \
 		-include "$XNU/san/memory/memintrinsics.h" \
-		-include skywalk/os_packet.h \
+		$SKYWALK_INC \
 		"-I$CONFIG" \
 		"-I$XNU/bsd/machine" \
 		"-I$XNU/bsd/i386" \

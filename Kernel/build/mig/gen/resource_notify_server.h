@@ -13,31 +13,6 @@
 #include <mach/mig_errors.h>
 #include <mach/port.h>
 	
-/* BEGIN VOUCHER CODE */
-
-#ifndef KERNEL
-#if defined(__has_include)
-#if __has_include(<mach/mig_voucher_support.h>)
-#ifndef USING_VOUCHERS
-#define USING_VOUCHERS
-#endif
-#ifndef __VOUCHER_FORWARD_TYPE_DECLS__
-#define __VOUCHER_FORWARD_TYPE_DECLS__
-#ifdef __cplusplus
-extern "C" {
-#endif
-	extern boolean_t voucher_mach_msg_set(mach_msg_header_t *msg) __attribute__((weak_import));
-#ifdef __cplusplus
-}
-#endif
-#endif // __VOUCHER_FORWARD_TYPE_DECLS__
-#endif // __has_include(<mach/mach_voucher_types.h>)
-#endif // __has_include
-#endif // !KERNEL
-	
-/* END VOUCHER CODE */
-
-	
 /* BEGIN MIG_STRNCPY_ZEROFILL CODE */
 
 #if defined(__has_include)
@@ -80,11 +55,24 @@ typedef function_table_entry   *function_table_t;
 #include <Availability.h>
 #include <mach/std_types.h>
 #include <mach/mig.h>
+#include <ipc/ipc_voucher.h>
+#include <kern/ipc_kobject.h>
+#include <kern/ipc_tt.h>
+#include <kern/ipc_host.h>
+#include <kern/ledger.h>
+#include <kern/processor.h>
+#include <kern/sync_sema.h>
+#include <ipc/ipc_eventlink.h>
+#include <vm/memory_object.h>
+#include <vm/vm_map.h>
+#include <kern/ipc_mig.h>
+#include <kern/task_ident.h>
+#include <kern/kern_cdata.h>
 #include <mach/mig.h>
 #include <mach/mach_types.h>
 #include <mach/mach_types.h>
-#include <System/mach/resource_monitors.h>
-#include <System/mach/clock_types.h>
+#include <mach/resource_monitors.h>
+#include <mach/clock_types.h>
 
 #ifdef __BeforeMigServerHeader
 __BeforeMigServerHeader
@@ -183,6 +171,24 @@ kern_return_t receive_file_descriptors_violation
 	mach_timespec_t timestamp,
 	int64_t observed_filedesc,
 	int64_t filedesc_allowed,
+	mach_port_t fatal_port,
+	resource_notify_flags_t flags
+);
+
+/* SimpleRoutine kqworkloops_violation */
+#ifdef	mig_external
+mig_external
+#else
+extern
+#endif	/* mig_external */
+kern_return_t receive_kqworkloops_violation
+(
+	mach_port_t receiver,
+	proc_name_t procname,
+	int pid,
+	mach_timespec_t timestamp,
+	int64_t observed_kqworkloops,
+	int64_t kqworkloops_allowed,
 	mach_port_t fatal_port,
 	resource_notify_flags_t flags
 );
@@ -327,6 +333,28 @@ extern const struct receive_resource_notify_subsystem {
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
+
+#ifdef  __MigPackStructs
+#pragma pack(4)
+#endif
+	typedef struct {
+		mach_msg_header_t Head;
+		/* start of the kernel processed data */
+		mach_msg_body_t msgh_body;
+		mach_msg_port_descriptor_t fatal_port;
+		/* end of the kernel processed data */
+		NDR_record_t NDR;
+		proc_name_t procname;
+		char procnamePad[3];
+		int pid;
+		mach_timespec_t timestamp;
+		int64_t observed_kqworkloops;
+		int64_t kqworkloops_allowed;
+		resource_notify_flags_t flags;
+	} __Request__kqworkloops_violation_t __attribute__((unused));
+#ifdef  __MigPackStructs
+#pragma pack()
+#endif
 #endif /* !__Request__resource_notify_subsystem__defined */
 
 
@@ -340,6 +368,7 @@ union __RequestUnion__receive_resource_notify_subsystem {
 	__Request__disk_writes_violation_t Request_disk_writes_violation;
 	__Request__port_space_violation_t Request_port_space_violation;
 	__Request__file_descriptors_violation_t Request_file_descriptors_violation;
+	__Request__kqworkloops_violation_t Request_kqworkloops_violation;
 };
 #endif /* __RequestUnion__receive_resource_notify_subsystem__defined */
 /* typedefs for all replies */
@@ -406,6 +435,18 @@ union __RequestUnion__receive_resource_notify_subsystem {
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
+
+#ifdef  __MigPackStructs
+#pragma pack(4)
+#endif
+	typedef struct {
+		mach_msg_header_t Head;
+		NDR_record_t NDR;
+		kern_return_t RetCode;
+	} __Reply__kqworkloops_violation_t __attribute__((unused));
+#ifdef  __MigPackStructs
+#pragma pack()
+#endif
 #endif /* !__Reply__resource_notify_subsystem__defined */
 
 
@@ -419,6 +460,7 @@ union __ReplyUnion__receive_resource_notify_subsystem {
 	__Reply__disk_writes_violation_t Reply_disk_writes_violation;
 	__Reply__port_space_violation_t Reply_port_space_violation;
 	__Reply__file_descriptors_violation_t Reply_file_descriptors_violation;
+	__Reply__kqworkloops_violation_t Reply_kqworkloops_violation;
 };
 #endif /* __RequestUnion__receive_resource_notify_subsystem__defined */
 
@@ -428,7 +470,8 @@ union __ReplyUnion__receive_resource_notify_subsystem {
     { "cpu_wakes_violation", 827801 },\
     { "disk_writes_violation", 827802 },\
     { "port_space_violation", 827803 },\
-    { "file_descriptors_violation", 827804 }
+    { "file_descriptors_violation", 827804 },\
+    { "kqworkloops_violation", 827805 }
 #endif
 
 #ifdef __AfterMigServerHeader

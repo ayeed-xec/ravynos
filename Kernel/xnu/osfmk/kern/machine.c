@@ -122,6 +122,7 @@ extern void wait_while_mp_kdp_trap(bool check_SIGPdebug);
 
 #if defined(__x86_64__)
 #include <i386/panic_notify.h>
+#include <vm/pmap.h>
 #endif
 
 /*

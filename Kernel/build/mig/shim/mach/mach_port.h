@@ -183,6 +183,16 @@ kern_return_t _kernelrpc_mach_port_deallocate
 	mach_port_name_t name
 );
 
+/* Kernel builds use unprefixed routine names: the .defs applies the
+ * UserPrefix _kernelrpc_ only for !KERNEL. */
+#ifdef KERNEL
+extern kern_return_t mach_port_deallocate
+(
+	ipc_space_t task,
+	mach_port_name_t name
+);
+#endif
+
 /* Routine mach_port_get_refs */
 #ifdef	mig_external
 mig_external

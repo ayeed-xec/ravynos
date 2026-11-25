@@ -59,6 +59,7 @@ typedef unsigned long   size_t;
  * Common type definitions that lots of old files seem to want.
  */
 
+#if !defined(_SYS_TYPES_H_)
 typedef unsigned char   u_char;         /* unsigned char */
 typedef unsigned short  u_short;        /* unsigned short */
 typedef unsigned int    u_int;          /* unsigned int */
@@ -79,6 +80,7 @@ typedef unsigned int    off_t;          /* another unsigned 32 */
 #define major(i)        (((i) >> 8) & 0xFF)
 #define minor(i)        ((i) & 0xFF)
 #define makedev(i, j)    ((((i) & 0xFF) << 8) | ((j) & 0xFF))
+#endif  /* !_SYS_TYPES_H_ */
 
 #ifndef NULL
 #define NULL            ((void *) 0)    /* the null pointer */

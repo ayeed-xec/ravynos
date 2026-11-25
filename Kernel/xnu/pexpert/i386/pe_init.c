@@ -31,6 +31,7 @@
  */
 
 #include <console/video_console.h>
+#include <console/serial_protos.h>
 #include <sys/types.h>
 #include <mach/vm_param.h>
 #include <machine/machine_routines.h>

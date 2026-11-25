@@ -92,13 +92,13 @@ __BeforeMigUserHeader
 __BEGIN_DECLS
 
 
-/* Routine _kernelrpc_mach_vm_allocate */
+/* Routine mach_vm_allocate */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_allocate
+kern_return_t mach_vm_allocate
 (
 	vm_map_t target,
 	mach_vm_address_t *address,
@@ -106,26 +106,26 @@ kern_return_t _kernelrpc_mach_vm_allocate
 	int flags
 );
 
-/* Routine _kernelrpc_mach_vm_deallocate */
+/* Routine mach_vm_deallocate */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_deallocate
+kern_return_t mach_vm_deallocate
 (
 	vm_map_t target,
 	mach_vm_address_t address,
 	mach_vm_size_t size
 );
 
-/* Routine _kernelrpc_mach_vm_protect */
+/* Routine mach_vm_protect */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_protect
+kern_return_t mach_vm_protect
 (
 	vm_map_t target_task,
 	mach_vm_address_t address,
@@ -148,13 +148,13 @@ kern_return_t mach_vm_inherit
 	vm_inherit_t new_inheritance
 );
 
-/* Routine _kernelrpc_mach_vm_read */
+/* Routine mach_vm_read */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_read
+kern_return_t mach_vm_read
 (
 	vm_map_read_t target_task,
 	mach_vm_address_t address,
@@ -247,13 +247,13 @@ kern_return_t mach_vm_behavior_set
 	vm_behavior_t new_behavior
 );
 
-/* Routine _kernelrpc_mach_vm_map */
+/* Routine mach_vm_map */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_map
+kern_return_t mach_vm_map
 (
 	vm_map_t target_task,
 	mach_vm_address_t *address,
@@ -283,13 +283,13 @@ kern_return_t mach_vm_machine_attribute
 	vm_machine_attribute_val_t *value
 );
 
-/* Routine _kernelrpc_mach_vm_remap */
+/* Routine mach_vm_remap */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_remap
+kern_return_t mach_vm_remap
 (
 	vm_map_t target_task,
 	mach_vm_address_t *target_address,
@@ -351,13 +351,13 @@ kern_return_t mach_vm_region
 	mach_port_t *object_name
 );
 
-/* Routine mach_make_memory_entry */
+/* Routine _mach_make_memory_entry */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t mach_make_memory_entry
+kern_return_t _mach_make_memory_entry
 (
 	vm_map_t target_task,
 	memory_object_size_t *size,
@@ -367,13 +367,13 @@ kern_return_t mach_make_memory_entry
 	mem_entry_name_port_t parent_handle
 );
 
-/* Routine _kernelrpc_mach_vm_purgable_control */
+/* Routine mach_vm_purgable_control */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_purgable_control
+kern_return_t mach_vm_purgable_control
 (
 	vm_map_t target_task,
 	mach_vm_address_t address,
@@ -411,13 +411,13 @@ kern_return_t mach_vm_page_range_query
 	mach_vm_size_t *dispositions_count
 );
 
-/* Routine _kernelrpc_mach_vm_remap_new */
+/* Routine mach_vm_remap_new */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_remap_new
+kern_return_t mach_vm_remap_new
 (
 	vm_map_t target_task,
 	mach_vm_address_t *target_address,
@@ -489,13 +489,13 @@ kern_return_t mach_vm_deferred_reclamation_buffer_resize
 	uint64_t *next_deadline
 );
 
-/* Routine _kernelrpc_mach_vm_update_pointers_with_remote_tags */
+/* Routine mach_vm_update_pointers_with_remote_tags */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_update_pointers_with_remote_tags
+kern_return_t mach_vm_update_pointers_with_remote_tags
 (
 	vm_map_t target,
 	mach_vm_offset_list_t in_pointer_list,
@@ -517,13 +517,13 @@ kern_return_t mach_vm_deferred_reclamation_buffer_query
 	mach_vm_size_t *size
 );
 
-/* Routine _kernelrpc_mach_vm_reallocate */
+/* Routine mach_vm_reallocate */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t _kernelrpc_mach_vm_reallocate
+kern_return_t mach_vm_reallocate
 (
 	vm_map_t target_task,
 	mach_vm_address_t src,
@@ -562,7 +562,7 @@ __END_DECLS
 		mach_vm_address_t address;
 		mach_vm_size_t size;
 		int flags;
-	} __Request___kernelrpc_mach_vm_allocate_t __attribute__((unused));
+	} __Request__mach_vm_allocate_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -575,7 +575,7 @@ __END_DECLS
 		NDR_record_t NDR;
 		mach_vm_address_t address;
 		mach_vm_size_t size;
-	} __Request___kernelrpc_mach_vm_deallocate_t __attribute__((unused));
+	} __Request__mach_vm_deallocate_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -590,7 +590,7 @@ __END_DECLS
 		mach_vm_size_t size;
 		boolean_t set_maximum;
 		vm_prot_t new_protection;
-	} __Request___kernelrpc_mach_vm_protect_t __attribute__((unused));
+	} __Request__mach_vm_protect_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -617,7 +617,7 @@ __END_DECLS
 		NDR_record_t NDR;
 		mach_vm_address_t address;
 		mach_vm_size_t size;
-	} __Request___kernelrpc_mach_vm_read_t __attribute__((unused));
+	} __Request__mach_vm_read_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -727,7 +727,7 @@ __END_DECLS
 		vm_prot_t cur_protection;
 		vm_prot_t max_protection;
 		vm_inherit_t inheritance;
-	} __Request___kernelrpc_mach_vm_map_t __attribute__((unused));
+	} __Request__mach_vm_map_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -764,7 +764,7 @@ __END_DECLS
 		mach_vm_address_t src_address;
 		boolean_t copy;
 		vm_inherit_t inheritance;
-	} __Request___kernelrpc_mach_vm_remap_t __attribute__((unused));
+	} __Request__mach_vm_remap_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -822,7 +822,7 @@ __END_DECLS
 		memory_object_size_t size;
 		memory_object_offset_t offset;
 		vm_prot_t permission;
-	} __Request__mach_make_memory_entry_t __attribute__((unused));
+	} __Request___mach_make_memory_entry_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -836,7 +836,7 @@ __END_DECLS
 		mach_vm_address_t address;
 		vm_purgable_t control;
 		int state;
-	} __Request___kernelrpc_mach_vm_purgable_control_t __attribute__((unused));
+	} __Request__mach_vm_purgable_control_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -889,7 +889,7 @@ __END_DECLS
 		vm_prot_t cur_protection;
 		vm_prot_t max_protection;
 		vm_inherit_t inheritance;
-	} __Request___kernelrpc_mach_vm_remap_new_t __attribute__((unused));
+	} __Request__mach_vm_remap_new_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -954,7 +954,7 @@ __END_DECLS
 		mach_msg_type_number_t in_pointer_listCnt;
 		mach_vm_offset_t in_pointer_list[1024];
 		mach_msg_type_number_t out_pointer_listCnt;
-	} __Request___kernelrpc_mach_vm_update_pointers_with_remote_tags_t __attribute__((unused));
+	} __Request__mach_vm_update_pointers_with_remote_tags_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -982,7 +982,7 @@ __END_DECLS
 		mach_vm_offset_t align_mask;
 		int options;
 		int flags;
-	} __Request___kernelrpc_mach_vm_reallocate_t __attribute__((unused));
+	} __Request__mach_vm_reallocate_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -993,35 +993,35 @@ __END_DECLS
 #ifndef __RequestUnion__mach_vm_subsystem__defined
 #define __RequestUnion__mach_vm_subsystem__defined
 union __RequestUnion__mach_vm_subsystem {
-	__Request___kernelrpc_mach_vm_allocate_t Request__kernelrpc_mach_vm_allocate;
-	__Request___kernelrpc_mach_vm_deallocate_t Request__kernelrpc_mach_vm_deallocate;
-	__Request___kernelrpc_mach_vm_protect_t Request__kernelrpc_mach_vm_protect;
+	__Request__mach_vm_allocate_t Request_mach_vm_allocate;
+	__Request__mach_vm_deallocate_t Request_mach_vm_deallocate;
+	__Request__mach_vm_protect_t Request_mach_vm_protect;
 	__Request__mach_vm_inherit_t Request_mach_vm_inherit;
-	__Request___kernelrpc_mach_vm_read_t Request__kernelrpc_mach_vm_read;
+	__Request__mach_vm_read_t Request_mach_vm_read;
 	__Request__mach_vm_read_list_t Request_mach_vm_read_list;
 	__Request__mach_vm_write_t Request_mach_vm_write;
 	__Request__mach_vm_copy_t Request_mach_vm_copy;
 	__Request__mach_vm_read_overwrite_t Request_mach_vm_read_overwrite;
 	__Request__mach_vm_msync_t Request_mach_vm_msync;
 	__Request__mach_vm_behavior_set_t Request_mach_vm_behavior_set;
-	__Request___kernelrpc_mach_vm_map_t Request__kernelrpc_mach_vm_map;
+	__Request__mach_vm_map_t Request_mach_vm_map;
 	__Request__mach_vm_machine_attribute_t Request_mach_vm_machine_attribute;
-	__Request___kernelrpc_mach_vm_remap_t Request__kernelrpc_mach_vm_remap;
+	__Request__mach_vm_remap_t Request_mach_vm_remap;
 	__Request__mach_vm_page_query_t Request_mach_vm_page_query;
 	__Request__mach_vm_region_recurse_t Request_mach_vm_region_recurse;
 	__Request__mach_vm_region_t Request_mach_vm_region;
-	__Request__mach_make_memory_entry_t Request_mach_make_memory_entry;
-	__Request___kernelrpc_mach_vm_purgable_control_t Request__kernelrpc_mach_vm_purgable_control;
+	__Request___mach_make_memory_entry_t Request__mach_make_memory_entry;
+	__Request__mach_vm_purgable_control_t Request_mach_vm_purgable_control;
 	__Request__mach_vm_page_info_t Request_mach_vm_page_info;
 	__Request__mach_vm_page_range_query_t Request_mach_vm_page_range_query;
-	__Request___kernelrpc_mach_vm_remap_new_t Request__kernelrpc_mach_vm_remap_new;
+	__Request__mach_vm_remap_new_t Request_mach_vm_remap_new;
 	__Request__mach_vm_deferred_reclamation_buffer_allocate_t Request_mach_vm_deferred_reclamation_buffer_allocate;
 	__Request__mach_vm_deferred_reclamation_buffer_flush_t Request_mach_vm_deferred_reclamation_buffer_flush;
 	__Request__mach_vm_range_create_t Request_mach_vm_range_create;
 	__Request__mach_vm_deferred_reclamation_buffer_resize_t Request_mach_vm_deferred_reclamation_buffer_resize;
-	__Request___kernelrpc_mach_vm_update_pointers_with_remote_tags_t Request__kernelrpc_mach_vm_update_pointers_with_remote_tags;
+	__Request__mach_vm_update_pointers_with_remote_tags_t Request_mach_vm_update_pointers_with_remote_tags;
 	__Request__mach_vm_deferred_reclamation_buffer_query_t Request_mach_vm_deferred_reclamation_buffer_query;
-	__Request___kernelrpc_mach_vm_reallocate_t Request__kernelrpc_mach_vm_reallocate;
+	__Request__mach_vm_reallocate_t Request_mach_vm_reallocate;
 };
 #endif /* !__RequestUnion__mach_vm_subsystem__defined */
 /* typedefs for all replies */
@@ -1037,7 +1037,7 @@ union __RequestUnion__mach_vm_subsystem {
 		NDR_record_t NDR;
 		kern_return_t RetCode;
 		mach_vm_address_t address;
-	} __Reply___kernelrpc_mach_vm_allocate_t __attribute__((unused));
+	} __Reply__mach_vm_allocate_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1049,7 +1049,7 @@ union __RequestUnion__mach_vm_subsystem {
 		mach_msg_header_t Head;
 		NDR_record_t NDR;
 		kern_return_t RetCode;
-	} __Reply___kernelrpc_mach_vm_deallocate_t __attribute__((unused));
+	} __Reply__mach_vm_deallocate_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1061,7 +1061,7 @@ union __RequestUnion__mach_vm_subsystem {
 		mach_msg_header_t Head;
 		NDR_record_t NDR;
 		kern_return_t RetCode;
-	} __Reply___kernelrpc_mach_vm_protect_t __attribute__((unused));
+	} __Reply__mach_vm_protect_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1089,7 +1089,7 @@ union __RequestUnion__mach_vm_subsystem {
 		/* end of the kernel processed data */
 		NDR_record_t NDR;
 		mach_msg_type_number_t dataCnt;
-	} __Reply___kernelrpc_mach_vm_read_t __attribute__((unused));
+	} __Reply__mach_vm_read_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1176,7 +1176,7 @@ union __RequestUnion__mach_vm_subsystem {
 		NDR_record_t NDR;
 		kern_return_t RetCode;
 		mach_vm_address_t address;
-	} __Reply___kernelrpc_mach_vm_map_t __attribute__((unused));
+	} __Reply__mach_vm_map_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1204,7 +1204,7 @@ union __RequestUnion__mach_vm_subsystem {
 		mach_vm_address_t target_address;
 		vm_prot_t cur_protection;
 		vm_prot_t max_protection;
-	} __Reply___kernelrpc_mach_vm_remap_t __attribute__((unused));
+	} __Reply__mach_vm_remap_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1270,7 +1270,7 @@ union __RequestUnion__mach_vm_subsystem {
 		/* end of the kernel processed data */
 		NDR_record_t NDR;
 		memory_object_size_t size;
-	} __Reply__mach_make_memory_entry_t __attribute__((unused));
+	} __Reply___mach_make_memory_entry_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1283,7 +1283,7 @@ union __RequestUnion__mach_vm_subsystem {
 		NDR_record_t NDR;
 		kern_return_t RetCode;
 		int state;
-	} __Reply___kernelrpc_mach_vm_purgable_control_t __attribute__((unused));
+	} __Reply__mach_vm_purgable_control_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1325,7 +1325,7 @@ union __RequestUnion__mach_vm_subsystem {
 		mach_vm_address_t target_address;
 		vm_prot_t cur_protection;
 		vm_prot_t max_protection;
-	} __Reply___kernelrpc_mach_vm_remap_new_t __attribute__((unused));
+	} __Reply__mach_vm_remap_new_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1393,7 +1393,7 @@ union __RequestUnion__mach_vm_subsystem {
 		kern_return_t RetCode;
 		mach_msg_type_number_t out_pointer_listCnt;
 		mach_vm_offset_t out_pointer_list[1024];
-	} __Reply___kernelrpc_mach_vm_update_pointers_with_remote_tags_t __attribute__((unused));
+	} __Reply__mach_vm_update_pointers_with_remote_tags_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1420,7 +1420,7 @@ union __RequestUnion__mach_vm_subsystem {
 		NDR_record_t NDR;
 		kern_return_t RetCode;
 		mach_vm_address_t dst;
-	} __Reply___kernelrpc_mach_vm_reallocate_t __attribute__((unused));
+	} __Reply__mach_vm_reallocate_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1431,69 +1431,69 @@ union __RequestUnion__mach_vm_subsystem {
 #ifndef __ReplyUnion__mach_vm_subsystem__defined
 #define __ReplyUnion__mach_vm_subsystem__defined
 union __ReplyUnion__mach_vm_subsystem {
-	__Reply___kernelrpc_mach_vm_allocate_t Reply__kernelrpc_mach_vm_allocate;
-	__Reply___kernelrpc_mach_vm_deallocate_t Reply__kernelrpc_mach_vm_deallocate;
-	__Reply___kernelrpc_mach_vm_protect_t Reply__kernelrpc_mach_vm_protect;
+	__Reply__mach_vm_allocate_t Reply_mach_vm_allocate;
+	__Reply__mach_vm_deallocate_t Reply_mach_vm_deallocate;
+	__Reply__mach_vm_protect_t Reply_mach_vm_protect;
 	__Reply__mach_vm_inherit_t Reply_mach_vm_inherit;
-	__Reply___kernelrpc_mach_vm_read_t Reply__kernelrpc_mach_vm_read;
+	__Reply__mach_vm_read_t Reply_mach_vm_read;
 	__Reply__mach_vm_read_list_t Reply_mach_vm_read_list;
 	__Reply__mach_vm_write_t Reply_mach_vm_write;
 	__Reply__mach_vm_copy_t Reply_mach_vm_copy;
 	__Reply__mach_vm_read_overwrite_t Reply_mach_vm_read_overwrite;
 	__Reply__mach_vm_msync_t Reply_mach_vm_msync;
 	__Reply__mach_vm_behavior_set_t Reply_mach_vm_behavior_set;
-	__Reply___kernelrpc_mach_vm_map_t Reply__kernelrpc_mach_vm_map;
+	__Reply__mach_vm_map_t Reply_mach_vm_map;
 	__Reply__mach_vm_machine_attribute_t Reply_mach_vm_machine_attribute;
-	__Reply___kernelrpc_mach_vm_remap_t Reply__kernelrpc_mach_vm_remap;
+	__Reply__mach_vm_remap_t Reply_mach_vm_remap;
 	__Reply__mach_vm_page_query_t Reply_mach_vm_page_query;
 	__Reply__mach_vm_region_recurse_t Reply_mach_vm_region_recurse;
 	__Reply__mach_vm_region_t Reply_mach_vm_region;
-	__Reply__mach_make_memory_entry_t Reply_mach_make_memory_entry;
-	__Reply___kernelrpc_mach_vm_purgable_control_t Reply__kernelrpc_mach_vm_purgable_control;
+	__Reply___mach_make_memory_entry_t Reply__mach_make_memory_entry;
+	__Reply__mach_vm_purgable_control_t Reply_mach_vm_purgable_control;
 	__Reply__mach_vm_page_info_t Reply_mach_vm_page_info;
 	__Reply__mach_vm_page_range_query_t Reply_mach_vm_page_range_query;
-	__Reply___kernelrpc_mach_vm_remap_new_t Reply__kernelrpc_mach_vm_remap_new;
+	__Reply__mach_vm_remap_new_t Reply_mach_vm_remap_new;
 	__Reply__mach_vm_deferred_reclamation_buffer_allocate_t Reply_mach_vm_deferred_reclamation_buffer_allocate;
 	__Reply__mach_vm_deferred_reclamation_buffer_flush_t Reply_mach_vm_deferred_reclamation_buffer_flush;
 	__Reply__mach_vm_range_create_t Reply_mach_vm_range_create;
 	__Reply__mach_vm_deferred_reclamation_buffer_resize_t Reply_mach_vm_deferred_reclamation_buffer_resize;
-	__Reply___kernelrpc_mach_vm_update_pointers_with_remote_tags_t Reply__kernelrpc_mach_vm_update_pointers_with_remote_tags;
+	__Reply__mach_vm_update_pointers_with_remote_tags_t Reply_mach_vm_update_pointers_with_remote_tags;
 	__Reply__mach_vm_deferred_reclamation_buffer_query_t Reply_mach_vm_deferred_reclamation_buffer_query;
-	__Reply___kernelrpc_mach_vm_reallocate_t Reply__kernelrpc_mach_vm_reallocate;
+	__Reply__mach_vm_reallocate_t Reply_mach_vm_reallocate;
 };
 #endif /* !__RequestUnion__mach_vm_subsystem__defined */
 
 #ifndef subsystem_to_name_map_mach_vm
 #define subsystem_to_name_map_mach_vm \
-    { "_kernelrpc_mach_vm_allocate", 4800 },\
-    { "_kernelrpc_mach_vm_deallocate", 4801 },\
-    { "_kernelrpc_mach_vm_protect", 4802 },\
+    { "mach_vm_allocate", 4800 },\
+    { "mach_vm_deallocate", 4801 },\
+    { "mach_vm_protect", 4802 },\
     { "mach_vm_inherit", 4803 },\
-    { "_kernelrpc_mach_vm_read", 4804 },\
+    { "mach_vm_read", 4804 },\
     { "mach_vm_read_list", 4805 },\
     { "mach_vm_write", 4806 },\
     { "mach_vm_copy", 4807 },\
     { "mach_vm_read_overwrite", 4808 },\
     { "mach_vm_msync", 4809 },\
     { "mach_vm_behavior_set", 4810 },\
-    { "_kernelrpc_mach_vm_map", 4811 },\
+    { "mach_vm_map", 4811 },\
     { "mach_vm_machine_attribute", 4812 },\
-    { "_kernelrpc_mach_vm_remap", 4813 },\
+    { "mach_vm_remap", 4813 },\
     { "mach_vm_page_query", 4814 },\
     { "mach_vm_region_recurse", 4815 },\
     { "mach_vm_region", 4816 },\
-    { "mach_make_memory_entry", 4817 },\
-    { "_kernelrpc_mach_vm_purgable_control", 4818 },\
+    { "_mach_make_memory_entry", 4817 },\
+    { "mach_vm_purgable_control", 4818 },\
     { "mach_vm_page_info", 4819 },\
     { "mach_vm_page_range_query", 4820 },\
-    { "_kernelrpc_mach_vm_remap_new", 4821 },\
+    { "mach_vm_remap_new", 4821 },\
     { "mach_vm_deferred_reclamation_buffer_allocate", 4822 },\
     { "mach_vm_deferred_reclamation_buffer_flush", 4823 },\
     { "mach_vm_range_create", 4825 },\
     { "mach_vm_deferred_reclamation_buffer_resize", 4826 },\
-    { "_kernelrpc_mach_vm_update_pointers_with_remote_tags", 4827 },\
+    { "mach_vm_update_pointers_with_remote_tags", 4827 },\
     { "mach_vm_deferred_reclamation_buffer_query", 4828 },\
-    { "_kernelrpc_mach_vm_reallocate", 4829 }
+    { "mach_vm_reallocate", 4829 }
 #endif
 
 #ifdef __AfterMigUserHeader

@@ -13,31 +13,6 @@
 #include <mach/mig_errors.h>
 #include <mach/port.h>
 	
-/* BEGIN VOUCHER CODE */
-
-#ifndef KERNEL
-#if defined(__has_include)
-#if __has_include(<mach/mig_voucher_support.h>)
-#ifndef USING_VOUCHERS
-#define USING_VOUCHERS
-#endif
-#ifndef __VOUCHER_FORWARD_TYPE_DECLS__
-#define __VOUCHER_FORWARD_TYPE_DECLS__
-#ifdef __cplusplus
-extern "C" {
-#endif
-	extern boolean_t voucher_mach_msg_set(mach_msg_header_t *msg) __attribute__((weak_import));
-#ifdef __cplusplus
-}
-#endif
-#endif // __VOUCHER_FORWARD_TYPE_DECLS__
-#endif // __has_include(<mach/mach_voucher_types.h>)
-#endif // __has_include
-#endif // !KERNEL
-	
-/* END VOUCHER CODE */
-
-	
 /* BEGIN MIG_STRNCPY_ZEROFILL CODE */
 
 #if defined(__has_include)
@@ -80,6 +55,19 @@ typedef function_table_entry   *function_table_t;
 #include <Availability.h>
 #include <mach/std_types.h>
 #include <mach/mig.h>
+#include <ipc/ipc_voucher.h>
+#include <kern/ipc_kobject.h>
+#include <kern/ipc_tt.h>
+#include <kern/ipc_host.h>
+#include <kern/ledger.h>
+#include <kern/processor.h>
+#include <kern/sync_sema.h>
+#include <ipc/ipc_eventlink.h>
+#include <vm/memory_object.h>
+#include <vm/vm_map.h>
+#include <kern/ipc_mig.h>
+#include <kern/task_ident.h>
+#include <kern/kern_cdata.h>
 #include <mach/mig.h>
 #include <mach/mach_types.h>
 #include <mach/mach_types.h>
@@ -151,9 +139,9 @@ kern_return_t vm_wire
 (
 	host_priv_t host_priv,
 	vm_map_t task,
-	vm_address_t address,
-	vm_size_t size,
-	vm_prot_t desired_access
+	vm_address_ut address,
+	vm_size_ut size,
+	vm_prot_ut desired_access
 );
 
 /* Routine thread_wire */
@@ -169,21 +157,6 @@ kern_return_t thread_wire
 	boolean_t wired
 );
 
-/* Routine vm_allocate_cpm */
-#ifdef	mig_external
-mig_external
-#else
-extern
-#endif	/* mig_external */
-kern_return_t vm_allocate_cpm
-(
-	host_priv_t host_priv,
-	vm_map_t task,
-	vm_address_t *address,
-	vm_size_t size,
-	int flags
-);
-
 /* Routine host_processors */
 #ifdef	mig_external
 mig_external
@@ -197,66 +170,13 @@ kern_return_t host_processors
 	mach_msg_type_number_t *out_processor_listCnt
 );
 
-/* Routine host_get_clock_control */
+/* Routine host_get_special_port_from_user */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t host_get_clock_control
-(
-	host_priv_t host_priv,
-	clock_id_t clock_id,
-	clock_ctrl_t *clock_ctrl
-);
-
-/* Routine kmod_create */
-#ifdef	mig_external
-mig_external
-#else
-extern
-#endif	/* mig_external */
-kern_return_t kmod_create
-(
-	host_priv_t host_priv,
-	vm_address_t info,
-	kmod_t *module
-);
-
-/* Routine kmod_destroy */
-#ifdef	mig_external
-mig_external
-#else
-extern
-#endif	/* mig_external */
-kern_return_t kmod_destroy
-(
-	host_priv_t host_priv,
-	kmod_t module
-);
-
-/* Routine kmod_control */
-#ifdef	mig_external
-mig_external
-#else
-extern
-#endif	/* mig_external */
-kern_return_t kmod_control
-(
-	host_priv_t host_priv,
-	kmod_t module,
-	kmod_control_flavor_t flavor,
-	kmod_args_t *data,
-	mach_msg_type_number_t *dataCnt
-);
-
-/* Routine host_get_special_port */
-#ifdef	mig_external
-mig_external
-#else
-extern
-#endif	/* mig_external */
-kern_return_t host_get_special_port
+kern_return_t host_get_special_port_from_user
 (
 	host_priv_t host_priv,
 	int node,
@@ -264,13 +184,13 @@ kern_return_t host_get_special_port
 	mach_port_t *port
 );
 
-/* Routine host_set_special_port */
+/* Routine host_set_special_port_from_user */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t host_set_special_port
+kern_return_t host_set_special_port_from_user
 (
 	host_priv_t host_priv,
 	int which,
@@ -329,19 +249,19 @@ kern_return_t host_swap_exception_ports
 	exception_flavor_array_t old_flavors
 );
 
-/* Routine mach_vm_wire */
+/* Routine mach_vm_wire_external */
 #ifdef	mig_external
 mig_external
 #else
 extern
 #endif	/* mig_external */
-kern_return_t mach_vm_wire
+kern_return_t mach_vm_wire_external
 (
 	host_priv_t host_priv,
 	vm_map_t task,
-	mach_vm_address_t address,
-	mach_vm_size_t size,
-	vm_prot_t desired_access
+	mach_vm_address_ut address,
+	mach_vm_size_ut size,
+	vm_prot_ut desired_access
 );
 
 /* Routine host_processor_sets */
@@ -404,11 +324,11 @@ kern_return_t kext_request
 (
 	host_priv_t host_priv,
 	uint32_t user_log_flags,
-	vm_offset_t request_data,
+	pointer_ut request_data,
 	mach_msg_type_number_t request_dataCnt,
-	vm_offset_t *response_data,
+	pointer_ut *response_data,
 	mach_msg_type_number_t *response_dataCnt,
-	vm_offset_t *log_data,
+	pointer_ut *log_data,
 	mach_msg_type_number_t *log_dataCnt,
 	kern_return_t *op_result
 );
@@ -508,9 +428,9 @@ extern const struct host_priv_subsystem {
 		mach_msg_port_descriptor_t task;
 		/* end of the kernel processed data */
 		NDR_record_t NDR;
-		vm_address_t address;
-		vm_size_t size;
-		vm_prot_t desired_access;
+		vm_address_ut address;
+		vm_size_ut size;
+		vm_prot_ut desired_access;
 	} __Request__vm_wire_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
@@ -537,79 +457,7 @@ extern const struct host_priv_subsystem {
 #endif
 	typedef struct {
 		mach_msg_header_t Head;
-		/* start of the kernel processed data */
-		mach_msg_body_t msgh_body;
-		mach_msg_port_descriptor_t task;
-		/* end of the kernel processed data */
-		NDR_record_t NDR;
-		vm_address_t address;
-		vm_size_t size;
-		int flags;
-	} __Request__vm_allocate_cpm_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
 	} __Request__host_processors_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		NDR_record_t NDR;
-		clock_id_t clock_id;
-	} __Request__host_get_clock_control_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		NDR_record_t NDR;
-		vm_address_t info;
-	} __Request__kmod_create_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		NDR_record_t NDR;
-		kmod_t module;
-	} __Request__kmod_destroy_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		/* start of the kernel processed data */
-		mach_msg_body_t msgh_body;
-		mach_msg_ool_descriptor_t data;
-		/* end of the kernel processed data */
-		NDR_record_t NDR;
-		kmod_t module;
-		kmod_control_flavor_t flavor;
-		mach_msg_type_number_t dataCnt;
-	} __Request__kmod_control_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -622,7 +470,7 @@ extern const struct host_priv_subsystem {
 		NDR_record_t NDR;
 		int node;
 		int which;
-	} __Request__host_get_special_port_t __attribute__((unused));
+	} __Request__host_get_special_port_from_user_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -638,7 +486,7 @@ extern const struct host_priv_subsystem {
 		/* end of the kernel processed data */
 		NDR_record_t NDR;
 		int which;
-	} __Request__host_set_special_port_t __attribute__((unused));
+	} __Request__host_set_special_port_from_user_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -701,10 +549,10 @@ extern const struct host_priv_subsystem {
 		mach_msg_port_descriptor_t task;
 		/* end of the kernel processed data */
 		NDR_record_t NDR;
-		mach_vm_address_t address;
-		mach_vm_size_t size;
-		vm_prot_t desired_access;
-	} __Request__mach_vm_wire_t __attribute__((unused));
+		mach_vm_address_ut address;
+		mach_vm_size_ut size;
+		vm_prot_ut desired_access;
+	} __Request__mach_vm_wire_external_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -787,18 +635,13 @@ union __RequestUnion__host_priv_subsystem {
 	__Request__host_default_memory_manager_t Request_host_default_memory_manager;
 	__Request__vm_wire_t Request_vm_wire;
 	__Request__thread_wire_t Request_thread_wire;
-	__Request__vm_allocate_cpm_t Request_vm_allocate_cpm;
 	__Request__host_processors_t Request_host_processors;
-	__Request__host_get_clock_control_t Request_host_get_clock_control;
-	__Request__kmod_create_t Request_kmod_create;
-	__Request__kmod_destroy_t Request_kmod_destroy;
-	__Request__kmod_control_t Request_kmod_control;
-	__Request__host_get_special_port_t Request_host_get_special_port;
-	__Request__host_set_special_port_t Request_host_set_special_port;
+	__Request__host_get_special_port_from_user_t Request_host_get_special_port_from_user;
+	__Request__host_set_special_port_from_user_t Request_host_set_special_port_from_user;
 	__Request__host_set_exception_ports_t Request_host_set_exception_ports;
 	__Request__host_get_exception_ports_t Request_host_get_exception_ports;
 	__Request__host_swap_exception_ports_t Request_host_swap_exception_ports;
-	__Request__mach_vm_wire_t Request_mach_vm_wire;
+	__Request__mach_vm_wire_external_t Request_mach_vm_wire_external;
 	__Request__host_processor_sets_t Request_host_processor_sets;
 	__Request__host_processor_set_priv_t Request_host_processor_set_priv;
 	__Request__host_set_UNDServer_t Request_host_set_UNDServer;
@@ -895,19 +738,6 @@ union __RequestUnion__host_priv_subsystem {
 #endif
 	typedef struct {
 		mach_msg_header_t Head;
-		NDR_record_t NDR;
-		kern_return_t RetCode;
-		vm_address_t address;
-	} __Reply__vm_allocate_cpm_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
 		/* start of the kernel processed data */
 		mach_msg_body_t msgh_body;
 		mach_msg_ool_ports_descriptor_t out_processor_list;
@@ -926,64 +756,9 @@ union __RequestUnion__host_priv_subsystem {
 		mach_msg_header_t Head;
 		/* start of the kernel processed data */
 		mach_msg_body_t msgh_body;
-		mach_msg_port_descriptor_t clock_ctrl;
-		/* end of the kernel processed data */
-	} __Reply__host_get_clock_control_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		NDR_record_t NDR;
-		kern_return_t RetCode;
-		kmod_t module;
-	} __Reply__kmod_create_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		NDR_record_t NDR;
-		kern_return_t RetCode;
-	} __Reply__kmod_destroy_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		/* start of the kernel processed data */
-		mach_msg_body_t msgh_body;
-		mach_msg_ool_descriptor_t data;
-		/* end of the kernel processed data */
-		NDR_record_t NDR;
-		mach_msg_type_number_t dataCnt;
-	} __Reply__kmod_control_t __attribute__((unused));
-#ifdef  __MigPackStructs
-#pragma pack()
-#endif
-
-#ifdef  __MigPackStructs
-#pragma pack(4)
-#endif
-	typedef struct {
-		mach_msg_header_t Head;
-		/* start of the kernel processed data */
-		mach_msg_body_t msgh_body;
 		mach_msg_port_descriptor_t port;
 		/* end of the kernel processed data */
-	} __Reply__host_get_special_port_t __attribute__((unused));
+	} __Reply__host_get_special_port_from_user_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -995,7 +770,7 @@ union __RequestUnion__host_priv_subsystem {
 		mach_msg_header_t Head;
 		NDR_record_t NDR;
 		kern_return_t RetCode;
-	} __Reply__host_set_special_port_t __attribute__((unused));
+	} __Reply__host_set_special_port_from_user_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1057,7 +832,7 @@ union __RequestUnion__host_priv_subsystem {
 		mach_msg_header_t Head;
 		NDR_record_t NDR;
 		kern_return_t RetCode;
-	} __Reply__mach_vm_wire_t __attribute__((unused));
+	} __Reply__mach_vm_wire_external_t __attribute__((unused));
 #ifdef  __MigPackStructs
 #pragma pack()
 #endif
@@ -1150,18 +925,13 @@ union __ReplyUnion__host_priv_subsystem {
 	__Reply__host_default_memory_manager_t Reply_host_default_memory_manager;
 	__Reply__vm_wire_t Reply_vm_wire;
 	__Reply__thread_wire_t Reply_thread_wire;
-	__Reply__vm_allocate_cpm_t Reply_vm_allocate_cpm;
 	__Reply__host_processors_t Reply_host_processors;
-	__Reply__host_get_clock_control_t Reply_host_get_clock_control;
-	__Reply__kmod_create_t Reply_kmod_create;
-	__Reply__kmod_destroy_t Reply_kmod_destroy;
-	__Reply__kmod_control_t Reply_kmod_control;
-	__Reply__host_get_special_port_t Reply_host_get_special_port;
-	__Reply__host_set_special_port_t Reply_host_set_special_port;
+	__Reply__host_get_special_port_from_user_t Reply_host_get_special_port_from_user;
+	__Reply__host_set_special_port_from_user_t Reply_host_set_special_port_from_user;
 	__Reply__host_set_exception_ports_t Reply_host_set_exception_ports;
 	__Reply__host_get_exception_ports_t Reply_host_get_exception_ports;
 	__Reply__host_swap_exception_ports_t Reply_host_swap_exception_ports;
-	__Reply__mach_vm_wire_t Reply_mach_vm_wire;
+	__Reply__mach_vm_wire_external_t Reply_mach_vm_wire_external;
 	__Reply__host_processor_sets_t Reply_host_processor_sets;
 	__Reply__host_processor_set_priv_t Reply_host_processor_set_priv;
 	__Reply__host_set_UNDServer_t Reply_host_set_UNDServer;
@@ -1178,18 +948,13 @@ union __ReplyUnion__host_priv_subsystem {
     { "host_default_memory_manager", 403 },\
     { "vm_wire", 404 },\
     { "thread_wire", 405 },\
-    { "vm_allocate_cpm", 406 },\
     { "host_processors", 407 },\
-    { "host_get_clock_control", 408 },\
-    { "kmod_create", 409 },\
-    { "kmod_destroy", 410 },\
-    { "kmod_control", 411 },\
-    { "host_get_special_port", 412 },\
-    { "host_set_special_port", 413 },\
+    { "host_get_special_port_from_user", 412 },\
+    { "host_set_special_port_from_user", 413 },\
     { "host_set_exception_ports", 414 },\
     { "host_get_exception_ports", 415 },\
     { "host_swap_exception_ports", 416 },\
-    { "mach_vm_wire", 418 },\
+    { "mach_vm_wire_external", 418 },\
     { "host_processor_sets", 419 },\
     { "host_processor_set_priv", 420 },\
     { "host_set_UNDServer", 423 },\
