@@ -11,14 +11,19 @@ rm -f "$LOG"
 
 i=0
 while [ $i -lt 60 ]; do
-	[ -f "$LOG" ] && grep -q "grub magic" "$LOG" && break
+	[ -f "$LOG" ] && grep -q "Mach-O link OK" "$LOG" && break
 	i=$((i + 1))
 	sleep 0.5
 done
-kill "$(cat "$OUT/qemu.pid")" 2>/dev/null || true
-wait "$(cat "$OUT/qemu.pid")" 2>/dev/null || true
-rm -f "$OUT/qemu.pid"
+if [ -f "$OUT/qemu.pid" ]; then
+	QPID=$(cat "$OUT/qemu.pid")
+	kill "$QPID" 2>/dev/null || true
+	wait "$QPID" 2>/dev/null || true
+	rm -f "$OUT/qemu.pid"
+fi
 cat "$LOG"
-grep -q "RAVYNOS-BOOT-OK WP-A2c multiboot2 COM1" "$LOG"
-grep -q "grub magic=0x36d76289" "$LOG"
+grep -q "RAVYNOS-BOOT-OK WP-A2 macho-loader long-mode" "$LOG"
+grep -q "grub magic=0x0*36d76289" "$LOG"
+grep -q "macho-loader: jumping to guest kernel" "$LOG"
+grep -q "ravynOS WP-A2b kernel stub: Mach-O link OK" "$LOG"
 echo "QEMU-BOOT-OK"

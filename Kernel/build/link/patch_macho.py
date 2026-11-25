@@ -121,7 +121,8 @@ def main():
     flags = (flags & ~(MH_DYLDLINK | MH_PIE)) | MH_NOUNDEFS | MH_TWOLEVEL | MH_NOMULTIDEFS
     struct.pack_into("<8I", data, 0, magic, cputype, cpusubtype, MH_EXECUTE,
                      len(cmds), new_sizeof, flags, reserved)
-    del data[32 + new_sizeof:end]
+    data[end:32 + new_sizeof + (end - (32 + new_sizeof))] = b""
+    data[32 + new_sizeof:end] = bytes(end - (32 + new_sizeof))
     data[32:32 + new_sizeof] = new
     with open(path, "wb") as f:
         f.write(data)

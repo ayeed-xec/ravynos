@@ -1,6 +1,6 @@
 # Kernel build blockers — xnu-12377.121.6 on Linux
 
-Updated: 2026-11-24. Tool: clang 21.1.8 (Ubuntu), bison/flex present.
+Updated: 2026-11-25. Tool: clang 21.1.8 (Ubuntu), flex/byacc (no bison: GPL skeleton).
 
 ## Solved this session
 
@@ -16,6 +16,11 @@ Updated: 2026-11-24. Tool: clang 21.1.8 (Ubuntu), bison/flex present.
   the header shims in `mig/shim/` (`__options_decl`/`__enum_decl` as
   fixed-type enum typedefs, `machine/types.h`, `Availability.h`,
   `sys/_types/*`, `i386/_types.h`).
+- GPL audit fix (2026-11-25): parser regenerated with byacc
+  (public-domain yaccpar) instead of `bison -y`, whose skeleton
+  carried the GPLv3 notice. `mig/generated/y.tab.c`/`.h` are now
+  byacc output; shim 64-bit typedefs aliased to `__INT64_TYPE__`
+  on Linux so glibc and the Apple headers agree.
 - Verified: `mach/clock.defs` (3 routines) and `mach/mach_host.defs`
   (25 routines) generate user.c/server.c/header/sheader end to end
   (`Kernel/build/mig/test-gen/`).

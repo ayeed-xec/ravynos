@@ -2,18 +2,30 @@
 set -eu
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 OUT="$DIR/testimg"
-CC=${CC:-clang}
+CC=${CC:-gcc}
+GUEST="$DIR/../link/guest_kernel"
+
+if [ ! -f "$GUEST" ]; then
+	echo "build.sh: $GUEST missing; run ../link/link.sh ../link/stub/main.o first" >&2
+	exit 1
+fi
 
 mkdir -p "$OUT/isodir/boot/grub"
-"$CC" -c "$DIR/loader/boot32.S" -o "$OUT/boot32.o" -m32
-"$CC" -c "$DIR/loader/stub.c" -o "$OUT/stub.o" -m32 -ffreestanding -fno-pie -fno-stack-protector -Os
-"$CC" -T "$DIR/loader/linker.ld" -o "$OUT/kernel.elf" -ffreestanding -m32 -nostdlib -no-pie \
-	-Wl,--build-id=none "$OUT/boot32.o" "$OUT/stub.o" -lgcc
 
+"$CC" -m64 -ffreestanding -fno-pie -fno-stack-protector -mno-red-zone -c \
+	"$DIR/loader/stub.S" -o "$OUT/boot32.o"
+"$CC" -m64 -ffreestanding -fno-pie -fno-stack-protector -mno-red-zone -Os -c \
+	"$DIR/loader/stub.c" -o "$OUT/stub.o"
+"$CC" -T "$DIR/loader/link64.ld" -o "$OUT/kernel.elf" -ffreestanding -m64 -nostdlib \
+	-no-pie -Wl,--build-id=none "$OUT/boot32.o" "$OUT/stub.o" -lgcc
+grub-file --is-x86-multiboot2 "$OUT/kernel.elf"
+
+cp "$GUEST" "$OUT/isodir/boot/guest_kernel"
 cat > "$OUT/isodir/boot/grub/grub.cfg" <<'CFG'
 set timeout=0
 menuentry "ravynOS" {
 	multiboot2 /boot/kernel.elf
+	module2 /boot/guest_kernel "guest_kernel"
 	boot
 }
 CFG

@@ -1,8 +1,20 @@
 # WP-A2c boot harness — QEMU bring-up chain
 
-Chosen chain: GRUB 2.12 (multiboot2) -> 32-bit ELF loader payload. The ELF is
-the harness stand-in for the real `guest_kernel` Mach-O; the drop-in point is
-`testimg/isodir/boot/kernel.elf` (see "Real kernel" below).
+## DONE (2026-11-25): real Mach-O boots end to end
+
+GRUB 2.12 (multiboot2) -> 32->64-bit loader (`loader/stub.S` + `loader/stub.c`)
+parses the embedded `guest_kernel` Mach-O (LC_SEGMENT_64 + LC_UNIXTHREAD),
+copies segments to their vmaddr (0x100000000 mapped via a 2 MB PDE at
+pdt_high[0..1]), and jumps to the patched entry. Serial, exit 0:
+
+	RAVYNOS-BOOT-OK WP-A2 macho-loader long-mode
+	grub magic=0x36d76289
+	macho-loader: jumping to guest kernel
+	ravynOS WP-A2b kernel stub: Mach-O link OK
+	QEMU-BOOT-OK
+
+Legacy 32-bit ELF chain (superseded but kept in history): GRUB -> 32-bit ELF
+loader payload; drop-in point was `testimg/isodir/boot/kernel.elf`.
 
 Exact commands (see `build.sh`, `qemu-boot.sh`):
 

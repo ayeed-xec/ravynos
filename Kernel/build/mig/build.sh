@@ -12,7 +12,7 @@ SHIM=$HERE/shim
 
 mkdir -p "$GEN" "$BIN"
 
-bison -y -d -o "$GEN/y.tab.c" "$SRC/parser.y"
+byacc -d -o "$GEN/y.tab.c" "$SRC/parser.y"
 flex -o "$GEN/lexxer.c" "$SRC/lexxer.l"
 
 clang -std=gnu17 -O2 -Ulinux -DMIG_VERSION='"bootstrap_cmds-99.231.1"' \
