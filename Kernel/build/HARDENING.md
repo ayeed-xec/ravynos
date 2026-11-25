@@ -66,3 +66,8 @@ Priorities: P1 = before first P2 kernel boot, P2 = before P2 release, P3 = hygie
   boot image itself is untrusted, but validate anyway) and `verify.py` reports
   `__LINKEDIT` as `--x` (ld64.lld artifact; harmless for a static image, note
   only).
+
+## FreeBSD driver version policy (2026-11-25)
+- Drivers stay on FreeBSD 11.4 (pre-iflib, drop-in). Upgrading to FreeBSD 15 / iflib
+  is deferred until the network stack is stable: 15.x drivers need a full iflib port,
+  which turns the shim into a rewrite. Revisit as a dedicated phase after P2.
