@@ -360,7 +360,7 @@ extern
 kern_return_t semaphore_destroy
 (
 	task_t task,
-	semaphore_consume_ref_t semaphore
+	semaphore_t semaphore /* ravynos: cusertype of semaphore_consume_ref_t */
 );
 
 /* Routine task_policy_set */

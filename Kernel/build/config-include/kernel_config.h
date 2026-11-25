@@ -19,6 +19,15 @@
 #define CONFIG_MACF 1
 
 /*
+ * MASTER option: max threads (config/MASTER:658, the medium/large/xlarge
+ * value). Used as thread_max/task_threadmax in kern/thread.c; must stay in
+ * sync with bsd/conf/MASTER per the comment there.
+ */
+#ifndef CONFIG_THREAD_MAX
+#define CONFIG_THREAD_MAX 2560
+#endif
+
+/*
  * bsd private driver declarations (dev/busvar.h pseudo_inits etc.)
  * come from DRIVER_PRIVATE in the real build.
  */
@@ -50,6 +59,14 @@
  */
 #ifndef MACH_BSD
 #define MACH_BSD 1
+#endif
+
+/*
+ * MASTER option: kperf tracing (config/MASTER:631). kern/thread.h gates
+ * the per-thread kperf_ast fields on it and kern/ast.c writes them.
+ */
+#ifndef KPERF
+#define KPERF 1
 #endif
 
 /*

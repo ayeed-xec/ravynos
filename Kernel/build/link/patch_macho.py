@@ -82,15 +82,17 @@ def main():
             name = raw[8:24].split(b"\x00", 1)[0].decode("ascii", "replace")
             (vmaddr, vmsize, fileoff, filesize, _maxp, _initp, _n,
              _sf) = struct.unpack_from("<QQQQiiII", raw, 24)
-            if name == "__DATA":
-                # ld64.lld leaves execute (prot bit 0) set on __DATA;
-                # nothing in the guest writes self-modifying code, so
-                # clamp maxprot=initprot=rw- for the W^X gate.
-                raw = bytearray(raw)
-                prot = struct.unpack_from("<i", raw, 60)[0] & ~0x1
+            raw = bytearray(raw)
+            maxp = struct.unpack_from("<i", raw, 56)[0]
+            if maxp & 0x2:
+                # ld64.lld leaves execute (prot bit 0) set on every writable
+                # segment (__DATA, __DATA_CONST, ...); nothing in the guest
+                # writes self-modifying code, so clamp maxprot=initprot=rw-
+                # for the W^X gate.
+                prot = maxp & ~0x1
                 struct.pack_into("<i", raw, 56, prot)
                 struct.pack_into("<i", raw, 60, prot)
-                raw = bytes(raw)
+            raw = bytes(raw)
             segments[name] = (vmaddr, vmsize, fileoff, filesize)
         elif cmd == LC_UNIXTHREAD:
             die("LC_UNIXTHREAD already present; nothing to convert")

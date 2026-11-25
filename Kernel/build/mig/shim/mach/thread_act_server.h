@@ -96,7 +96,7 @@ extern
 #endif	/* mig_external */
 kern_return_t thread_terminate
 (
-	thread_act_consume_ref_t target_act
+	thread_act_t target_act /* ravynos: cusertype of thread_act_consume_ref_t */
 );
 
 /* Routine act_get_state */
