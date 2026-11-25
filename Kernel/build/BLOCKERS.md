@@ -27,45 +27,43 @@ Updated: 2026-11-24. Tool: clang 21.1.8 (Ubuntu), bison/flex present.
   committable generated-config headers the real kernel build creates
   at build time (`kernel_config.h` with CONFIG_* defines matching the
   default x86_64 MASTER options, `mach_kdp.h`, `mach_ldebug.h`) plus
-  `san/` forwarders to the in-tree `san/memory/kasan.h` and
-  `san/coverage/kcov_data.h`. Put `config-include` first on the
-  include path and force-include `kernel_config.h`.
-- Verified syntax check (clang -fsyntax-only, shims + gen +
-  config-include on the path) passes with 0 errors for:
-  `kern/coalition.h`, `kern/thread.h`, `kern/task.h`, `kern/zalloc.h`,
-  `osfmk/kern/locks.h`, `kern/processor.h`, `kern/timer.h`,
-  `mach/mach_vm.h`, `mach/mach_host.h`. This resolves the two
-  earlier stops: `struct run_queue` (behind
-  CONFIG_SCHED_TIMESHARE_CORE) and the coalition typedef (behind
-  CONFIG_COALITIONS) now resolve.
+  `san/` forwarders (`kasan.h`, `kcov.h`, `kcov_data.h`,
+  `kcov_ksancov.h`, `kcov_ksancov_data.h`, `kcov_stksz.h`,
+  `kcov_stksz_data.h`). Put `config-include` first on the include path
+  and force-include `kernel_config.h`.
+- Export-headers step (WP-A2a): `Kernel/build/driver/export-headers.sh`
+  walks the component Makefiles and flattens 1020 headers into
+  `driver/export-hdrs/` (incl. `debug.h`). Caveat: the flat dir can
+  collide arch-specific files (`types.h` exports the ARM variant);
+  real arch dirs go EARLIER on the include path than `export-hdrs`.
+- `libkern/version.h` is build-generated (`newvers.pl` stamps
+  `xnuVersion` into the template). A copy stamped with `12377.121.6`
+  is committed at `driver/export-hdrs/libkern/version.h`; regenerate
+  after kernel version bumps. Do NOT run newvers.pl on the in-tree
+  template — it rewrites the file in place.
+- WP-A2a syntax-check driver: `Kernel/build/driver/compile.sh`
+  (clang -fsyntax-only, `-target x86_64-apple-darwin`, MACH/BSD
+  KERNEL_PRIVATE, `-include stddef.h` because `size_t` in xnu comes
+  from clang modules, which we do not use).
 
-## Next blocker (WP-A1, remaining): full kernel build
+## Next blocker: full kernel .c compile (WP-A3)
 
-1. Header include order: xnu kernel headers are not self-contained
-   (e.g. `kern/sched.h` expects `kern_types.h`/timer_call types to be
-   included first; `pexpert.h` needs `-I iokit`). The kernel .c
-   compile order must follow xnu's own Makefile inclusion order, not
-   standalone header checks. Include paths needed so far:
-   xnu, osfmk, osfmk/i386, pexpert, iokit, libkern, libkern/libc,
-   bsd, EXTERNAL_HEADERS, build/config-include, build/mig/shim,
-   build/mig/gen.
-   Additional finding: some plain `<x.h>` includes resolve through
-   xnu's export-headers mechanism, not the source tree — e.g.
-   `startup.c` does `#include <debug.h>` which only works because
-   `osfmk/kern/Makefile` installs `kern/debug.h` into
-   `$(OBJROOT)/EXPORT_HDRS/osfmk` (a flattened dir on the include
-   path). The build driver must reproduce the export_hdrs install
-   step (walk each component Makefile's `EXPORT_FILES` /
-   `INSTALL_*_LIST`, copy into a flat dir) or add per-file shims.
-   Retested `osfmk/kern/startup.c` syntax with the new gen/config
-   paths: past the old `run_queue`/coalition failures, now stops at
-   this flattened-header resolution (`debug.h`, plus `NULL` needing
-   proper include order in kcdata.h) — progress confirmed, exact
-   remaining work is the export-headers step above.
-2. First kernel .c syntax attempt previously stopped at `debug.h`
-   include resolution (osfmk/kern/startup.c); retest now that the
-   generated headers and config-include exist.
-3. Kernel linking needs a Mach-O toolchain story on Linux (ld64/llvm-lld
-   with Mach-O support) and the xnu KDK-style syscall metadata; the MIT
-   build driver modeled on blacktop/darwin-xnu-build should be written
-   only after (2) since its job is orchestration, not fixing includes.
+`osfmk/kern/startup.c` now passes `compile.sh` CLEAN (0 errors) with
+the full chain: export-hdrs + config-include (incl.
+`kernel_base_types.h` for `u_int`/`uint_t`) + clean-room
+`mig/shim/TrustCache/API.h` + generated `libkern/version.h`.
+
+Remaining, in order:
+
+1. `CONFIG_ZONE_MAP_MIN` and friends: more build-time config values
+   that the real MASTER build derives; add to `config-include`'s
+   `kernel_config.h` as files demand them.
+2. `semaphore_consume_ref_t` unknown in mig-generated
+   `mach/task_server.h`: mig gen headers reference semaphore typedefs
+   that need `mach/semaphore.h` on the path (include-order or shim).
+3. Missing prototypes in `zalloc.c` (`ledger_credit`,
+   `__nosan_strlcpy`) and an int/pointer mismatch at zalloc.c:8217:
+   real header/decl work, batch by batch.
+4. `bsd/kern/bsd_init.c`: 20 errors of the same classes.
+5. Then write the MIT build driver (WP-A2b/c link+boot story already
+   proven, see `Kernel/build/link/` and `Kernel/build/boot/`).
