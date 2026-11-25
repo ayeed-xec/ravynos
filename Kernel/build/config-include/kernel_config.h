@@ -50,4 +50,29 @@
 #define MACH_BSD 1
 #endif
 
+/*
+ * Lock internals: the real build compiles the lock users with LOCK_PRIVATE
+ * so machine/locks.h exposes lock_get_timebase() and the adaptive-spin
+ * helpers used by kern/locks_internal.h.
+ */
+#ifndef LOCK_PRIVATE
+#define LOCK_PRIVATE 1
+#endif
+
+/*
+ * osfmk/kern/kalloc.h relies on Apple-clang-only builtins for its
+ * kalloc_type signature checks. Upstream clang has neither; report every
+ * granule present so checks stay permissive and kalloc_type calls route
+ * to the generic zone until the real builtins are available.
+ */
+#if !__has_builtin(__builtin_xnu_type_summary)
+#define __builtin_xnu_type_summary(type) KT_SUMMARY_MASK_ALL_GRANULES
+#endif
+#if !__has_builtin(__builtin_xnu_type_signature)
+#define __builtin_xnu_type_signature(type) ""
+#endif
+#if !__has_builtin(__builtin_xnu_types_compatible)
+#define __builtin_xnu_types_compatible(a, b) 1
+#endif
+
 #endif

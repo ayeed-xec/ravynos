@@ -6,24 +6,49 @@ BUILD="$(cd "$DRV/.." && pwd)"
 XNU="$(cd "$BUILD/../xnu" && pwd)"
 CC=${CC:-clang}
 
+MODE=syntax
+if [ "${1:-}" = "-c" ]; then
+	MODE=obj
+	shift
+fi
+
 OUT=${OUT:-"$DRV/export-hdrs"}
 [ -d "$OUT" ] || "$DRV/export-headers.sh"
 
 MIGSHIM="$BUILD/mig/shim"
 MIGGEN="$BUILD/mig/gen"
 CONFIG="$BUILD/config-include"
+OBJDIR="$BUILD/kernel-objs"
 
 for f in "$@"; do
+	case "$f" in
+		/*) ;;
+		*) f="$PWD/$f" ;;
+	esac
 	echo "== $f"
 	case "$f" in
 		*/osfmk/*|*/iokit/*)
-			PRIV="-DMACH_KERNEL_PRIVATE -DMACH_KERNEL -DBSD_KERNEL_PRIVATE"
+			PRIV="-DMACH_KERNEL_PRIVATE -DMACH_KERNEL"
 			;;
 		*/bsd/*)
 			PRIV="-DMACH_KERNEL -DBSD_KERNEL_PRIVATE -DBSD_BUILD"
 			;;
+		*)
+			PRIV=""
+			;;
 	esac
-	"$CC" -target x86_64-apple-darwin -fsyntax-only \
+	case "$MODE" in
+		obj)
+			rel=${f#"$XNU/"}
+			obj="$OBJDIR/${rel%.c}.o"
+			mkdir -p "$(dirname "$obj")"
+			ACTION="-c -o $obj"
+			;;
+		syntax)
+			ACTION="-fsyntax-only"
+			;;
+	esac
+	"$CC" -target x86_64-apple-darwin $ACTION \
 		-std=gnu17 -Ulinux \
 		-Wno-deprecated-non-prototype \
 		-fno-builtin \
