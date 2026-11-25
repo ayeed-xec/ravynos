@@ -20,6 +20,21 @@ MIGGEN="$BUILD/mig/gen"
 CONFIG="$BUILD/config-include"
 OBJDIR="$BUILD/kernel-objs"
 
+# No args: syntax-check the core osfmk header surface.
+if [ $# -eq 0 ]; then
+	set -- \
+		"$XNU/osfmk/kern/assert.h" \
+		"$XNU/osfmk/kern/ast.h" \
+		"$XNU/osfmk/kern/queue.h" \
+		"$XNU/osfmk/kern/misc_protos.h" \
+		"$XNU/osfmk/kern/locks.h" \
+		"$XNU/osfmk/machine/machine_routines.h" \
+		"$XNU/osfmk/kern/zalloc.h" \
+		"$XNU/osfmk/kern/task.h" \
+		"$XNU/osfmk/kern/thread.h" \
+		"$XNU/osfmk/kern/startup.c"
+fi
+
 for f in "$@"; do
 	case "$f" in
 		/*) ;;
