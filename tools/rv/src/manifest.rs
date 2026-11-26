@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Deserialize)]
 pub struct Manifest {
@@ -14,10 +14,6 @@ pub struct Manifest {
     pub deps: Deps,
     #[serde(default)]
     pub targets: Vec<String>,
-    #[serde(default)]
-    pub tests: Vec<String>,
-    #[serde(default)]
-    pub vendored: BTreeMap<String, String>,
     #[serde(skip)]
     pub dir: std::path::PathBuf,
 }
@@ -26,14 +22,10 @@ pub struct Manifest {
 pub struct Deps {
     #[serde(default)]
     pub internal: Vec<String>,
-    #[serde(default)]
-    pub system: Vec<String>,
 }
 
 #[derive(Deserialize, Default)]
 pub struct Exports {
-    #[serde(default)]
-    pub headers: Vec<String>,
     #[serde(default)]
     pub libs: Vec<String>,
 }

@@ -21,6 +21,20 @@ const FAIL: &[&str] = &["GPL", "LGPL", "AGPL"];
 pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) {
     let mut failures = Vec::new();
     for m in manifests.values() {
+        let expr: String = m
+            .license
+            .to_uppercase()
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '.')
+            .collect();
+        if FAIL.iter().any(|bad| expr.starts_with(bad)) {
+            failures.push(format!("{}: manifest license '{}' is prohibited", m.name, m.license));
+        } else if !ACCEPT.iter().any(|a| expr.starts_with(a)) {
+            failures.push(format!(
+                "{}: manifest license '{}' is not on the accept list",
+                m.name, m.license
+            ));
+        }
         let full = tree.join(&m.dir);
         walk(&full, &full, &mut failures);
     }

@@ -118,7 +118,7 @@ fn select(
         }
     }
     let mut order = Vec::new();
-    graph::closure(&deps_for(&deps, &selected), &selected, &mut order);
+    graph::closure(&deps_for(deps, &selected), &selected, &mut order);
     order
 }
 
@@ -144,14 +144,22 @@ fn build(
     names: &[String],
 ) {
     audit::license(tree, manifests);
-    let _order = select(manifests, &deps, names);
+    for m in manifests.values() {
+        if !m.targets.is_empty() && !m.targets.iter().any(|t| t == target) {
+            eprintln!(
+                "error: {} does not support target {target}\n       targets: {}",
+                m.name,
+                m.targets.join(", ")
+            );
+            exit(1);
+        }
+    }
+    let order = select(manifests, deps, names);
     let build_dir = tree.join("build").join(target);
     std::fs::create_dir_all(&build_dir).expect("create build dir");
     let ninja_file = build_dir.join("build.ninja");
-    std::fs::write(
-        &ninja_file,
-        ninja::emit(&tree, manifests, &deps, target),
-    ).expect("write build.ninja");
+    std::fs::write(&ninja_file, ninja::emit(tree, manifests, &order, target))
+        .expect("write build.ninja");
     let status = std::process::Command::new("ninja")
         .arg("-C")
         .arg(&build_dir)

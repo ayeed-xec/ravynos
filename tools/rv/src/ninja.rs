@@ -3,16 +3,16 @@ use std::collections::BTreeMap;
 pub fn emit(
     tree_root: &std::path::Path,
     manifests: &BTreeMap<String, crate::manifest::Manifest>,
-    deps: &BTreeMap<String, Vec<String>>,
+    order: &[String],
     target: &str,
 ) -> String {
     let mut out = String::new();
     out.push_str(&format!(
         "target = {target}\nrule cc\n  command = clang --target=$target -ffreestanding -fno-builtin -nostdinc -c $in -o $out\nrule link\n  command = clang -nostdlib -static $in -o $out\n\n"
     ));
-    let _ = deps;
     let _ = tree_root;
-    for m in manifests.values() {
+    for name in order {
+        let m = &manifests[name];
         let comp_dir = m.name.clone();
         let c_srcs: Vec<String> = m
             .sources
