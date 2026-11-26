@@ -7,14 +7,12 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BUILD="$ROOT/build"
 mkdir -p "$BUILD"
 
-RISCV_OBJCOPY=${RISCV_OBJCOPY:-riscv64-linux-gnu-objcopy}
-
 HOST_CFLAGS=(-O2 -Wall -Wextra)
 if [[ ! -x "$BUILD/mkfat" || "$ROOT/mkfat/mkfat.c" -nt "$BUILD/mkfat" ]]; then
 	clang "${HOST_CFLAGS[@]}" -o "$BUILD/mkfat" "$ROOT/mkfat/mkfat.c"
 fi
-if [[ ! -x "$BUILD/pefix" || "$ROOT/pefix/pefix.c" -nt "$BUILD/pefix" ]]; then
-	clang "${HOST_CFLAGS[@]}" -o "$BUILD/pefix" "$ROOT/pefix/pefix.c"
+if [[ ! -x "$BUILD/elf2pe" || "$ROOT/elf2pe/elf2pe.c" -nt "$BUILD/elf2pe" ]]; then
+	clang "${HOST_CFLAGS[@]}" -o "$BUILD/elf2pe" "$ROOT/elf2pe/elf2pe.c"
 fi
 
 UEFI_TARGET=x86_64-pc-windows-gnu
@@ -190,9 +188,7 @@ if [[ "$r64_needs_link" == 1 ]]; then
 	ld.lld -T "$ROOT/loader/riscv64/efi-objlst.ld" -nostdlib -static \
 		-e efi_main \
 		-o "$BUILD/r64-loader.elf" "$BUILD"/r64-loader-*.o
-	"$RISCV_OBJCOPY" -O pei-riscv64-little "$BUILD/r64-loader.elf" "$BUILD/BOOTRISCV64.EFI.raw"
-	"$BUILD/pefix" "$BUILD/BOOTRISCV64.EFI.raw" "$BUILD/BOOTRISCV64.EFI"
-	rm -f "$BUILD/BOOTRISCV64.EFI.raw"
+	"$BUILD/elf2pe" "$BUILD/r64-loader.elf" "$BUILD/BOOTRISCV64.EFI"
 fi
 
 R64_KTARGET=riscv64-ravynos
