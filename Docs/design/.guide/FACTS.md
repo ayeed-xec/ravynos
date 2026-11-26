@@ -94,9 +94,9 @@ x86_64 + arm64 + riscv).
 - Acceptable: APSL (Apple releases), BSD, MIT, Apache-2.0, Zlib, ISC, public domain.
 - Every imported file keeps its upstream license header; a per-directory LICENSE audit is a
   build gate, not a convention.
-- Reverse engineering Apple binaries to study behavior is how we fill closed-source gaps
-  (Metal, WindowServer, etc.): decompile to understand, then write our own implementation
-  clean-room. Never copy decompiled code into the tree.
+- Behavioral study of Apple's shipped binaries is how we fill closed-source gaps
+  (Metal, WindowServer, etc.): observe, specify, then write our own implementation
+  clean-room. Never copy anything derived from Apple's compiled code into the tree.
 
 ## Machine reality
 - Our build machines today: x86_64 Linux, 8 CPUs, 16 GB RAM, no GPU. Cross-compilation must

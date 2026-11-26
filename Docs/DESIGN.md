@@ -25,8 +25,9 @@ only a dated decision record in `.mlai/DECISIONS.md` can change one.
    regression. No performance claim is accepted without a before/after measurement.
 3. **Functional understanding before code.** For anything we implement against observed
    Apple behavior (including closed-source apps), a written functional spec exists first,
-   produced under the clean-room protocol (§7). We reverse-engineer *behavior*, document
-   it, and implement from the document — never from decompiled code.
+   produced under the clean-room protocol (§7). We study *observable behavior*, document
+   it, and implement from the document — never from anything derived from Apple's
+   compiled code.
 4. **xnu is vendored, not modified.** The kernel of record is Apple's xnu-12377.121.6,
    kept pristine so future versions drop in cleanly (§8). Everything we add lives outside
    the vendored tree as shims, overlays, or a maintained patch series.
@@ -347,24 +348,24 @@ zero copyright exposure and zero GPL contamination.
   `Docs/spec/<subsystem>.md`: behavior contracts, state machines, wire formats,
   error-code tables, pseudocode.
 - **Implementation room** (sees only the spec + licensed sources): writes the real
-  implementation from the spec and public headers. Never receives spec-room raw notes,
-  binaries, or disassembly.
+  implementation from the spec and public headers. Never receives spec-room raw notes
+  or binaries.
 
 With agent lanes (§9), the same person may run both rooms at different times, but the
 artifacts stay separated: the spec is the wall. Anything that looks like transcribed
-disassembly is rejected in review.
+compiled code is rejected in review.
 
 ### 7.2 Hard rules
 
-- **No decompilation into the tree.** We never paste decompiled output, translated
+- **Nothing derived from Apple's compiled code enters the tree.** We never paste translated
   pseudocode of compiled Apple code, or model-reconstructed code derived from it into any
-  committed file. Models used for RE may produce *specs*; implementations are written
+  committed file. Models used for study may produce *specs*; implementations are written
   against the spec, from scratch, and review diff-checks them against spec (not against
   any binary).
 - **Observation, not extraction.** Black-box behavioral observation of a shipped binary
   (running it, tracing its system calls) is the method. This is the same evidence Apple's
   own public docs and headers give, and it is what keeps the OS legally clean.
-- **Every RE'd behavior is cited.** A spec claim about a closed-source behavior carries
+- **Every observed behavior is cited.** A spec claim about a closed-source behavior carries
   the observation that established it ("Claude Desktop 0.x calls `mach_msg` with
   msgh_id 0x... at startup; see spec notes 2026-11-xx"). Uncited behavior claims do not
   pass review.
@@ -373,7 +374,7 @@ disassembly is rejected in review.
 
 It converts unknowns into a testable document the whole team can implement against in
 parallel, it produces the functional understanding the project needs anyway, and it is
-the only RE method that leaves the license story intact for funding due diligence.
+the only study method that leaves the license story intact for funding due diligence.
 
 ---
 
@@ -436,7 +437,7 @@ colliding: **lanes own directories, contracts own interfaces.**
 | **C — UI stack** | `CoreServices/` (WindowServer, Dock), `apps/` | T3; budgets P6–P8 |
 | **D — Drivers/HAL** | `Kernel/Extensions/`, `Kernel/IOKit*`, `Kernel/RVOS/platform/` | Real hardware, every board port |
 | **E — Harness/CI** | `tools/`, `Tests/`, CI config, `Docs/spec/` infra | License gate, perf gate, spec system, build engine 2.0 |
-| **F — Spec/RE** | `Docs/spec/` | Functional specs, clean-room observations, tier test apps |
+| **F — Spec** | `Docs/spec/` | Functional specs, clean-room behavioral observations, tier test apps |
 
 ### 9.2 Coordination rules
 

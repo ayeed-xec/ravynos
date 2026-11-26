@@ -55,7 +55,7 @@ get their encryption internals. Everything below follows from that.
 
 ## Clean-room discipline
 
-The rule in FACTS.md is: decompile to understand, write our own implementation, never copy.
+The rule in FACTS.md is: study observable behavior, write our own implementation, never copy.
 For filesystems the discipline is sharper because the format has both open documentation and
 GPL implementations of it:
 

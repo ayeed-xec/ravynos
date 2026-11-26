@@ -204,7 +204,7 @@ Dependencies: W3 (launchd starts it; clients speak Mach IPC to it).
 
 The hard part: the client protocol is a clean-room target — what the
 target release's applications actually speak is not public, and
-[07-graphics.md](07-graphics.md) owns the decompile-to-understand,
+[07-graphics.md](07-graphics.md) owns the study-behavior-then-
 reimplement-cleanly work. Software rendering in QEMU keeps us honest about
 the compositor while hiding every GPU question, which is fine for W5 and
 precisely what W7 exists to end.

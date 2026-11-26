@@ -315,19 +315,19 @@ evidence that the implementation is ours. The rule:
 
 - Each RE-derived subsystem has a **specification document** in its
   directory, written from observed behavior (public documentation, sample
-  code, decompiled study), describing the contract the implementation
+  code, behavioral study of shipped binaries), describing the contract the implementation
   satisfies. [06-filesystem.md](06-filesystem.md) shows the pattern with its
   reference-volume corpus; [07-graphics.md](07-graphics.md) applies it to
   the window server's protocol.
 - Code in that subsystem is **reviewed against the spec, not against the
   binary**. A reviewer who wants to check a behavior checks the spec's
   statement of it; if the spec is silent, the reviewer asks for a spec
-  change first, not a decompiler session at review time.
+  change first, not a fresh look at the binary at review time.
 - Nobody who has read a GPL-licensed implementation of the same format
   touches our implementation of it — the two-party discipline
   [06-filesystem.md](06-filesystem.md) states for APFS, applied everywhere.
-- Decompiled code never enters the tree. Study notes describe behavior;
-  they do not contain transcription.
+- Nothing derived from Apple's compiled code enters the tree. Study notes
+  describe behavior; they do not contain transcription.
 
 The evidence chain is what lets the project answer an accusation with
 artifacts instead of assurances. It costs one document per subsystem; the

@@ -2,9 +2,9 @@
 
 This document states what ravynOS is, the three engineering pillars every
 subsystem is held against, and the rules that follow from them: the no-stubs
-doctrine, the clean-room protocol for filling Apple's closed-source gaps, and
-the licensing rules that gate every import. It also draws the factual line
-between this project and PureDarwin, and records our portability commitments.
+doctrine and the licensing rules that gate every import. It also draws the
+factual line between this project and PureDarwin, and records our portability
+commitments.
 Read it before any other document in this directory; the later files assume
 the terms defined here.
 
@@ -140,39 +140,6 @@ The build harness enforces this: a component cannot claim a state it does not
 have, and a test that documents a gap fails if the gap closes without the
 documentation changing. Honest build states are cheap; the alternative is how
 projects end up with a thousand stubs and no OS.
-
-## Clean-room reverse engineering
-
-Apple does not publish everything we must implement. Metal, the window
-server, the APFS on-disk implementation and parts of the framework stack are
-closed. What is public for each: the API headers and documentation
-(https://developer.apple.com/metal/ for the Metal 4 surface,
-https://developer.apple.com/metal/cpp for the Apache-2.0 metal-cpp headers
-that define the ABI we must satisfy), the sample-code library
-(https://developer.apple.com/metal/sample-code/), and Apple's release index
-(https://opensource.apple.com/releases/). Where public material ends, we fill
-the gap by clean-room study, in this order:
-
-1. **Understand the contract from public material first.** Headers,
-   documentation, sample code, and Apple's own open-source releases answer
-   most questions about behavior. Exhaust these before anything else.
-2. **Decompile Apple binaries only to understand behavior.** Where the
-   documentation is silent — an undocumented error path, an on-disk format
-   detail, a performance characteristic — we disassemble the shipped binary
-   to learn what it does, and write down the finding as a functional
-   specification in our own words.
-3. **A different engineer implements from the specification.** Where
-   practical, the person who studied the binary does not write the
-   implementation; the spec is the only thing that crosses the wall.
-4. **Decompiled code never enters the tree.** Not as comments, not as
-   renamed listings, not as "just the structure". A finding enters as an
-   English sentence in a spec, and the implementation is ours.
-
-This protocol is how the project stays shippable at all: it is the only
-legally sound way to close the gap between the ABI macOS software expects and
-the source Apple publishes. The cost is real — clean-room work is slower than
-copying — and the design docs price it honestly rather than pretending the
-gaps are smaller than they are.
 
 ## Licensing
 
@@ -316,9 +283,6 @@ hardware close the loop for architectures we do not run natively.
 - Should the Windows build host target native Windows toolchains only, or
   also document the WSL2 path (which is effectively the Linux row) as a
   supported configuration?
-- The clean-room protocol specifies a two-person split between specification
-  and implementation "where practical". For small components, when is the
-  overhead justified, and who reviews the spec in the one-engineer case?
 - What is the process for adding a build host to the matrix? Presumably a
   host enters at best effort and is promoted, but the promotion criteria
   (what gets exercised, how often) are not yet written down.

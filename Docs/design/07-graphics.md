@@ -139,9 +139,9 @@ Apple has never documented or published the WindowServer. What we have is the
 public headers and documentation of the client frameworks, and the observed
 behavior of Apple's binaries. Exactly what wire behavior stock applications
 expect is therefore knowable only by studying both — which makes this a
-clean-room-with-study effort under the same rules as Metal: decompile to
-understand, write our own implementation, never copy decompiled code into the
-tree ([01-principles.md](01-principles.md)).
+clean-room-with-study effort under the same rules as Metal: study observable
+behavior, write our own implementation, never copy anything derived from
+Apple's compiled code into the tree ([01-principles.md](01-principles.md)).
 
 The practical consequence: the protocol is versioned and documented in this
 tree like any other contract, but it is allowed to change freely while no

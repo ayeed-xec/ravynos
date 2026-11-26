@@ -70,7 +70,8 @@ shrinks by work, not by optimism.
 
 For what neither tier covers, we write clean-room implementations: study
 Apple's public headers, documentation and observed binary behavior; specify;
-then implement from the specification, never from decompiled code. The
+then implement from the specification, never from anything derived from
+Apple's compiled code. The
 protocol is in [01-principles.md](01-principles.md), including the two-person
 split between specification and implementation where practical.
 
