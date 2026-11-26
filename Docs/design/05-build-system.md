@@ -106,7 +106,10 @@ never gave PureDarwin users, and it is a design goal, not a debugging escape hat
 
 ## The harness: `rv`
 
-One entry point, a plain executable or Python program living at the tree root. Subcommands:
+One entry point, a statically linked Rust binary living at `tools/rv/` (the language is
+decided on evidence in [13-toolchain-sdk.md](13-toolchain-sdk.md) §2.2: both reference
+builds — PureDarwin's Nix-driven tree and upstream ravynOS's bmake/CMake glue — keep the
+top-level driver out of the interpreted-scripting layer). Subcommands:
 
 ```
 rv build [-t <target>] [<component>|<layer>...]   # one component, a layer, or everything
@@ -299,9 +302,10 @@ source bump is not the code that stops compiling — it is the ABI that quietly 
 
 ## What this does not solve
 
-- Reproducibility of the *bootstrap* (compiler, mig, host tools) is a separate bootstrapping
-  problem; the harness pins and hashes the toolchain binaries it uses but does not build them
-  from source in this design.
+- Bootstrap of the toolchain itself (compiler, mig, host tools) is out of this design's
+  scope by choice — it is the three-stage native bootstrap specified in
+  [13-toolchain-sdk.md](13-toolchain-sdk.md) §2.1 (host clang → our cross-toolchain →
+  self-hosting), not an unsolved gap. This design assumes its stage-1 output and pins it.
 - QEMU test fidelity is not hardware fidelity; target-side tests catch logic errors, not
   driver timing. `11-quality.md` and the hardware testing plan own that gap.
 - Windows as a build host is designed-for, not yet specified; its flag table row will be
@@ -319,5 +323,3 @@ source bump is not the code that stops compiling — it is the ABI that quietly 
   formatting; the appeals process (who re-fingerprints a file by hand) is unwritten.
 - Whether `rv graph` should gain a "what breaks if I change this header" query as a
   first-class command, or stay a filter on the printed graph.
-- Sysroot layout for the compat layer: Mac binaries expect a macOS-like path structure, which
-  may argue for a second sysroot view rather than one merged tree.

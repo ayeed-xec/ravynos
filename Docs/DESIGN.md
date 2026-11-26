@@ -45,10 +45,10 @@ falsifiable — for contributors, investors, and ourselves.
 
 | Tier | Definition | Testable exit | Wave |
 |------|-----------|---------------|------|
-| **T0** | Exec format: we load and run a static Mach-O | A static Mach-O built with the macOS SDK (`clang -static`) runs on our kernel; correct exit status, argv, env | W1 |
-| **T1** | Dynamic linkage: dyld + objc runtime work | A trivial *dynamic* Objective-C app (Foundation only, SDK-built) links via dyld,objc4 and runs to completion | W2 |
+| **T0** | Exec format: we load and run a static Mach-O | A static Mach-O (`clang -static`) built **by our stage-1 toolchain** runs on our kernel; correct exit status, argv, env. An equivalent Apple-SDK-built binary is a *test fixture* for cross-checking, never a build input | W1 |
+| **T1** | Dynamic linkage: dyld + objc runtime work | A trivial *dynamic* Objective-C app (Foundation only) built by our toolchain links via dyld,objc4 and runs to completion | W2 |
 | **T2** | POSIX/BSD surface: real userland lives on us | launchd starts from disk; our shell + a ported set of BSD userland tools run a full boot-to-login cycle with no stub syscalls on the hot path | W3 |
-| **T3** | Graphics: window server + AppKit slice | An SDK-built AppKit app shows a window, responds to mouse/keyboard at ≥ 60 fps with the W3 latency budget (§5) | W4 |
+| **T3** | Graphics: window server + AppKit slice | An AppKit app built by our toolchain against `rv build sdk` output shows a window, responds to mouse/keyboard at ≥ 60 fps with the W3 latency budget (§5) | W4 |
 | **T4** | Frameworks width: the 20-app set | A fixed set of 20 real-world open-source Mac apps (chosen in W4, licenses permitting) launch and function at the level their AppKit usage requires | W6 |
 | **T5** | Closed-source Mac apps | A designated commercial app (POC candidate: an Electron- or Qt-based app, then a native AppKit app) installs and runs | W7 |
 
@@ -181,7 +181,7 @@ with a functional spec written before implementation (§7):
 | Mach IPC / XPC surface | xnu + public docs | xnu native; XPC as clean-room spec impl |
 | launchd behavior | Public docs + observed behavior | Clean-room reimpl (upstream's `old-launchd` audited; only reused if license and quality pass) |
 
-The gate for this layer is T1's exit: an SDK-built dynamic Objective-C app runs. That
+The gate for this layer is T1's exit: an own-toolchain-built dynamic Objective-C app runs. That
 single test exercises dyld fixups, objc dispatch, Foundation basics and the syscall
 surface end to end.
 
@@ -228,9 +228,12 @@ test that proves each behavior claim). A subsystem without a verified spec is no
 ## 4. Language and toolchain choices
 
 - Core set, matching ravynOS community practice and keeping the contributor pool wide:
-  **C, C++, Objective-C, Objective-C++** for kernel, drivers and frameworks; **Python 3**
-  for build tooling and test harnesses; **shell** only for thin orchestration
-  (`build.sh` entry points); Swift considered only after the runtime can host it (post-W6).
+  **C, C++, Objective-C, Objective-C++** for kernel, drivers and frameworks; **Rust** for
+  the build harness `rv` per §14 (rationale on evidence:
+  [design/13-toolchain-sdk.md](design/13-toolchain-sdk.md) §2.2); **Python 3** for test
+  and spec tooling (never the top-level build driver); **shell** only for thin
+  orchestration (`build.sh` entry points); Swift considered only after the runtime can
+  host it (post-W6).
   SwiftUI is a committed milestone, not a maybe: the Swift runtime hosts post-W6, and a
   stock SwiftUI app runs out of the box at Wave 8 (see the wave exits).
 - Toolchain: clang/LLVM (already validated at clang 21.1.8 against xnu-12377), ld64.lld
@@ -256,7 +259,7 @@ decisions that trade latency away must name the budget they spend.
 | P5 | Thread context switch (same core) | ≤ 1 µs | `Tests/perf/ctx_switch` | W2 |
 | P6 | WindowServer input → photon (input event to first pixel change) | ≤ 16.6 ms @ 60 Hz; stretch ≤ 8 ms @ 120 Hz | `Tests/perf/input_photon` with instrumented WindowServer | W4 |
 | P7 | UI frame pacing: dropped frames under composition load | < 0.5 % over 60 s scripted test | `Tests/perf/frame_pacing` | W4 |
-| P8 | Cold app launch, small SDK-built app | ≤ 500 ms | `Tests/perf/app_launch` | W6 |
+| P8 | Cold app launch, small own-toolchain-built app | ≤ 500 ms | `Tests/perf/app_launch` | W6 |
 | P9 | Kernel build: full batch, 8 cores | ≤ 5 min | build harness timing report | W1 |
 | P10 | Build: per-file compile p95 | ≤ 1 s | build harness per-file timings | W1 |
 
@@ -474,8 +477,11 @@ records exist for every vendored tree.
   `tools/license-audit.py` with content fingerprinting; `.clang-format` + style
   checker; CI pipeline (build matrix, license gate, perf smoke).
 - **E/F:** spec system seeded (`Docs/spec/` with the contract set of §2.5).
-- **F:** tier test apps chosen and built with the macOS SDK (T0 static, T1 dynamic,
-  T3 AppKit window app) — the exit criteria exist as binaries before the work starts.
+- **F:** tier test apps built **by our own toolchain** (T0 static, T1 dynamic, T3 AppKit
+  window app) — stage-1 cross-toolchain output per [design/13-toolchain-sdk.md]
+  (design/13-toolchain-sdk.md) §2.4, never Apple's proprietary macOS SDK. Binaries built
+  with Apple's SDK appear only as **test fixtures**: executed to prove tier exits,
+  never build inputs, never redistributed.
 - **All:** provenance audit of `Libraries/`, `Frameworks/`, `BSD/` (§6.3).
 
 ### Wave 1 — Kernel links and boots (T0)
@@ -488,7 +494,7 @@ P2/P9/P10 budgets recorded.
 - **F:** syscall-surface spec (what T0 exercises).
 
 ### Wave 2 — Dynamic runtime (T1)
-**Exit:** SDK-built dynamic Objective-C app runs end to end; P3–P5 measured in CI.
+**Exit:** Own-toolchain-built dynamic Objective-C app runs end to end; P3–P5 measured in CI.
 - **B:** dyld + objc4 built and running on our kernel; Libsystem syscalls completed
   against the spec; XPC spec drafted.
 - **A:** syscall surface gaps surfaced by the runtime (the only sanctioned kernel change
@@ -610,7 +616,7 @@ gate scans Rust package dependencies too, because some are GPL.
   smoke (boot + tier test app) in QEMU; (3) nightly: full boot trends + perf baselines +
   fuzzing of the syscall surface (fixed-seed, reproducible); (4) per-wave: tier exit on
   the reference rig with recorded artifacts (serial log, screenshots, perf JSON).
-- **Compat tests are apps, not units.** The growing SDK-built test app set under
+- **Compat tests are apps, not units.** The growing own-toolchain-built test app set under
   `Tests/apps/` is the compatibility suite; kernel unit tests exist only for our own
   overlay code.
 - **Failure policy:** a broken mainline boot is reverted by the owning lane within the

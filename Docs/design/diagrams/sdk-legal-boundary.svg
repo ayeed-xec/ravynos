@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560">
+  <rect x="0" y="0" width="960" height="560" fill="#ffffff"/>
+  <text x="30" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">The legal boundary — what enters the build, what never does</text>
+
+  <!-- Column 1: build inputs -->
+  <rect x="30" y="70" width="290" height="400" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="45" y="96" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#14532d">Build inputs — always fine</text>
+  <text x="45" y="114" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">Apple's own open-source releases, pinned in VENDORS</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">
+    <text x="45" y="146">xnu kernel</text>
+    <text x="45" y="166">dyld, objc4</text>
+    <text x="45" y="186">Libc / Libsystem, libplatform, libpthread</text>
+    <text x="45" y="206">libdispatch</text>
+    <text x="45" y="226">CoreFoundation</text>
+    <text x="45" y="246">cctools / ld64 (APSL-2.0)</text>
+    <text x="45" y="266">tapi (APSL-2.0)</text>
+    <text x="45" y="286">mig, iig (APSL-2.0)</text>
+    <text x="45" y="306">llvm-project (Apache-2.0 w/ LLVM-exception)</text>
+  </g>
+  <text x="45" y="340" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">Every import keeps its upstream header;</text>
+  <text x="45" y="358" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">_PROVENANCE record per component (§6.2).</text>
+  <text x="45" y="386" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" fill="#14532d">Why: these are the ABI itself.</text>
+  <text x="45" y="404" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">Vendoring Apple's published code is the only</text>
+  <text x="45" y="422" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">way the ABI is correct — same technique Asahi</text>
+  <text x="45" y="440" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">uses for Apple silicon. APSL-2.0 is OSI-approved;</text>
+  <text x="45" y="458" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">it is what Apple ships Darwin under.</text>
+
+  <!-- Column 2: never -->
+  <rect x="345" y="70" width="290" height="400" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="360" y="96" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#7f1d1d">Never a build input</text>
+  <text x="360" y="114" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#991b1b">proprietary Apple artifacts</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">
+    <text x="360" y="146" font-weight="bold" fill="#7f1d1d">macOS SDK (ships only in Xcode)</text>
+    <text x="360" y="166">license covers developing for Apple platforms</text>
+    <text x="360" y="184">on Apple hardware — not ours to use here</text>
+    <text x="360" y="210" font-weight="bold" fill="#7f1d1d">Xcode toolchain binaries</text>
+    <text x="360" y="236" font-weight="bold" fill="#7f1d1d">Apple proprietary frameworks / AppleInternal</text>
+    <text x="360" y="262" font-weight="bold" fill="#7f1d1d">Apple assets, fonts, artwork</text>
+    <text x="360" y="288">and per §6.1: GPL, LGPL, AGPL anywhere —</text>
+    <text x="360" y="306">build tooling included (excludes darling)</text>
+  </g>
+  <text x="360" y="340" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" fill="#14532d">How the rule is enforced:</text>
+  <text x="360" y="358" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">rv never invokes an external compiler; every</text>
+  <text x="360" y="376" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">tool comes from stage 1 of the bootstrap. A</text>
+  <text x="360" y="394" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">toolchain binary not produced by rv bootstrap</text>
+  <text x="360" y="412" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">fails the build. CI runs on Linux only.</text>
+  <text x="360" y="440" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">Identity fields in SDKSettings.json are ravynOS's,</text>
+  <text x="360" y="458" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">so nothing presents itself as an Apple product.</text>
+
+  <!-- Column 3: fixtures -->
+  <rect x="660" y="70" width="270" height="400" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="675" y="96" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e3a8a">Test fixtures only</text>
+  <text x="675" y="114" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">binaries other parties built on macOS</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">
+    <text x="675" y="146">upstream-released open-source Mac app builds</text>
+    <text x="675" y="174">Consumed as inputs to rv test</text>
+    <text x="675" y="194">(executed on our kernel, never derived from,</text>
+    <text x="675" y="212">never redistributed as part of the OS)</text>
+    <text x="675" y="240" font-weight="bold" fill="#1e3a8a">This is how tier exits keep their teeth:</text>
+    <text x="675" y="258">T0 proves "a macOS-built Mach-O runs" —</text>
+    <text x="675" y="276">the binary exists as a fixture, so the</text>
+    <text x="675" y="294">compatibility claim is tested without the</text>
+    <text x="675" y="312">project touching Apple's SDK to produce it</text>
+    <text x="675" y="340">Our own T0/T1/T3 test apps are built natively</text>
+    <text x="675" y="358">by our stage-1 toolchain against our SDK</text>
+  </g>
+  <text x="675" y="394" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">InternalSDK/ (clean-room "AppleInternal-style"</text>
+  <text x="675" y="412" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">headers) stays — ours by construction.</text>
+
+  <text x="30" y="508" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">Amends DESIGN.md §10 W0 lane F: "built with the macOS SDK" → built natively + fixture set.</text>
+  <text x="30" y="530" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#6b7280">Companion doc: Docs/design/13-toolchain-sdk.md (§2.4, §2.5).</text>
+</svg>

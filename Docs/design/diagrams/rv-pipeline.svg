@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="960" height="520">
+  <defs>
+    <marker id="arrowP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="520" fill="#ffffff"/>
+  <text x="30" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Build pipeline — rv owns everything, ninja schedules, one graph</text>
+
+  <!-- inputs -->
+  <rect x="30" y="100" width="180" height="170" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="45" y="126" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#374151">Inputs</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#4b5563">
+    <text x="45" y="152">component.toml per directory</text>
+    <text x="45" y="176">VENDORS pins</text>
+    <text x="45" y="200">vendored Apple sources</text>
+    <text x="45" y="224">our sources (RVOS, rv)</text>
+    <text x="45" y="248">flag table (host × target)</text>
+  </g>
+
+  <!-- rv -->
+  <rect x="280" y="100" width="200" height="170" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="295" y="126" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1e3a8a">rv — Rust, MIT</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1f2937">
+    <text x="295" y="152">resolve manifest graph</text>
+    <text x="295" y="176">check layers, licenses, budgets</text>
+    <text x="295" y="200">emit ONE ninja file</text>
+    <text x="295" y="224">assemble sysroots + sdk</text>
+    <text x="295" y="248">builds nothing itself</text>
+  </g>
+  <text x="295" y="290" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">language amendment: 05:109 "executable or</text>
+  <text x="295" y="304" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">Python program" → statically linked Rust binary</text>
+
+  <!-- ninja -->
+  <rect x="550" y="100" width="160" height="170" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="565" y="126" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#374151">ninja</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#4b5563">
+    <text x="565" y="152">runs stage-1 tools only</text>
+    <text x="565" y="176">clang, ld64.lld, tapi, mig</text>
+    <text x="565" y="200">content-addressed cache</text>
+    <text x="565" y="224">incremental per export set</text>
+  </g>
+
+  <!-- outputs -->
+  <rect x="780" y="70" width="150" height="110" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="795" y="94" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#14532d">sysroot</text>
+  <text x="795" y="116" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">build/sysroots/&lt;target&gt;</text>
+  <text x="795" y="138" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">build output, not a blob</text>
+
+  <rect x="780" y="200" width="150" height="110" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="795" y="224" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#14532d">sdk</text>
+  <text x="795" y="246" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">headers, .tbd stubs,</text>
+  <text x="795" y="268" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">module maps, identity</text>
+
+  <rect x="780" y="330" width="150" height="110" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="795" y="354" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#14532d">rv image</text>
+  <text x="795" y="376" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">boot image, disk, ISO</text>
+  <text x="795" y="398" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">manifest-described</text>
+
+  <!-- flows -->
+  <g stroke="#2563eb" stroke-width="1.6" fill="none">
+    <line x1="210" y1="185" x2="272" y2="185" marker-end="url(#arrowP)"/>
+    <line x1="480" y1="185" x2="542" y2="185" marker-end="url(#arrowP)"/>
+    <line x1="710" y1="150" x2="772" y2="125" marker-end="url(#arrowP)"/>
+    <line x1="710" y1="185" x2="772" y2="250" marker-end="url(#arrowP)"/>
+    <polyline points="855,310 855,322" marker-end="url(#arrowP)"/>
+  </g>
+
+  <!-- language policy strip -->
+  <rect x="30" y="330" width="700" height="150" rx="8" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="45" y="356" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#374151">Language policy (DESIGN.md §14, confirmed — contradictions fixed by the proposal)</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">
+    <text x="45" y="382" font-weight="bold">Rust</text>
+    <text x="120" y="382">rv, mig tooling, CLI tools, bootloader (kite), WindowServer, new services — entirely our code</text>
+    <text x="45" y="406" font-weight="bold">C / C++ / ObjC</text>
+    <text x="150" y="406">xnu (untouched), objc4, Libsystem, AppKit-style frameworks — binary compat requires Apple's ABI</text>
+    <text x="45" y="430" font-weight="bold">Python 3</text>
+    <text x="120" y="430">test scripts and spec tooling only — not the harness (amends DESIGN.md §4)</text>
+    <text x="45" y="454">Rationale: one static MIT binary with no interpreter to bootstrap; a Python harness would deepen the</text>
+    <text x="45" y="472">bootstrap gap (13 §G1). Cargo dependencies scanned by the §6 license gate.</text>
+  </g>
+</svg>

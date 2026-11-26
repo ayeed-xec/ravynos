@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowGrey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="640" fill="#ffffff"/>
+  <text x="30" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Native toolchain bootstrap — everything from pinned open source, no macOS host</text>
+
+  <!-- Stage 0 -->
+  <rect x="30" y="80" width="230" height="150" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="45" y="106" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#374151">Stage 0 — host compiler</text>
+  <text x="45" y="128" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#4b5563">any host clang ≥ pinned floor</text>
+  <text x="45" y="148" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#4b5563">(distro clang on Linux first)</text>
+  <text x="45" y="176" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#6b7280">compiles stage 1 only</text>
+  <text x="45" y="196" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#6b7280">never touches target code</text>
+  <text x="45" y="216" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">recorded, not trusted</text>
+
+  <!-- Stage 1 -->
+  <rect x="330" y="60" width="330" height="290" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="345" y="86" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e3a8a">Stage 1 — our cross-toolchain</text>
+  <text x="345" y="104" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">built by rv from VENDORS pins</text>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1f2937">
+    <rect x="345" y="118" width="300" height="24" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="355" y="134">llvm + clang + lld (Apache-2.0 w/ LLVM-exc)</text>
+    <rect x="345" y="150" width="300" height="24" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="355" y="166">cctools / ld64 — Mach-O linker (APSL-2.0)</text>
+    <rect x="345" y="182" width="300" height="24" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="355" y="198">tapi — .tbd generation (APSL-2.0)</text>
+    <rect x="345" y="214" width="300" height="24" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="355" y="230">mig, iig, rpcgen (APSL-2.0)</text>
+    <rect x="345" y="246" width="300" height="24" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="355" y="262">xar, dtrace_ctf, unifdef</text>
+  </g>
+  <text x="345" y="296" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">outputs: clang, ld64.lld, tapi, mig</text>
+  <text x="345" y="314" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">for x86_64 + aarch64-unknown-ravynos</text>
+  <text x="345" y="336" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">hash published per artifact; hash change without</text>
+  <text x="345" y="348" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">VENDORS bump fails the build</text>
+
+  <!-- Stage 2 -->
+  <rect x="730" y="80" width="200" height="150" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="745" y="106" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#14532d">Stage 2 — the system</text>
+  <text x="745" y="124" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#14532d">builds itself</text>
+  <text x="745" y="148" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">libc, Libsystem, dyld,</text>
+  <text x="745" y="166" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">objc4, libdispatch, frameworks</text>
+  <text x="745" y="190" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">against the rv-assembled</text>
+  <text x="745" y="208" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#166534">sysroot, stage-1 tools only</text>
+
+  <!-- Self-host loop -->
+  <rect x="330" y="430" width="330" height="110" rx="8" fill="#fefce8" stroke="#ca8a04" stroke-width="1.5"/>
+  <text x="345" y="456" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#713f12">Self-hosting (W8 milestone)</text>
+  <text x="345" y="478" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#713f12">stage-1 toolchain rebuilt on ravynOS itself,</text>
+  <text x="345" y="496" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#713f12">by the same rv graph — the OS is a</text>
+  <text x="345" y="514" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#713f12">development platform. Two-stage pattern</text>
+  <text x="345" y="532" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#713f12">already planned in Developer/ (SourceMap.md).</text>
+
+  <!-- arrows -->
+  <g stroke="#2563eb" stroke-width="1.6" fill="none">
+    <line x1="260" y1="155" x2="322" y2="155" marker-end="url(#arrow)"/>
+    <line x1="660" y1="155" x2="722" y2="155" marker-end="url(#arrow)"/>
+    <polyline points="830,230 830,560 665,560" marker-end="url(#arrowGrey)" stroke="#6b7280" stroke-dasharray="6 4"/>
+  </g>
+  <polyline points="495,560 495,548 495,548" stroke="#6b7280" stroke-width="1.6" fill="none"/>
+
+  <text x="30" y="592" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">rv bootstrap runs and verifies the chain. Dashed line: the self-host proof re-enters stage 1.</text>
+  <text x="30" y="612" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a3412">No Apple SDK, no Xcode, no macOS host anywhere in this chain.</text>
+</svg>

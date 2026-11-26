@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620">
+  <defs>
+    <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
+  <text x="30" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">ravynOS.sdk — today vs. what it must become</text>
+
+  <!-- LEFT: today -->
+  <rect x="30" y="70" width="430" height="440" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="45" y="96" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#7f1d1d">Today — checked-in, hand-assembled</text>
+
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">
+    <text x="45" y="126">Developer/ravynOS.sdk/_PROVENANCE: manual imports</text>
+    <text x="45" y="144">(apple-oss-distributions, CarbonHeaders, …)</text>
+    <text x="45" y="170">Developer/Makefile builds it with BSD bsd.subdir.mk —</text>
+    <text x="45" y="188">outside rv; the pattern 05-build-system.md bans</text>
+    <text x="45" y="214" font-weight="bold" fill="#7f1d1d">Headers only — zero .tbd files, no usr/lib:</text>
+    <text x="45" y="232">cannot link an SDK-style app; invites</text>
+    <text x="45" y="250">-undefined dynamic_lookup (banned by DESIGN.md §1)</text>
+    <text x="45" y="276" font-weight="bold" fill="#7f1d1d">Impersonates Apple:</text>
+    <text x="45" y="294">SDKSettings.json — platform "macosx",</text>
+    <text x="45" y="312">LLVMTargetTripleVendor "apple",</text>
+    <text x="45" y="330">MACOSX_DEPLOYMENT_TARGET, CODE_SIGN_IDENTITY</text>
+    <text x="45" y="348">"Apple Development"</text>
+    <text x="45" y="374">No module maps, no tapi pipeline, glue = xcbuild/cmake</text>
+    <text x="45" y="400" font-weight="bold" fill="#7f1d1d">W0 lane F builds the tier test apps with</text>
+    <text x="45" y="418" font-weight="bold" fill="#7f1d1d">Apple's proprietary macOS SDK (Xcode license)</text>
+    <text x="45" y="444">exit binaries the project itself cannot produce</text>
+  </g>
+  <text x="45" y="490" font-family="Helvetica, Arial, sans-serif" font-size="12" font-style="italic" fill="#9a3412">Looks like a counterfeit Apple SDK; leans on Apple proprietary tooling.</text>
+
+  <!-- RIGHT: target -->
+  <rect x="510" y="70" width="420" height="440" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="525" y="96" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#14532d">Target — rv build sdk (a build output)</text>
+
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">
+    <text x="525" y="126">rv build sdk assembles build/sdk/&lt;target&gt;/ from</text>
+    <text x="525" y="144">component manifests — reproducible, auditable</text>
+    <rect x="525" y="158" width="390" height="234" rx="6" fill="#ffffff" stroke="#86efac"/>
+    <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#14532d">
+      <text x="540" y="182" font-weight="bold">1. Headers</text>
+      <text x="540" y="200">only what built components export</text>
+      <text x="540" y="226" font-weight="bold">2. Link surface</text>
+      <text x="540" y="244">tapi generates .tbd stubs from each dylib's</text>
+      <text x="540" y="262">real export table — no stub, no link</text>
+      <text x="540" y="288" font-weight="bold">3. Module maps</text>
+      <text x="540" y="306">generated with the headers, clang modules work</text>
+      <text x="540" y="332" font-weight="bold">4. Identity</text>
+      <text x="540" y="350">platform ravynos, triple arch-apple-ravynos,</text>
+      <text x="540" y="368">no Apple code-sign identity; Mach-O LC_BUILD_VERSION</text>
+      <text x="540" y="386">stays Apple-shaped on purpose — that IS the ABI</text>
+      <text x="540" y="404" font-weight="bold">5. macOS-shaped view</text>
+      <text x="540" y="420">second sysroot view: /usr/include, /System/Library/F…</text>
+    </g>
+    <text x="525" y="418"> </text>
+    <text x="525" y="444" font-weight="bold" fill="#14532d">Tier test apps built by our stage-1 toolchain on Linux;</text>
+    <text x="525" y="462" font-weight="bold" fill="#14532d">macOS-built binaries are test fixtures, never build inputs</text>
+  </g>
+  <text x="525" y="492" font-family="Helvetica, Arial, sans-serif" font-size="12" font-style="italic" fill="#166534">Everything natively built; nothing proprietary in the build path.</text>
+
+  <!-- arrow between panels -->
+  <line x1="465" y1="290" x2="502" y2="290" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <text x="30" y="548" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">Sources for the generated SDK: xnu libsyscall, Libc, libdispatch, objc4, CoreFoundation — all pinned in VENDORS (APSL-2.0 / Apache-2.0).</text>
+  <text x="30" y="568" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#374151">The checked-in Developer/ravynOS.sdk snapshot retires to test-fixture status; _PROVENANCE records it as historical.</text>
+  <text x="30" y="592" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#6b7280">Companion doc: Docs/design/13-toolchain-sdk.md (§2.3). Resolves the sysroot-layout open question in 05-build-system.md.</text>
+</svg>
