@@ -333,7 +333,7 @@ framework is reimplemented from spec rather than patched ad infinitum.
 
 ---
 
-## 7. Reverse engineering: the clean-room protocol
+## 7. Behavioral study: the clean-room protocol
 
 Goal: know *how things functionally work* well enough to reimplement them natively, with
 zero copyright exposure and zero GPL contamination.

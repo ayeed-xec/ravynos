@@ -32,7 +32,7 @@ APFS brings properties the system is designed around:
 
 HFS+ stays read-capable for migration — Apple's hfs source is open (it is part of what the
 ios-sweet project boots with, and it is in Apple's open-source releases), so a read
-implementation is a matter of porting and licensing discipline, not reverse engineering.
+implementation is a matter of porting and licensing discipline, not behavioral study.
 FAT, NTFS and ext4 are secondary filesystems; NTFS and ext4 ride the compat driver path
 described in `03-kernel.md` rather than a native xnu VFS backend each.
 

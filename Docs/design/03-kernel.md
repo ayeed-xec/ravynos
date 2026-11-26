@@ -189,18 +189,20 @@ memory-management APIs, workqueues, mutexes, bus access via our PCI/USB
 controller drivers, and a socket or block-device plane below.
 
 **Version pinning.** Linux and FreeBSD KPIs move. A shim that claims "the
-Linux kernel API" is a lie; a shim that claims "Linux 6.12.y network
+Linux kernel API" is a lie; a shim that claims "Linux 6.18.y network
 device KPI" is a contract. We pin a version per driver class — network,
 GPU, storage — and document it:
 
 | Driver class | Host KPI pinned to | Contract tests live in |
 |---|---|---|
-| Network | Linux netdev + napi, version X | `tests/kpi/network` |
-| GPU | Linux DRM/KMS subset used by the driver | `tests/kpi/drm` |
-| Storage | Linux block + NVMe, FreeBSD CAM subset | `tests/kpi/storage` |
+| Network | Linux 6.18.y longterm: netdev + napi | `tests/kpi/network` |
+| GPU | Linux DRM/KMS subset as of 6.18 (deferred shim, see below) | `tests/kpi/drm` |
+| Storage | Linux block + NVMe; FreeBSD 15.1-RELEASE CAM subset | `tests/kpi/storage` |
 
-(Exact versions are recorded next to the shim source, not in this
-document, because they change per driver.) Each contract has a documented
+(6.18 longterm is the contract because a KPI must live for years; newer
+stable series are test kernels, not the pin. Exact patch levels are
+recorded next to the shim source, because they change per driver.) Each
+contract has a documented
 test suite that the shim must pass before the driver using it is
 considered supported. The suite is what makes the contract real; without
 it, "compatible" degrades into "it booted once".
@@ -319,7 +321,10 @@ becomes a patch with a `fate:` line, per the vendoring policy.
   (it validates the shim, independently of the native family) and of
   [07-graphics.md](07-graphics.md). Prior art for the quality bar:
   LunarG's KosmicKrisp, see W7 in [12-roadmap.md](12-roadmap.md).
-- **mig ownership.** Do we write our own MIT mig from the language
-  definition, or adopt an existing permissive implementation and patch it?
-  The generated headers are committed either way, so this is low-risk, but
-  it should be settled before the vendor bump lands.
+- **mig ownership.** *Decided 2026-11-26: adopt Apple's mig* — it is the
+  reference implementation, APSL-licensed and already in the tree's
+  provenance set; Apple no longer publishes a standalone mig tarball, so we
+  build `migcom` on Linux with a small header shim (include-path work
+  remains). The generated headers are committed either way.
+
+All four previously open questions are resolved above, each with its date.

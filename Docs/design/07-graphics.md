@@ -64,11 +64,14 @@ processes, map on the GPU. Every layer above depends on it, so it lands early
 and stays boring.
 
 **GPU kernel-mode drivers.** The strategy question — a Linux DRM KPI shim
-running ported drivers versus a native IOKit GPU family — is owned by
-[03-kernel.md](03-kernel.md) and still open there. This document depends on
-the answer only for its vocabulary: whatever the kernel side ends up being,
-the userland drivers below it speak our IOKit accelerator KPI, and the choice
-does not change the shape of Metal or the window server.
+running ported drivers versus a native IOKit GPU family — was decided
+2026-11-26 in [03-kernel.md](03-kernel.md): the **native IOKit GPU family
+comes first**; the DRM KPI shim is a deferred compatibility layer for
+foreign drivers (NVIDIA's), contract-tested in `tests/kpi/drm`. This
+document depends on that answer only for its vocabulary: whichever path a
+given device takes, the userland drivers above it speak our IOKit
+accelerator KPI, and the choice does not change the shape of Metal or the
+window server.
 
 ## The window server
 
@@ -271,9 +274,6 @@ they measure:
   beside the frameworks, but its first concrete draft has no owner yet. It
   should not be designed twice — once by the server author and once by the
   framework author.
-- GPU kernel-mode driver strategy: Linux DRM KPI shim or native IOKit GPU
-  family? Owned by [03-kernel.md](03-kernel.md), but three of this document's
-  backends wait on it.
 - How much AIR/metallib coverage do unmodified applications actually require
   in the first milestone, and which LLVM-level backend do we target for
   translating it — our own, or Mesa-derived infrastructure?
