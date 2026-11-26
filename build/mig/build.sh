@@ -20,13 +20,13 @@ fi
 
 need_pkg=()
 command -v flex  >/dev/null 2>&1 || need_pkg+=(flex)
-command -v bison >/dev/null 2>&1 || need_pkg+=(bison)
+command -v byacc >/dev/null 2>&1 || need_pkg+=(byacc)
 command -v clang >/dev/null 2>&1 || need_pkg+=(clang)
 if [ ${#need_pkg[@]} -gt 0 ]; then
     echo "installing missing toolchain packages: ${need_pkg[*]}"
     sudo apt-get update -qq && sudo apt-get install -y -qq "${need_pkg[@]}"
 fi
-for tool in flex bison clang; do
+for tool in flex byacc clang; do
     command -v "$tool" >/dev/null 2>&1 || {
         echo "error: $tool still missing after apt-get install" >&2; exit 1; }
 done
@@ -48,7 +48,7 @@ for patch in "$PATCHES"/*.patch; do
 done
 
 cd "$WORK/migcom.tproj"
-bison --defines=y.tab.h -o y.tab.c parser.y
+byacc -d -b y parser.y
 flex -o lexxer.c lexxer.l
 
 clang -O2 -std=gnu11 -Wall \
