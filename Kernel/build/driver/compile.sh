@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 
+# Usage: sh Kernel/build/driver/compile.sh [-c] [ARCH] [files...]
+#   ARCH = x86_64 (default) | arm64 | riscv64; also honored as env var ARCH.
+
 DRV="$(cd "$(dirname "$0")" && pwd)"
 BUILD="$(cd "$DRV/.." && pwd)"
 XNU="$(cd "$BUILD/../xnu" && pwd)"
@@ -12,8 +15,61 @@ if [ "${1:-}" = "-c" ]; then
 	shift
 fi
 
+ARCH=${ARCH:-}
+case "${1:-}" in
+	x86_64|arm64|riscv64)
+		ARCH=$1
+		shift
+		;;
+esac
+ARCH=${ARCH:-x86_64}
+
+case "$ARCH" in
+	x86_64)
+		TARGET=x86_64-apple-darwin
+		ARCHDEFS="-DAPPLE_ARCH=x86_64 -D__i386__ -D__x86_64__ -Di386 -Dx86_64"
+		BSD_ARCH_INC="-I$XNU/bsd/i386"
+		ARCH_EARLY_INC=""
+		OSFMK_LATE_INC="-I$XNU/osfmk/i386"
+		PEXPERT_LATE_INC="-I$XNU/pexpert/i386"
+		;;
+	arm64)
+		TARGET=arm64-apple-darwin
+		ARCHDEFS="-DAPPLE_ARCH=arm64 -D__arm64__ -D__aarch64__ -Darm64 -DARM64 -D__ARM64__ -DLP64"
+		BSD_ARCH_INC="-I$XNU/bsd/arm"
+		ARCH_EARLY_INC="-I$XNU/osfmk/arm64 -I$XNU/pexpert/arm"
+		OSFMK_LATE_INC=""
+		PEXPERT_LATE_INC=""
+		;;
+	riscv64)
+		TARGET=riscv64-ravynos
+		ARCHDEFS="-DAPPLE_ARCH=riscv64 -D__riscv"
+		BSD_ARCH_INC=""
+		ARCH_EARLY_INC=""
+		OSFMK_LATE_INC=""
+		PEXPERT_LATE_INC=""
+		;;
+	*)
+		echo "compile.sh: unsupported ARCH '$ARCH' (use x86_64, arm64 or riscv64)" >&2
+		exit 2
+		;;
+esac
+
 OUT=${OUT:-"$DRV/export-hdrs"}
 [ -d "$OUT" ] || "$DRV/export-headers.sh"
+
+if [ ! -f "$OUT/libkern/version.h" ]; then
+	mkdir -p "$OUT/libkern"
+	sed -e 's/###KERNEL_VERSION_MAJOR###/12377/' \
+		-e 's/###KERNEL_VERSION_MINOR###/121/' \
+		-e 's/###KERNEL_VERSION_VARIANT###/6/' \
+		-e 's/###KERNEL_VERSION_REVISION###/6/' \
+		-e 's/###KERNEL_VERSION_STAGE###/VERSION_STAGE_RELEASE/' \
+		-e 's/###KERNEL_VERSION_PRERELEASE_LEVEL###/0/' \
+		-e 's/###KERNEL_BUILD_CONFIG###/RELEASE/' \
+		-e 's/###KERNEL_VERSION_LONG###/12377.121.6/' \
+		"$XNU/libkern/libkern/version.h.template" > "$OUT/libkern/version.h"
+fi
 
 MIGSHIM="$BUILD/mig/shim"
 MIGGEN="$BUILD/mig/gen"
@@ -42,6 +98,7 @@ if [ $# -eq 0 ]; then
 		"$XNU/bsd/net/kpi_interface.h"
 fi
 
+fail=0
 for f in "$@"; do
 	case "$f" in
 		/*) ;;
@@ -67,7 +124,7 @@ for f in "$@"; do
 	esac
 	case "$f" in
 		*/bsd/*|*/osfmk/vm/*)
-			SKYWALK_INC="-include skywalk/os_packet.h"
+			SKYWALK_INC="-include skywalk/packet/os_packet.h"
 			;;
 		*)
 			SKYWALK_INC=""
@@ -100,7 +157,8 @@ for f in "$@"; do
 			STDLANG="-std=gnu17"
 			;;
 	esac
-	"$CC" -target x86_64-apple-darwin $ACTION \
+	# shellcheck disable=SC2086
+	if ! "$CC" -target "$TARGET" $ACTION \
 		$STDLANG -Ulinux \
 		-Wno-deprecated-non-prototype \
 		-fno-builtin \
@@ -109,7 +167,7 @@ for f in "$@"; do
 		-DKERNEL -DKERNEL_PRIVATE -DXNU_KERNEL_PRIVATE \
 		$PRIV \
 		-DCONFIG_KERNEL -DKERNEL_BUILD \
-		-DAPPLE_ARCH=x86_64 -D__i386__ -D__x86_64__ -Di386 -Dx86_64 \
+		$ARCHDEFS \
 		-DKERNEL_BASE_OFFSET=0x100000 \
 		-include "$CONFIG/kernel_config.h" \
 		-include "$CONFIG/mach_kdp.h" \
@@ -122,14 +180,15 @@ for f in "$@"; do
 		$SKYWALK_INC \
 		"-I$CONFIG" \
 		"-I$XNU/bsd/machine" \
-		"-I$XNU/bsd/i386" \
+		$BSD_ARCH_INC \
 		"-I$MIGGEN" \
+		$ARCH_EARLY_INC \
 		"-I$OUT" \
 		"-I$XNU" \
 		"-I$XNU/osfmk" \
-		"-I$XNU/osfmk/i386" \
+		$OSFMK_LATE_INC \
 		"-I$XNU/pexpert" \
-		"-I$XNU/pexpert/i386" \
+		$PEXPERT_LATE_INC \
 		"-I$XNU/pexpert/gen" \
 		"-I$XNU/iokit" \
 		"-I$XNU/libkern" \
@@ -139,5 +198,10 @@ for f in "$@"; do
 		"-I$XNU/EXTERNAL_HEADERS" \
 		"-I$XNU/EXTERNAL_HEADERS/staging" \
 		"-I$MIGSHIM" \
+		"-I$DRV/shim" \
 		"$f"
+	then
+		fail=$((fail + 1))
+	fi
 done
+exit $fail

@@ -55,7 +55,7 @@ wave is first and short. The risk is that it grows — the harness is the
 project's most tempting place to gold-plate. W0 is done when the W1 exit
 criteria can be attempted, not when `rv` is pretty.
 
-### W1 — Vendored xnu builds on Linux x86_64
+### W1 — Vendored xnu builds on Linux x86_64 (all three triples from day one)
 
 What this wave is: Apple's kernel, compiled by our harness on our hosts,
 booting far enough to prove it is alive. The kernel workstream, including
@@ -75,6 +75,13 @@ Exit criteria:
   "It hangs after three lines" is not an exit state.
 - The vendored delta is a patch series with `why:`/`fate:` headers, and
   regenerating the pristine upstream tree works.
+- Per-arch from day one (amendment 2026-11-26): every harness rule, mig
+  invocation and boot-script path is triple-clean — `x86_64-ravynos`,
+  `arm64-ravynos`, `riscv64-ravynos` each build every component and pass
+  the same gates on every commit, with no `linux-gnu`, no `unknown`, and no
+  arch-conditional shell escapes in build rules. Kernel port *sources*
+  stay out of W1; the W1 deliverable is a build system on which the W9
+  port work can start the day it begins.
 
 Dependencies: W0.
 
@@ -338,12 +345,22 @@ userspace is famously demanding of its kernel counterpart. The corridor
 PureDarwin proved exists; keeping it stable as the kernel vendor-bumps is
 the ongoing cost.
 
-### W9 — arm64, then riscv64 bring-up
+### W9 — arm64, then riscv64 bring-up (started early, per the day-one amendment)
 
 What this wave proves: the portability commitments from [01-principles.md]
 (01-principles.md) are real. The kernel port layers are
 [03-kernel.md](03-kernel.md)'s design; this wave is the schedule for
 exercising them on the other architectures.
+
+Amendment 2026-11-26: [01-principles.md](01-principles.md) says the three
+architectures are designed in from day one, and the build layer has honored
+that since W1. The port *sources* therefore start here as their own
+long-running track instead of waiting for W1–W8 to serialize ahead of them:
+an arch-port lane owns `osfmk/arm64` and `osfmk/riscv64` (plus their
+pmap/trap/SBI pieces per the table below) and works in parallel with the
+other waves, pulling W2–W4's per-arch criteria forward as its own
+milestones. This wave's exit criteria are unchanged; what changes is that
+the work is no longer scheduled strictly after W8.
 
 Exit criteria:
 

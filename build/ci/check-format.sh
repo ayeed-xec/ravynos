@@ -55,7 +55,7 @@ else
 fi
 
 echo "== format gate: clang-format (build tooling)"
-mapfile -t tool_c_files < <(tracked ':(glob)build/mig/*.c')
+mapfile -t tool_c_files < <(tracked ':(glob)build/mig/*.c' ':(glob)Kernel/RVOS/**/*.c' ':(glob)Kernel/RVOS/**/*.h')
 if [ "${#tool_c_files[@]}" -eq 0 ]; then
     echo "notice: no build/** .c/.h files tracked yet; nothing to check"
 else
