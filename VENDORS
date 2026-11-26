@@ -1,0 +1,12 @@
+# ravynOS vendored third-party sources (Docs/design/05-build-system.md, VENDORS file).
+# Format: <upstream-id> = <exact upstream tag>; license line records the SPDX the
+# vendored tree carries. Vendored files keep their upstream headers; a stripped
+# header fails the license audit.
+
+[vanillas]
+"opensource.apple.com:Libc" = "libc-1534.40.2"
+license = "APSL-2.0"
+
+[vanillas."opensource.apple.com:libdispatch"]
+tag = "libdispatch-1273.40.2"
+license = "Apache-2.0"
