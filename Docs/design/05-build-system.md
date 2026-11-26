@@ -77,6 +77,28 @@ time and hot paths. The harness measures what it builds (section sizes per compo
 artifact sizes) and fails the build when a change breaks a budget, with a diff of the
 regression in the error message.
 
+**Build scopes: one component to one bootable image.** The same graph and the same
+commands scale from a single directory to the whole system, with no special cases:
+
+- `rv build <component>` — one component and its dependency closure, nothing else.
+  `rv build kernel` is a first-class target, not a flag combination: the kernel is just
+  the component whose manifest declares mig inputs, and building it alone must be as
+  fast and cacheable as building a daemon. `rv build dyld`, `rv build WindowServer`,
+  `rv build AppKit` are the same story at their layers.
+- `rv build <layer>` — every component in a layer (`rv build frameworks`), the natural
+  unit for a lane that owns several directories.
+- `rv build` — everything buildable for the target.
+- `rv image [-t <target>]` — the whole-system build: runs the full graph, then assembles
+  the run-time artifacts from the outputs, in the formats each wave's exit criteria name
+  — the boot image (kernel + bootloader + boot-args payload), the disk image launchd
+  boots from in W3, the ISO and the Mac VM demo package in W8. Image assembly is
+  manifest-described too (which components land in which partition), so an image is
+  reproducible from source and auditable, never a hand-run script over build outputs.
+
+The rule this buys: any target a lane can describe — one file's rebuild, one component,
+one layer, one image — is `rv` plus a name, and CI uses exactly the commands a
+developer uses, never a parallel build path that can drift.
+
 **Manual builds that work.** `rv shell` drops you into an environment with the sysroot,
 compiler flags, include paths and library paths of one component already set, where
 `ninja -C build/x86_64/AppKit` (or a plain clang invocation) works. This is the thing Nix
@@ -87,7 +109,8 @@ never gave PureDarwin users, and it is a design goal, not a debugging escape hat
 One entry point, a plain executable or Python program living at the tree root. Subcommands:
 
 ```
-rv build [-t <target>] [<component>...]   # build components or everything
+rv build [-t <target>] [<component>|<layer>...]   # one component, a layer, or everything
+rv image [-t <target>]                    # whole-system build + image assembly (boot image, disk, ISO)
 rv test  [<component>...]                 # run component tests
 rv shell [<component>]                    # environment for manual builds
 rv graph [--reverse] [--forbid]           # print the dependency graph

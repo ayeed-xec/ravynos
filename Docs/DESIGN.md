@@ -468,7 +468,10 @@ P0–P6: W1 ≈ P2 completion, W2 ≈ P4 (runtime), W3 ≈ P2 userland, W4 ≈ P
 records exist for every vendored tree.
 - **E:** build harness 2.0 skeleton — declarative component graph + batch engine
   (design already agreed: graph of components, generic engine, ninja emission, cache
-  hooks); `tools/license-audit.py` with content fingerprinting; `.clang-format` + style
+  hooks); build scopes from one component to one bootable image (`rv build <component>`,
+  `rv image`; the harness builds the whole system and any single part of it through the
+  same graph — `Docs/design/05-build-system.md`, "Build scopes");
+  `tools/license-audit.py` with content fingerprinting; `.clang-format` + style
   checker; CI pipeline (build matrix, license gate, perf smoke).
 - **E/F:** spec system seeded (`Docs/spec/` with the contract set of §2.5).
 - **F:** tier test apps chosen and built with the macOS SDK (T0 static, T1 dynamic,
