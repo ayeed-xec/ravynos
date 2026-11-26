@@ -44,3 +44,9 @@ if command -v qemu-system-aarch64 >/dev/null 2>&1 && [[ -f /usr/share/qemu-efi-a
 else
 	echo "smoke: aarch64 prerequisites missing, skipping Apple Silicon boot smoke" >&2
 fi
+
+if command -v qemu-system-riscv64 >/dev/null 2>&1 && [[ -f /usr/share/qemu-efi-riscv64/RISCV_VIRT_CODE.fd ]]; then
+	bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/smoke-riscv64.sh"
+else
+	echo "smoke: riscv64 prerequisites missing, skipping RISC-V boot smoke" >&2
+fi

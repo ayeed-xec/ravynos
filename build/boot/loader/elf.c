@@ -25,6 +25,8 @@ int rv_parse_elf(const uint8_t *data, uint64_t size, struct rv_kernel_image *ima
 		return -1;
 #if defined(__x86_64__)
 	if (rd16(data + 18) != 62)
+#elif defined(__riscv)
+	if (rd16(data + 18) != 243)
 #else
 	if (rd16(data + 18) != 183)
 #endif

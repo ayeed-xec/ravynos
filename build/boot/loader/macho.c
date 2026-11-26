@@ -5,6 +5,8 @@
 #define RV_MACHO_MAGIC64 0xfeedfacf
 #if defined(__x86_64__)
 #define RV_MACHO_CPU_HOST 0x01000007
+#elif defined(__riscv)
+#define RV_MACHO_CPU_HOST 0
 #else
 #define RV_MACHO_CPU_HOST 0x0100000c
 #endif
@@ -80,13 +82,14 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 			seg->file_size = filesize;
 			seg->mem_size = memsize;
 		} else if (cmd == RV_LC_UNIXTHREAD && cmdsize >= 184) {
-			uint32_t flavor = rd32(data + offset + 8);
 #if defined(__x86_64__)
+			uint32_t flavor = rd32(data + offset + 8);
 			if (flavor == 4 && !have_entry) {
 				entry_vaddr = rd64(data + offset + 16 + 20 * 8);
 				have_entry = 1;
 			}
-#else
+#elif !defined(__riscv)
+			uint32_t flavor = rd32(data + offset + 8);
 			if (flavor == 6 && cmdsize >= 16 + 268 && !have_entry) {
 				entry_vaddr = rd64(data + offset + 16 + 32 * 8);
 				have_entry = 1;

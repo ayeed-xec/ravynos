@@ -11,6 +11,9 @@ HOST_CFLAGS=(-O2 -Wall -Wextra)
 if [[ ! -x "$BUILD/mkfat" || "$ROOT/mkfat/mkfat.c" -nt "$BUILD/mkfat" ]]; then
 	clang "${HOST_CFLAGS[@]}" -o "$BUILD/mkfat" "$ROOT/mkfat/mkfat.c"
 fi
+if [[ ! -x "$BUILD/pefix" || "$ROOT/pefix/pefix.c" -nt "$BUILD/pefix" ]]; then
+	clang "${HOST_CFLAGS[@]}" -o "$BUILD/pefix" "$ROOT/pefix/pefix.c"
+fi
 
 UEFI_TARGET=x86_64-pc-windows-gnu
 UEFI_CFLAGS=(
@@ -147,6 +150,77 @@ if [[ "$a64_kernel_needs_link" == 1 ]]; then
 		-o "$BUILD/testkernel-a64.elf" "$BUILD/a64-tk-start.o" "$BUILD/a64-tk-kernel.o" "$BUILD/a64-tk-util-arm64.o"
 fi
 
-printf 'mkfat=%s\nloader=%s\ntestkernel=%s\nloader-aarch64=%s\ntestkernel-aarch64=%s\n' \
+printf 'mkfat=%s\nloader=%s\ntestkernel=%s\nloader-aarch64=%s\ntestkernel-aarch64=%s\nloader-riscv64=%s\ntestkernel-riscv64=%s\n' \
 	"$BUILD/mkfat" "$BUILD/BOOTX64.EFI" "$BUILD/testkernel.elf" \
-	"$BUILD/BOOTAA64.EFI" "$BUILD/testkernel-a64.elf"
+	"$BUILD/BOOTAA64.EFI" "$BUILD/testkernel-a64.elf" \
+	"$BUILD/BOOTRISCV64.EFI" "$BUILD/testkernel-riscv64.elf"
+
+R64_TARGET=riscv64-efi
+R64_UEFI_CFLAGS=(
+	--target="$R64_TARGET"
+	-fno-pic
+	-mcmodel=medany
+	-ffreestanding
+	-fno-builtin
+	-fno-stack-protector
+	-fno-stack-check
+	-mno-relax
+	-msmall-data-limit=0
+	-O2
+	-Wall
+	-Wextra
+	-I"$ROOT/include"
+	-I"$ROOT/loader"
+)
+
+for src in main elf util-riscv64; do
+	clang "${R64_UEFI_CFLAGS[@]}" -c "$ROOT/loader/$src.c" -o "$BUILD/r64-loader-$src.o"
+done
+clang "${R64_UEFI_CFLAGS[@]}" -c "$ROOT/loader/macho.c" -o "$BUILD/r64-loader-macho.o"
+clang --target="$R64_TARGET" -c "$ROOT/loader/handoff-riscv64.S" -o "$BUILD/r64-loader-handoff.o"
+
+r64_needs_link=0
+[[ ! -f "$BUILD/BOOTRISCV64.EFI" ]] && r64_needs_link=1
+for obj in "$BUILD"/r64-loader-*.o; do
+	[[ "$obj" -nt "$BUILD/BOOTRISCV64.EFI" ]] && r64_needs_link=1
+done
+if [[ "$r64_needs_link" == 1 ]]; then
+	ld.lld -T "$ROOT/loader/riscv64/efi-objlst.ld" -nostdlib -static \
+		-e efi_main \
+		-o "$BUILD/r64-loader.elf" "$BUILD"/r64-loader-*.o
+	riscv64-linux-gnu-objcopy -O pei-riscv64-little "$BUILD/r64-loader.elf" "$BUILD/BOOTRISCV64.EFI.raw"
+	"$BUILD/pefix" "$BUILD/BOOTRISCV64.EFI.raw" "$BUILD/BOOTRISCV64.EFI"
+	rm -f "$BUILD/BOOTRISCV64.EFI.raw"
+fi
+
+R64_KTARGET=riscv64-ravynos
+R64_K_CFLAGS=(--target="$R64_KTARGET"
+	-fno-pic
+	-mcmodel=medany
+	-ffreestanding
+	-fno-builtin
+	-fno-stack-protector
+	-fno-stack-check
+	-mno-relax
+	-msmall-data-limit=0
+	-O2
+	-Wall
+	-Wextra
+	-I"$ROOT/include"
+	-I"$ROOT/loader"
+)
+
+clang "${R64_K_CFLAGS[@]}" -c "$ROOT/testkernel/kernel.c" -o "$BUILD/r64-tk-kernel.o"
+clang "${R64_K_CFLAGS[@]}" -c "$ROOT/loader/util-riscv64.c" -o "$BUILD/r64-tk-util-riscv64.o"
+clang --target="$R64_KTARGET" -c "$ROOT/testkernel/start-riscv64.S" -o "$BUILD/r64-tk-start.o"
+
+r64_kernel_needs_link=0
+[[ ! -f "$BUILD/testkernel-riscv64.elf" ]] && r64_kernel_needs_link=1
+for obj in "$BUILD"/r64-tk-*.o; do
+	[[ "$obj" -nt "$BUILD/testkernel-riscv64.elf" ]] && r64_kernel_needs_link=1
+done
+[[ "$ROOT/testkernel/kernel-riscv64.ld" -nt "$BUILD/testkernel-riscv64.elf" ]] && r64_kernel_needs_link=1
+if [[ "$r64_kernel_needs_link" == 1 ]]; then
+	ld.lld -T "$ROOT/testkernel/kernel-riscv64.ld" -nostdlib -static \
+		-o "$BUILD/testkernel-riscv64.elf" "$BUILD/r64-tk-start.o" "$BUILD/r64-tk-kernel.o" "$BUILD/r64-tk-util-riscv64.o"
+fi

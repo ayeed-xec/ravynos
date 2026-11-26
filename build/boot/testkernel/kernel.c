@@ -71,6 +71,8 @@ __attribute__((noinline)) static void rv_panic(const char *reason, struct rv_boo
 	for (;;)
 #if defined(__x86_64__)
 		__asm__ volatile("cli; hlt");
+#elif defined(__riscv)
+		__asm__ volatile("wfi");
 #else
 		__asm__ volatile("wfe");
 #endif

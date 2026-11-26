@@ -12,7 +12,9 @@ OUTPUT=""
 SIZE=34
 OVMF_DIR=/usr/share/OVMF
 AAVMF_DIR=/usr/share/qemu-efi-aarch64
+RISCV_EFI_DIR=/usr/share/qemu-efi-riscv64
 BOOT_NAME=BOOTX64.EFI
+STARTUP=""
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -48,6 +50,10 @@ while [[ $# -gt 0 ]]; do
 		BOOT_NAME="$2"
 		shift 2
 		;;
+	--startup)
+		STARTUP="$2"
+		shift 2
+		;;
 	*)
 		echo "image.sh: unknown option $1" >&2
 		exit 2
@@ -76,7 +82,13 @@ if [[ -z "$KERNEL_FILE" ]]; then
 fi
 [[ -f "$KERNEL_FILE" ]]
 
-"$MKFAT" "$OUTPUT" "$SIZE" "EFI/BOOT/$BOOT_NAME" "$LOADER" "KERNEL.ELF" "$KERNEL_FILE"
+ESP_FILES=("EFI/BOOT/$BOOT_NAME" "$LOADER" "KERNEL.ELF" "$KERNEL_FILE")
+if [[ -n "$STARTUP" ]]; then
+	STARTUP_SCRIPT="$BUILD/startup.nsh"
+	printf '%s\r\n' "$STARTUP" >"$STARTUP_SCRIPT"
+	ESP_FILES+=("STARTUP.NSH" "$STARTUP_SCRIPT")
+fi
+"$MKFAT" "$OUTPUT" "$SIZE" "${ESP_FILES[@]}"
 
 FIRMWARE=""
 case "$BOOT_NAME" in
@@ -96,6 +108,13 @@ BOOTAA64.EFI)
 	FIRMWARE="$AAVMF_DIR/QEMU_EFI.fd"
 	[[ -f "$FIRMWARE" ]] || {
 		echo "image.sh: no AAVMF firmware found at $FIRMWARE" >&2
+		exit 1
+	}
+	;;
+BOOTRISCV64.EFI)
+	FIRMWARE="$RISCV_EFI_DIR/RISCV_VIRT_CODE.fd"
+	[[ -f "$FIRMWARE" ]] || {
+		echo "image.sh: no RISC-V edk2 firmware found at $FIRMWARE" >&2
 		exit 1
 	}
 	;;

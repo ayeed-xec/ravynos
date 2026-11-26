@@ -67,40 +67,90 @@ static uint64_t dir_scan_end(uint32_t dir_cluster)
 	return cluster_off(dir_cluster) + bytes_per_cluster;
 }
 
+static uint8_t sfn_checksum(const uint8_t *sfn)
+{
+	uint8_t sum = 0;
+	for (int i = 0; i < 11; i++)
+		sum = (uint8_t)(((sum & 1) << 7) + (sum >> 1) + sfn[i]);
+	return sum;
+}
+
 static void add_entry(uint32_t dir_cluster, const char *name, uint8_t attr, uint32_t first_cluster, uint32_t size)
 {
-	for (uint64_t off = dir_scan_start(dir_cluster); off < dir_scan_end(dir_cluster); off += 32) {
-		if (image[off] == 0x00 || image[off] == 0xe5) {
-			memset(&image[off], ' ', 11);
-			size_t nlen = 0;
-			const char *dot = name;
-			while (*dot && *dot != '.') {
-				if (nlen < 8)
-					image[off + nlen] = (uint8_t)(*dot >= 'a' && *dot <= 'z' ? *dot - 32 : *dot);
-				nlen++;
-				dot++;
-			}
-			size_t elen = 0;
-			while (*dot) {
-				if (*dot == '.') {
-					elen = 0;
-				} else if (elen < 3) {
-					char c = *dot;
-					image[off + 8 + elen] = (uint8_t)(c >= 'a' && c <= 'z' ? c - 32 : c);
-					elen++;
-				}
-				dot++;
-			}
-			image[off + 11] = attr;
-			wr16(&image[off + 22], 0x6a48);
-			wr16(&image[off + 24], 0x6a48);
-			wr16(&image[off + 26], (uint16_t)first_cluster);
-			wr32(&image[off + 28], size);
-			return;
-		}
+	static const int slot_off[13] = { 1, 3, 5, 7, 9, 14, 16, 18, 20, 22, 24, 28, 30 };
+	uint8_t sfn[11];
+	size_t base_len = 0, ext_len = 0;
+	int saw_dot = 0;
+	for (const char *c = name; *c; c++) {
+		if (*c == '.') {
+			saw_dot = 1;
+			ext_len = 0;
+		} else if (saw_dot)
+			ext_len++;
+		else
+			base_len++;
 	}
-	fprintf(stderr, "mkfat: directory full\n");
-	exit(1);
+	int needs_lfn = base_len > 8 || ext_len > 3;
+	memset(sfn, ' ', 11);
+	size_t n = 0;
+	const char *c = name;
+	while (*c && *c != '.') {
+		if (n < (needs_lfn ? 6u : 8u))
+			sfn[n] = (uint8_t)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c);
+		n++;
+		c++;
+	}
+	if (needs_lfn) {
+		sfn[6] = '~';
+		sfn[7] = '1';
+	}
+	size_t e = 0;
+	while (*c) {
+		if (*c != '.' && e < 3)
+			sfn[8 + e++] = (uint8_t)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c);
+		c++;
+	}
+	size_t ulen = strlen(name);
+	size_t lfn_count = needs_lfn ? (ulen + 12) / 13 : 0;
+	uint64_t end = dir_scan_end(dir_cluster);
+	uint64_t off = dir_scan_start(dir_cluster);
+	while (off + 32 <= end && image[off] != 0x00 && image[off] != 0xe5)
+		off += 32;
+	if (off + (lfn_count + 1) * 32 > end) {
+		fprintf(stderr, "mkfat: directory full\n");
+		exit(1);
+	}
+	if (needs_lfn) {
+		uint8_t sum = sfn_checksum(sfn);
+		for (size_t i = 0; i < lfn_count; i++) {
+			size_t seq = lfn_count - i;
+			uint8_t *ent = &image[off + i * 32];
+			memset(ent, 0xff, 32);
+			ent[0] = (uint8_t)(seq | (i == 0 ? 0x40 : 0));
+			ent[11] = 0x0f;
+			ent[12] = 0;
+			ent[13] = sum;
+			wr16(&ent[26], 0);
+			for (int s = 0; s < 13; s++) {
+				size_t ci = (seq - 1) * 13 + (size_t)s;
+				uint16_t ch = 0xffff;
+				if (ci < ulen)
+					ch = (uint16_t)(uint8_t)name[ci];
+				else if (ci == ulen)
+					ch = 0;
+				ent[slot_off[s]] = (uint8_t)(ch & 0xff);
+				ent[slot_off[s] + 1] = (uint8_t)(ch >> 8);
+			}
+		}
+		off += lfn_count * 32;
+	}
+	memset(&image[off], ' ', 11);
+	memcpy(&image[off], sfn, 11);
+	image[off + 11] = attr;
+	wr16(&image[off + 22], 0x6a48);
+	wr16(&image[off + 24], 0x6a48);
+	wr16(&image[off + 26], (uint16_t)first_cluster);
+	wr32(&image[off + 28], size);
 }
 
 static uint32_t fat16_mkdir(const char *name, uint32_t parent)
@@ -232,7 +282,7 @@ int main(int argc, char **argv)
 				else
 					base_len++;
 			}
-			if (base_len > 8 || ext_len > 3 || depth == 8) {
+			if (base_len > 11 || depth == 8) {
 				fprintf(stderr, "mkfat: bad path %s\n", path);
 				return 1;
 			}

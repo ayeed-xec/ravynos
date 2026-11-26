@@ -191,14 +191,13 @@ efi_status efi_main(efi_handle image_handle, struct efi_system_table *system_tab
 		return EFI_LOAD_ERROR;
 	}
 
-	static const char *paths[] = {
-		"\\ravynos\\kernel", "\\ravynos\\kernel.elf", "\\kernel.elf", "\\kernel", 0
-	};
+	static const char paths[] = "\\ravynos\\kernel\0\\ravynos\\kernel.elf\0"
+				    "\\kernel.elf\0\\kernel";
 	void *file = 0;
 	const char *opened = 0;
-	for (uint32_t i = 0; paths[i]; i++) {
-		if (rv_open_file(sfs, paths[i], &file) == 0) {
-			opened = paths[i];
+	for (const char *p = paths; *p != 0; p += rv_strlen(p) + 1) {
+		if (rv_open_file(sfs, p, &file) == 0) {
+			opened = p;
 			break;
 		}
 	}
@@ -288,6 +287,8 @@ efi_status efi_main(efi_handle image_handle, struct efi_system_table *system_tab
 	for (;;)
 #if defined(__x86_64__)
 		__asm__ volatile("cli; hlt");
+#elif defined(__riscv)
+		__asm__ volatile("wfi");
 #else
 		__asm__ volatile("wfi");
 #endif
