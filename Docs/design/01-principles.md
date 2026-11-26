@@ -133,7 +133,7 @@ What we do instead when a subsystem is not ready:
   unimplemented selectors, ioctls or error paths written in the component's
   README. "Incomplete and documented" is a state we accept; "silently
   pretending" is not.
-- The gap is recorded in the roadmap ([09-roadmap.md](09-roadmap.md)) so the
+- The gap is recorded in the roadmap ([12-roadmap.md](12-roadmap.md)) so the
   next contributor can find it without archaeology.
 
 The build harness enforces this: a component cannot claim a state it does not
