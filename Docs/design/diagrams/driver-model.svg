@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 740" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="740" fill="#ffffff"/>
+  <text x="30" y="36" font-size="16" font-weight="bold" fill="#1a1a1a">Driver model: families, kext infrastructure, compatibility</text>
+
+  <!-- userspace row -->
+  <rect x="60" y="60" width="360" height="54" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="240" y="92" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Applications, userspace clients</text>
+  <rect x="480" y="60" width="380" height="54" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="670" y="84" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">DriverKit user drivers</text>
+  <text x="670" y="103" font-size="12" text-anchor="middle" fill="#1a1a1a">own process, IPC path, preferred</text>
+
+  <!-- families -->
+  <rect x="60" y="150" width="800" height="96" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="80" y="178" font-size="13" font-weight="bold" fill="#1a1a1a">IOKit driver families — from Apple's open-source releases</text>
+  <text x="80" y="204" font-size="12" fill="#1a1a1a">IOPCIFamily · IONetworkingFamily · IOGraphics · IOHIDFamily</text>
+  <text x="80" y="228" font-size="12" fill="#1a1a1a">IOStorageFamily · IOAudioFamily · DriverKit frameworks</text>
+
+  <!-- our kext infrastructure -->
+  <rect x="60" y="282" width="800" height="90" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="80" y="310" font-size="13" font-weight="bold" fill="#1a1a1a">Our kext infrastructure</text>
+  <text x="80" y="332" font-size="12" fill="#1a1a1a">loading (kextd, signature checks) · matching (per-family tables)</text>
+  <text x="80" y="356" font-size="12" fill="#1a1a1a">sandboxing (declared KPIs at link time, user-client entitlements)</text>
+
+  <!-- native vs shim -->
+  <rect x="60" y="412" width="380" height="70" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="250" y="440" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Native IOKit kexts</text>
+  <text x="250" y="462" font-size="12" text-anchor="middle" fill="#1a1a1a">written against Apple's families</text>
+  <rect x="480" y="412" width="380" height="70" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="670" y="436" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">KPI shim — version-pinned contracts</text>
+  <text x="670" y="456" font-size="12" text-anchor="middle" fill="#1a1a1a">network · GPU · storage, test suite per contract</text>
+  <text x="670" y="474" font-size="12" text-anchor="middle" fill="#9a3412">retired when no native driver needs it</text>
+
+  <!-- bottom row -->
+  <rect x="60" y="530" width="380" height="96" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="250" y="558" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Hardware</text>
+  <text x="250" y="580" font-size="12" text-anchor="middle" fill="#1a1a1a">PCI and USB devices reached through</text>
+  <text x="250" y="600" font-size="12" text-anchor="middle" fill="#1a1a1a">our bus controllers</text>
+  <rect x="480" y="530" width="380" height="96" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="670" y="554" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Unmodified Linux / FreeBSD drivers</text>
+  <text x="670" y="576" font-size="12" text-anchor="middle" fill="#1a1a1a">compiled against the shim, same privilege,</text>
+  <text x="670" y="596" font-size="12" text-anchor="middle" fill="#1a1a1a">same memory — native speed, no translation VM</text>
+  <text x="670" y="616" font-size="12" text-anchor="middle" fill="#1a1a1a">e.g. NVIDIA's proprietary kernel driver</text>
+
+  <!-- arrows -->
+  <line x1="240" y1="114" x2="240" y2="146" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="670" y1="114" x2="560" y2="146" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="460" y1="246" x2="460" y2="278" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="250" y1="372" x2="250" y2="408" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="670" y1="372" x2="670" y2="408" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="670" y1="482" x2="670" y2="526" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="688" y="510" font-size="12" fill="#1a1a1a">implements the host KPI surface</text>
+  <line x1="250" y1="482" x2="250" y2="526" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="480" y1="600" x2="446" y2="600" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="30" y="668" font-size="12" fill="#1a1a1a">One kernel path for native and compatible drivers; the shim is a function-call boundary, not a VM.</text>
+</svg>

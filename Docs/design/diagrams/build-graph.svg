@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 720" width="900" height="720">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowNo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9a3412"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="720" fill="#ffffff"/>
+  <text x="30" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Build graph of a first working system</text>
+
+  <!-- allowed edges -->
+  <g stroke="#2563eb" stroke-width="1.6" fill="none">
+    <line x1="165" y1="330" x2="215" y2="330" marker-end="url(#arrow)"/>
+    <polyline points="350,318 375,318 375,238 400,238" marker-end="url(#arrow)"/>
+    <line x1="350" y1="330" x2="400" y2="330" marker-end="url(#arrow)"/>
+    <polyline points="350,342 375,342 375,418 400,418" marker-end="url(#arrow)"/>
+    <polyline points="530,238 555,238 555,316 580,316" marker-end="url(#arrow)"/>
+    <line x1="530" y1="330" x2="580" y2="330" marker-end="url(#arrow)"/>
+    <polyline points="530,418 555,418 555,344 580,344" marker-end="url(#arrow)"/>
+    <polyline points="720,322 738,322 738,268 755,268" marker-end="url(#arrow)"/>
+    <line x1="815" y1="240" x2="815" y2="182" marker-end="url(#arrow)"/>
+    <polyline points="282,360 282,530 440,530 440,560" marker-end="url(#arrow)"/>
+    <polyline points="530,350 540,350 540,530 480,530 480,560" marker-end="url(#arrow)"/>
+    <polyline points="289,360 289,536 665,536 665,560" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- forbidden edges -->
+  <g stroke="#9a3412" stroke-width="1.6" fill="none" stroke-dasharray="6 4">
+    <polyline points="815,120 815,80 300,80 300,296" marker-end="url(#arrowNo)"/>
+    <polyline points="475,620 475,656 875,656 875,304" marker-end="url(#arrowNo)"/>
+  </g>
+  <text x="330" y="72" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a3412">forbidden: apps depend on kernel</text>
+  <text x="560" y="650" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a3412">forbidden: compat depends on app frameworks</text>
+
+  <!-- boxes -->
+  <g stroke="#444" stroke-width="1.2" font-family="Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle">
+    <rect x="30" y="300" width="135" height="60" rx="8" fill="#e6f4ea"/>
+    <text x="97" y="325" font-weight="bold" fill="#1a1a1a" stroke="none">Bootloader</text>
+    <text x="97" y="345" fill="#1a1a1a" stroke="none" font-size="12">ours</text>
+
+    <rect x="215" y="296" width="135" height="60" rx="8" fill="#e8f0fe"/>
+    <text x="282" y="321" font-weight="bold" fill="#1a1a1a" stroke="none">Kernel</text>
+    <text x="282" y="341" fill="#1a1a1a" stroke="none" font-size="12">xnu, vendored</text>
+
+    <rect x="400" y="210" width="130" height="56" rx="8" fill="#e8f0fe"/>
+    <text x="465" y="243" font-weight="bold" fill="#1a1a1a" stroke="none">libc</text>
+
+    <rect x="400" y="300" width="130" height="56" rx="8" fill="#e8f0fe"/>
+    <text x="465" y="325" font-weight="bold" fill="#1a1a1a" stroke="none">dyld</text>
+    <text x="465" y="343" fill="#1a1a1a" stroke="none" font-size="12">+ libSystem</text>
+
+    <rect x="400" y="390" width="130" height="56" rx="8" fill="#e8f0fe"/>
+    <text x="465" y="423" font-weight="bold" fill="#1a1a1a" stroke="none">launchd</text>
+
+    <rect x="580" y="300" width="140" height="56" rx="8" fill="#e8f0fe"/>
+    <text x="650" y="325" font-weight="bold" fill="#1a1a1a" stroke="none">CoreFoundation</text>
+    <text x="650" y="343" fill="#1a1a1a" stroke="none" font-size="12">vendored</text>
+
+    <rect x="755" y="240" width="120" height="56" rx="8" fill="#e6f4ea"/>
+    <text x="815" y="273" font-weight="bold" fill="#1a1a1a" stroke="none">AppKit</text>
+
+    <rect x="755" y="120" width="120" height="56" rx="8" fill="#f5f5f4"/>
+    <text x="815" y="153" font-weight="bold" fill="#1a1a1a" stroke="none">Apps</text>
+
+    <rect x="400" y="560" width="150" height="60" rx="8" fill="#e6f4ea"/>
+    <text x="475" y="585" font-weight="bold" fill="#1a1a1a" stroke="none">Compat</text>
+    <text x="475" y="603" fill="#1a1a1a" stroke="none" font-size="12">Mac binary loader</text>
+
+    <rect x="610" y="560" width="150" height="60" rx="8" fill="#e6f4ea"/>
+    <text x="685" y="585" font-weight="bold" fill="#1a1a1a" stroke="none">Metal</text>
+    <text x="685" y="603" fill="#1a1a1a" stroke="none" font-size="12">ours, clean-room</text>
+  </g>
+
+  <!-- legend -->
+  <g font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">
+    <rect x="30" y="680" width="14" height="14" rx="3" fill="#e8f0fe" stroke="#444"/>
+    <text x="50" y="691">Apple-open (vendored)</text>
+    <rect x="200" y="680" width="14" height="14" rx="3" fill="#e6f4ea" stroke="#444"/>
+    <text x="220" y="691">ours (new)</text>
+    <rect x="310" y="680" width="14" height="14" rx="3" fill="#f5f5f4" stroke="#444"/>
+    <text x="330" y="691">applications</text>
+    <line x1="420" y1="687" x2="460" y2="687" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <text x="468" y="691">allowed dependency</text>
+    <line x1="600" y1="687" x2="640" y2="687" stroke="#9a3412" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrowNo)"/>
+    <text x="648" y="691">rejected by rv graph --forbid</text>
+  </g>
+
+  <text x="30" y="712" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Layer rules are defined in 02-architecture.md; the harness rejects violating edges before any compiler runs.</text>
+</svg>

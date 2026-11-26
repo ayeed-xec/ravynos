@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="600" fill="#ffffff"/>
+
+  <text x="30" y="40" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Work waves: order, dependencies, parallel lanes</text>
+  <text x="30" y="62" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Left to right is approximate start order. Green: mainline. Red: hardest gaps.</text>
+
+  <!-- Row 1: W0 -> W1 -> W2, then W5 (c4, r1) -->
+  <!-- W0 -->
+  <rect x="35" y="100" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="100" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W0 skeleton</text>
+  <text x="100" y="138" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">rv, CI, licenses</text>
+
+  <!-- W1 -->
+  <rect x="215" y="100" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="280" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W1 xnu on Linux</text>
+  <text x="280" y="138" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">boots in QEMU</text>
+
+  <!-- W2 -->
+  <rect x="395" y="100" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="460" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W2 kite bootloader</text>
+  <text x="460" y="138" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">ESP hand-off</text>
+
+  <!-- W5 (c4 r1) -->
+  <rect x="575" y="100" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="640" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W5 display</text>
+  <text x="640" y="138" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">fb, WindowServer</text>
+
+  <!-- W3 (c3 r2) -->
+  <rect x="395" y="170" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="460" y="190" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W3 core userland</text>
+  <text x="460" y="208" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">dyld, launchd, IPC</text>
+
+  <!-- W4 (c4 r2) -->
+  <rect x="575" y="170" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="640" y="190" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W4 APFS</text>
+  <text x="640" y="208" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">tools, then VFS</text>
+
+  <!-- W8 (c4 r3) -->
+  <rect x="575" y="240" width="130" height="48" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="640" y="260" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W8 compat</text>
+  <text x="640" y="278" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">shims, ELF loader</text>
+
+  <!-- W6 (c5 r1) -->
+  <rect x="750" y="100" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="815" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W6 frameworks</text>
+  <text x="815" y="138" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Foundation, AppKit</text>
+
+  <!-- W7 (c5 r2) -->
+  <rect x="750" y="170" width="130" height="48" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="815" y="190" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W7 Metal</text>
+  <text x="815" y="208" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">software raster</text>
+
+  <!-- W9 (c5 r3) -->
+  <rect x="750" y="240" width="130" height="48" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="815" y="260" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W9 arm64 + riscv</text>
+  <text x="815" y="278" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">exit criteria</text>
+
+  <!-- W10 (c5 r4) -->
+  <rect x="750" y="310" width="130" height="48" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="815" y="330" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W10 phone face</text>
+  <text x="815" y="348" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">bring-up (10)</text>
+
+  <!-- Arrows -->
+  <line x1="165" y1="124" x2="215" y2="124" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="345" y1="124" x2="395" y2="124" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="280,148 280,194 395,194" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <line x1="460" y1="148" x2="460" y2="170" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="525" y1="194" x2="575" y2="194" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="525,182 550,182 550,124 575,124" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="525,206 550,206 550,264 575,264" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="705,124 750,124" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="705,178 727,178 727,80 815,80 815,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="705,132 735,132 735,194 750,194" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="705,210 727,210 727,264 750,264" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="815" y1="288" x2="815" y2="310" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="880,124 893,124 893,334 880,334" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+
+  <!-- Labels for the two dashed edges -->
+  <text x="300" y="186" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">develop host-side</text>
+
+  <!-- Legend -->
+  <rect x="35" y="420" width="18" height="18" rx="4" fill="#e6f4ea" stroke="#444"/>
+  <text x="62" y="434" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">mainline wave</text>
+  <rect x="190" y="420" width="18" height="18" rx="4" fill="#fdeeee" stroke="#444"/>
+  <text x="217" y="434" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">hardest gaps: Metal (W7), compat (W8), phone face (W10)</text>
+
+  <text x="35" y="490" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">W7 (Metal) and W8 (compat) proceed alongside W6 (frameworks); W9 re-runs every</text>
+  <text x="35" y="510" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">earlier exit criterion on each new architecture before W10 starts on top of it.</text>
+
+  <text x="35" y="570" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Figure: the work waves. Arrows are dependencies; vertical position separates parallel lanes.</text>
+</svg>

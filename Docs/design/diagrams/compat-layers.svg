@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 720" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="720" fill="#ffffff"/>
+  <text x="30" y="36" font-size="16" font-weight="bold" fill="#1a1a1a">Compatibility layers: three process families, one kernel</text>
+
+  <!-- process row -->
+  <rect x="60" y="62" width="240" height="66" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="180" y="88" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Native processes</text>
+  <text x="180" y="108" font-size="12" text-anchor="middle" fill="#1a1a1a">Mach-O, loaded by dyld</text>
+
+  <rect x="330" y="62" width="240" height="66" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="450" y="82" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Linux-ABI processes</text>
+  <text x="450" y="100" font-size="12" text-anchor="middle" fill="#1a1a1a">ELF, unmodified binaries</text>
+  <text x="450" y="118" font-size="12" text-anchor="middle" fill="#1a1a1a">incl. NVIDIA GL / Vulkan userspace</text>
+
+  <rect x="600" y="62" width="240" height="66" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="720" y="88" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">FreeBSD-ABI processes</text>
+  <text x="720" y="108" font-size="12" text-anchor="middle" fill="#1a1a1a">ELF, unmodified binaries</text>
+
+  <!-- loader row -->
+  <rect x="60" y="168" width="240" height="60" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="180" y="192" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">dyld</text>
+  <text x="180" y="212" font-size="12" text-anchor="middle" fill="#1a1a1a">Mach-O images, unchanged</text>
+
+  <rect x="330" y="168" width="240" height="60" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="450" y="188" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Our ELF loader — Linux</text>
+  <text x="450" y="206" font-size="12" text-anchor="middle" fill="#1a1a1a">maps segments, auxv,</text>
+  <text x="450" y="223" font-size="12" text-anchor="middle" fill="#1a1a1a">our own vDSO</text>
+
+  <rect x="600" y="168" width="240" height="60" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="720" y="188" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Our ELF loader — FreeBSD</text>
+  <text x="720" y="208" font-size="12" text-anchor="middle" fill="#1a1a1a">same loader, FreeBSD brand</text>
+
+  <!-- kernel row -->
+  <rect x="60" y="268" width="780" height="150" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="80" y="294" font-size="13" font-weight="bold" fill="#1a1a1a">XNU kernel (xnu-13432 line) — one kernel, one scheduler, one VM</text>
+
+  <rect x="76" y="312" width="236" height="88" rx="8" fill="#ffffff" stroke="#444"/>
+  <text x="194" y="336" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Native surface</text>
+  <text x="194" y="356" font-size="12" text-anchor="middle" fill="#1a1a1a">Mach traps + BSD syscalls,</text>
+  <text x="194" y="374" font-size="12" text-anchor="middle" fill="#1a1a1a">as shipped</text>
+
+  <rect x="332" y="312" width="236" height="88" rx="8" fill="#ffffff" stroke="#444"/>
+  <text x="450" y="332" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Linux ABI environment</text>
+  <text x="450" y="350" font-size="12" text-anchor="middle" fill="#1a1a1a">Linux syscalls, futex → ulocks,</text>
+  <text x="450" y="368" font-size="12" text-anchor="middle" fill="#1a1a1a">epoll → kqueue, projected</text>
+  <text x="450" y="386" font-size="12" text-anchor="middle" fill="#1a1a1a">/proc and /sys</text>
+
+  <rect x="588" y="312" width="236" height="88" rx="8" fill="#ffffff" stroke="#444"/>
+  <text x="706" y="332" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">FreeBSD ABI environment</text>
+  <text x="706" y="352" font-size="12" text-anchor="middle" fill="#1a1a1a">FreeBSD syscalls served</text>
+  <text x="706" y="370" font-size="12" text-anchor="middle" fill="#1a1a1a">natively, smaller surface</text>
+
+  <!-- shim plane -->
+  <rect x="60" y="458" width="780" height="84" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="80" y="486" font-size="13" font-weight="bold" fill="#1a1a1a">Driver shim plane — version-pinned Linux / FreeBSD KPIs (03-kernel.md)</text>
+  <text x="80" y="508" font-size="12" fill="#1a1a1a">unmodified drivers compiled against the shim, linked as kexts: NVIDIA kernel driver,</text>
+  <text x="80" y="526" font-size="12" fill="#1a1a1a">network, storage — BSD/MIT, ours, with a contract test suite per driver class</text>
+
+  <!-- hardware row -->
+  <rect x="60" y="582" width="780" height="70" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="450" y="610" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Hardware</text>
+  <text x="450" y="632" font-size="12" text-anchor="middle" fill="#1a1a1a">GPU · NIC · NVMe · USB — reached through our bus controllers and IOKit families</text>
+
+  <!-- arrows -->
+  <line x1="180" y1="128" x2="180" y2="164" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="450" y1="128" x2="450" y2="164" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="720" y1="128" x2="720" y2="164" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="180" y1="228" x2="180" y2="264" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="450" y1="228" x2="450" y2="264" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="720" y1="228" x2="720" y2="264" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="450" y1="418" x2="450" y2="454" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="450" y1="542" x2="450" y2="578" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="468" y="566" font-size="12" fill="#1a1a1a">drivers reach hardware as first-class kexts</text>
+
+  <text x="30" y="692" font-size="12" fill="#1a1a1a">Every process is first-class: same scheduler, same VM, same privilege. The loaders, ABI environments and shim are ours — nothing is emulated.</text>
+</svg>

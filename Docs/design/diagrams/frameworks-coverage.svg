@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 660" width="900" height="660">
+  <rect x="0" y="0" width="900" height="660" fill="#ffffff"/>
+
+  <text x="28" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Framework coverage by sourcing tier</text>
+
+  <!-- column headers -->
+  <text x="40" y="80" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">Framework family</text>
+  <text x="370" y="80" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Tier 1 — vendor</text>
+  <text x="560" y="80" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Tier 2 — permissive seed</text>
+  <text x="755" y="80" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Tier 3 — clean-room</text>
+  <line x1="40" y1="92" x2="850" y2="92" stroke="#888" stroke-width="1"/>
+
+  <!-- row 1: Foundation / CoreFoundation -->
+  <text x="40" y="130" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">Foundation / CoreFoundation</text>
+  <rect x="292" y="109" width="156" height="34" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="370" y="123" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">CF, objc4, dispatch,</text>
+  <text x="370" y="138" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">libpthread — done</text>
+
+  <!-- row 2: AppKit -->
+  <text x="40" y="184" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">AppKit</text>
+  <rect x="482" y="163" width="156" height="34" rx="8" fill="#fef3e2" stroke="#444"/>
+  <text x="560" y="177" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">mySTEP seed (BSD)</text>
+  <text x="560" y="192" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">re-bind + big gaps</text>
+
+  <!-- row 3: CoreGraphics -->
+  <text x="40" y="238" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">CoreGraphics</text>
+  <rect x="672" y="217" width="166" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="755" y="238" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">clean-room</text>
+
+  <!-- row 4: CoreText -->
+  <text x="40" y="292" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">CoreText</text>
+  <rect x="672" y="271" width="166" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="755" y="292" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">clean-room</text>
+
+  <!-- row 5: CoreAnimation -->
+  <text x="40" y="346" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">CoreAnimation (QuartzCore)</text>
+  <rect x="672" y="325" width="166" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="755" y="346" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">clean-room — server too</text>
+
+  <!-- row 6: Metal -->
+  <text x="40" y="400" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">Metal</text>
+  <rect x="672" y="379" width="166" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="755" y="394" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">API + shader pipeline</text>
+  <text x="755" y="409" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">+ per-GPU backends (07)</text>
+
+  <!-- row 7: CoreAudio -->
+  <text x="40" y="454" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">CoreAudio</text>
+  <rect x="672" y="433" width="166" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="755" y="454" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">clean-room</text>
+
+  <!-- row 8: Security -->
+  <text x="40" y="508" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">Security</text>
+  <rect x="292" y="487" width="156" height="34" rx="8" fill="#fef3e2" stroke="#444"/>
+  <text x="370" y="501" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">pieces vendored,</text>
+  <text x="370" y="516" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">rest to write</text>
+
+  <!-- row 9: CoreML / MLX -->
+  <text x="40" y="562" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1a1a1a">CoreML / MLX</text>
+  <rect x="292" y="541" width="156" height="34" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="370" y="562" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">MLX (MIT) — vendored</text>
+  <rect x="672" y="541" width="166" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="755" y="562" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">serving layer on Metal</text>
+
+  <!-- legend -->
+  <rect x="40" y="606" width="14" height="14" fill="#e6f4ea" stroke="#444"/>
+  <text x="60" y="618" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">done by vendoring / adoption</text>
+  <rect x="280" y="606" width="14" height="14" fill="#fef3e2" stroke="#444"/>
+  <text x="300" y="618" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">seed adopted — major work remains</text>
+  <rect x="560" y="606" width="14" height="14" fill="#fdeeee" stroke="#444"/>
+  <text x="580" y="618" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">major new work, clean-room</text>
+
+  <text x="40" y="648" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#444">A family appears in the tier it is sourced from; the chip color says how much of it is new work.</text>
+</svg>

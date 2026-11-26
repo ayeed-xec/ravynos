@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 760" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="760" fill="#ffffff"/>
+  <text x="24" y="36" font-size="16" font-weight="bold" fill="#1a1a1a">Boot flow: firmware to first user process</text>
+
+  <!-- Stage 1: Firmware -->
+  <rect x="40" y="60" width="380" height="104" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="60" y="84" font-size="13" font-weight="bold" fill="#1a1a1a">1. Firmware (UEFI / DT / SBI)</text>
+  <text x="60" y="104" font-size="12" fill="#1a1a1a">enumerates boot devices, exposes the</text>
+  <text x="60" y="122" font-size="12" fill="#1a1a1a">memory map, UEFI protocols and variables.</text>
+  <text x="60" y="146" font-size="12" fill="#9a3412">ready when: a boot device can be read</text>
+
+  <!-- Stage 2: kite -->
+  <rect x="480" y="60" width="380" height="104" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="500" y="84" font-size="13" font-weight="bold" fill="#1a1a1a">2. kite (the loader)</text>
+  <text x="500" y="104" font-size="12" fill="#1a1a1a">core up, modules in, menu and OS choice,</text>
+  <text x="500" y="122" font-size="12" fill="#1a1a1a">parse image, build boot_args / DTB,</text>
+  <text x="500" y="140" font-size="12" fill="#1a1a1a">reserve dump area, TPM-measure, boot log.</text>
+  <text x="500" y="158" font-size="12" fill="#9a3412">ready when: kernel image and args are set</text>
+
+  <!-- Stage 3: Hand-off -->
+  <rect x="40" y="230" width="380" height="118" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="60" y="254" font-size="13" font-weight="bold" fill="#1a1a1a">3. Hand-off</text>
+  <text x="60" y="274" font-size="12" fill="#1a1a1a">exit boot services, copy segments to</text>
+  <text x="60" y="292" font-size="12" fill="#1a1a1a">physical addresses, final console writes,</text>
+  <text x="60" y="310" font-size="12" fill="#1a1a1a">jump to entry (64 to 32 switch on x86_64).</text>
+  <text x="60" y="332" font-size="12" fill="#9a3412">loader is gone; log and measurement remain</text>
+
+  <!-- Stage 4: XNU -->
+  <rect x="480" y="230" width="380" height="118" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="500" y="254" font-size="13" font-weight="bold" fill="#1a1a1a">4. XNU kernel (pstart)</text>
+  <text x="500" y="274" font-size="12" fill="#1a1a1a">re-establishes paging, starts other CPUs,</text>
+  <text x="500" y="292" font-size="12" fill="#1a1a1a">brings up IOKit drivers,</text>
+  <text x="500" y="310" font-size="12" fill="#1a1a1a">mounts root (APFS boot volume).</text>
+  <text x="500" y="332" font-size="12" fill="#9a3412">ready when: root device is mounted</text>
+
+  <!-- Stage 5: launchd -->
+  <rect x="40" y="404" width="380" height="96" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="60" y="428" font-size="13" font-weight="bold" fill="#1a1a1a">5. launchd (first user process)</text>
+  <text x="60" y="448" font-size="12" fill="#1a1a1a">PID 1 starts system services;</text>
+  <text x="60" y="466" font-size="12" fill="#1a1a1a">everything before this point existed</text>
+  <text x="60" y="484" font-size="12" fill="#1a1a1a">to make this line of code run.</text>
+
+  <!-- Flow arrows -->
+  <line x1="420" y1="112" x2="476" y2="112" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+  <polyline points="670,164 670,197 230,197 230,226" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="420" y1="289" x2="476" y2="289" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+  <polyline points="670,348 670,381 230,381 230,400" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Contract table -->
+  <rect x="60" y="534" width="780" height="182" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="80" y="560" font-size="13" font-weight="bold" fill="#1a1a1a">What each stage must hand to the next (the contract)</text>
+  <text x="80" y="584" font-size="12" fill="#1a1a1a">firmware -&gt; loader:  readable boot device, memory map, console, (UEFI: protocols and variables)</text>
+  <text x="80" y="606" font-size="12" fill="#1a1a1a">loader -&gt; hand-off:  chosen OS and root device, parsed image, boot_args / DTB, reserved dump area,</text>
+  <text x="104" y="624" font-size="12" fill="#1a1a1a">measured-boot log, versioned machine-readable boot log</text>
+  <text x="80" y="648" font-size="12" fill="#1a1a1a">hand-off -&gt; kernel:  boot services exited, segments at physical addresses, entry register contract</text>
+  <text x="80" y="672" font-size="12" fill="#1a1a1a">kernel -&gt; launchd:   mounted root filesystem, devices for PID 1, early console still available</text>
+  <text x="80" y="700" font-size="12" fill="#9a3412">Each stage may assume exactly what its predecessor set up, and nothing more.</text>
+
+  <text x="450" y="744" font-size="12" font-style="italic" text-anchor="middle" fill="#1a1a1a">Boot hand-off from firmware through kite to XNU and launchd; the colored line at the foot of each stage is its readiness check.</text>
+</svg>

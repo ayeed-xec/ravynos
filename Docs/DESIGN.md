@@ -535,6 +535,46 @@ widens: W3∥(early D work), W4∥(W5 arm64 prototype), W6∥(W5 Apple Silicon),
 most 3–4 lanes active — more parallel lanes than the contracts can freeze produces
 collision churn, not speed.
 
+### External contract version pins
+
+A KPI contract must live years, so each driver-class contract pins to a long-support
+line, not the newest stable. Re-pinning is a decision recorded here and in the owning
+wave, not a drive-by bump. Checked 2026-11-26 against kernel.org and freebsd.org.
+
+| Contract | Pin | Support window | Rationale |
+|---|---|---|---|
+| Linux KPI (driver shim) | **6.18.y longterm** (6.18.65 at pin time) | EOL Dec 2028 | Longterm gets fixes for years; the 7.x stable line churns weekly and is for testing new drivers, not for a contract |
+| FreeBSD KPI | **15.1-RELEASE** (stable/15 branch) | Branch EOL Dec 31, 2029 | Current production line; the branch-based model guarantees the 4-year window our shims need |
+| GPU/DRM subset | DRM/KMS ABI **as of 6.18** | Matches the Linux KPI pin | One kernel baseline for all three contracts keeps the shim test matrix honest |
+
+Precedent worth recording: FreeBSD 15.1's own wireless drivers run Linux v7.x-based
+drivers through its LinuxKPI shim in production — the KPI-shim approach is proven
+technology, not a bet.
+
+### Language policy
+
+The rule: **Rust for new code that does not have to match Apple's binaries; C/C++/Objective-C
+where binary compatibility with Apple requires it.** Closed-source Mac apps and drivers expect
+a binary-level match, so xnu (never edited — our changes live in the quilt patch series),
+objc4, the AppKit-style frameworks and IOKit driver classes stay in their original languages;
+switching there gains nothing and loses compatibility.
+
+| Layer | Language | Why |
+|---|---|---|
+| Bootloader (`kite`) | Rust (no-std, `uefi-rs`) | Small new surface, and a bug here stops the machine from booting |
+| Vendored xnu | C, untouched (patch series only) | Apple's source must remain diffable against upstream |
+| Our kernel additions | C in xnu's style | Rust inside a C kernel needs a dedicated owner per component; allow it only for self-contained parts |
+| IOKit-compatible drivers | C++ (Apple's driver model); Rust for new self-contained drivers | Precedent: Asahi Linux's Apple GPU driver is Rust |
+| objc4, AppKit-style frameworks | Objective-C/C++ only | Running Mac apps unchanged is the product; sanitizers + fuzzing cover the safety gap |
+| WindowServer, new system services | Rust first | New code with no Apple heritage — the highest safety per line |
+| `rv`, mig tooling, CLI tools, tests | Rust | Entirely our own code |
+
+The evidence: Android's memory-safety vulnerabilities fell from 76% of the total in 2019 to
+24% in 2024 as new code moved to Rust, with zero memory-safety bugs found in its Rust code —
+most risk comes from new code, which is exactly what this policy routes to Rust. Every Rust
+component needs a named owner before it starts (the FreeBSD Rust lesson), and the W0 license
+gate scans Rust package dependencies too, because some are GPL.
+
 ---
 
 ## 11. Testing and verification

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 740" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="740" fill="#ffffff"/>
+  <text x="30" y="36" font-size="16" font-weight="bold" fill="#1a1a1a">Phone face: one system, configured for touch and arm64</text>
+
+  <!-- main stack column -->
+  <rect x="60" y="62" width="480" height="56" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="300" y="86" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Touch applications</text>
+  <text x="300" y="106" font-size="12" text-anchor="middle" fill="#1a1a1a">same frameworks, phone scales</text>
+
+  <rect x="60" y="138" width="480" height="56" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="300" y="162" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Our frameworks</text>
+  <text x="300" y="182" font-size="12" text-anchor="middle" fill="#1a1a1a">same code as the desktop face (08-frameworks.md)</text>
+
+  <rect x="60" y="214" width="480" height="80" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="300" y="238" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">iOS-generation daemons we implement</text>
+  <text x="300" y="258" font-size="12" text-anchor="middle" fill="#1a1a1a">launchd session plists · backboard-equivalent (event routing)</text>
+  <text x="300" y="276" font-size="12" text-anchor="middle" fill="#1a1a1a">SpringBoard-equivalent home screen, a peer process</text>
+
+  <rect x="60" y="314" width="480" height="56" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="300" y="338" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Darwin core userland</text>
+  <text x="300" y="358" font-size="12" text-anchor="middle" fill="#1a1a1a">libc · libpthread · libdispatch · launchd · CoreFoundation</text>
+
+  <rect x="60" y="390" width="480" height="66" rx="8" fill="#e8f0fe" stroke="#444"/>
+  <text x="300" y="414" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">XNU arm64 — xnu-13432 line</text>
+  <text x="300" y="434" font-size="12" text-anchor="middle" fill="#1a1a1a">same kernel as the desktop face, plus a per-SoC port layer</text>
+  <text x="300" y="450" font-size="12" text-anchor="middle" fill="#1a1a1a">(03-kernel.md port-layer architecture)</text>
+
+  <rect x="60" y="476" width="480" height="66" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="300" y="500" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Boot path</text>
+  <text x="300" y="520" font-size="12" text-anchor="middle" fill="#1a1a1a">device's own bootloader (fastboot boot, nothing flashed)</text>
+  <text x="300" y="536" font-size="12" text-anchor="middle" fill="#1a1a1a">our loader: boot_args + per-SoC device tree (04-boot.md)</text>
+
+  <rect x="60" y="562" width="480" height="66" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="300" y="586" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">SoC and devices</text>
+  <text x="300" y="606" font-size="12" text-anchor="middle" fill="#1a1a1a">UFS storage · display framebuffer · touch as I2C-HID</text>
+  <text x="300" y="622" font-size="12" text-anchor="middle" fill="#1a1a1a">GPU via shimmed vendor drivers · radios</text>
+
+  <!-- differences column -->
+  <text x="590" y="86" font-size="13" font-weight="bold" fill="#1a1a1a">Differs from the desktop face</text>
+
+  <rect x="590" y="104" width="250" height="58" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="715" y="126" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Input</text>
+  <text x="715" y="146" font-size="12" text-anchor="middle" fill="#1a1a1a">touch first, I2C-HID digitizers</text>
+
+  <rect x="590" y="182" width="250" height="58" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="715" y="204" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Power</text>
+  <text x="715" y="224" font-size="12" text-anchor="middle" fill="#1a1a1a">suspend, battery, thermals</text>
+
+  <rect x="590" y="260" width="250" height="72" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="715" y="282" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Radios — the long pole</text>
+  <text x="715" y="302" font-size="12" text-anchor="middle" fill="#1a1a1a">Wi-Fi / BT: shimmed Linux drivers</text>
+  <text x="715" y="320" font-size="12" text-anchor="middle" fill="#1a1a1a">cellular: not a first target</text>
+
+  <rect x="590" y="352" width="250" height="72" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="715" y="374" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Security staged last</text>
+  <text x="715" y="394" font-size="12" text-anchor="middle" fill="#1a1a1a">permissive during bring-up,</text>
+  <text x="715" y="412" font-size="12" text-anchor="middle" fill="#1a1a1a">AMFI / sandbox from real code later</text>
+
+  <rect x="590" y="476" width="250" height="66" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="715" y="498" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">First targets</text>
+  <text x="715" y="518" font-size="12" text-anchor="middle" fill="#1a1a1a">tablet-class devices: radios</text>
+  <text x="715" y="534" font-size="12" text-anchor="middle" fill="#1a1a1a">covered by shimmed drivers</text>
+
+  <!-- arrows down the stack -->
+  <line x1="300" y1="118" x2="300" y2="134" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="300" y1="194" x2="300" y2="210" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="300" y1="294" x2="300" y2="310" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="300" y1="370" x2="300" y2="386" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="300" y1="456" x2="300" y2="472" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="300" y1="542" x2="300" y2="558" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="30" y="672" font-size="12" fill="#1a1a1a">The kernel, core userland and frameworks are shared with the desktop face; the faces differ in input, power and radios — nothing is forked.</text>
+  <text x="30" y="696" font-size="12" fill="#9a3412">Red boxes are the hard parts: radios are the schedule's long pole; security is staged, not skipped.</text>
+</svg>

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" width="900" height="640">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="640" fill="#ffffff"/>
+
+  <text x="28" y="36" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">ravynOS graphics stack: scanout to application</text>
+
+  <!-- ================= left column: the runtime stack ================= -->
+
+  <!-- Applications -->
+  <rect x="40" y="60" width="480" height="48" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="280" y="82" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Applications</text>
+  <text x="280" y="99" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">unmodified Mac apps + ours</text>
+
+  <line x1="280" y1="108" x2="280" y2="126" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Client frameworks -->
+  <rect x="40" y="128" width="480" height="78" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="280" y="148" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Client frameworks — the compatibility surface (08)</text>
+  <rect x="48" y="158" width="110" height="38" rx="6" fill="#e6f4ea" stroke="#444"/>
+  <text x="103" y="181" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">AppKit</text>
+  <rect x="164" y="158" width="110" height="38" rx="6" fill="#fdeeee" stroke="#444"/>
+  <text x="219" y="181" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">CoreGraphics</text>
+  <rect x="280" y="158" width="110" height="38" rx="6" fill="#fdeeee" stroke="#444"/>
+  <text x="335" y="181" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">CoreText</text>
+  <rect x="396" y="158" width="116" height="38" rx="6" fill="#fdeeee" stroke="#444"/>
+  <text x="454" y="181" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">CoreAnimation</text>
+
+  <line x1="280" y1="206" x2="280" y2="224" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="292" y="220" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2563eb">buffer commits + events (our protocol)</text>
+
+  <!-- WindowServer -->
+  <rect x="40" y="226" width="480" height="58" rx="8" fill="#e6f4ea" stroke="#444"/>
+  <text x="280" y="250" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">WindowServer — ours, userland peer process</text>
+  <text x="280" y="270" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">compositor · window buffers · input routing · restartable</text>
+
+  <line x1="280" y1="284" x2="280" y2="302" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- IOSurface -->
+  <rect x="40" y="304" width="480" height="48" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="280" y="326" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">IOSurface — the shared buffer currency</text>
+  <text x="280" y="343" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">closed at Apple; we implement it clean-room, first</text>
+
+  <line x1="280" y1="352" x2="280" y2="370" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Kernel graphics -->
+  <rect x="40" y="372" width="480" height="118" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="280" y="394" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Kernel — IOGraphics family + GPU drivers</text>
+  <rect x="48" y="404" width="212" height="36" rx="6" fill="#e8f0fe" stroke="#444"/>
+  <text x="154" y="419" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">IOGraphics KPI</text>
+  <text x="154" y="434" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#444" text-anchor="middle">display headers public</text>
+  <rect x="48" y="448" width="150" height="36" rx="6" fill="#e6f4ea" stroke="#444"/>
+  <text x="123" y="470" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">software / QEMU</text>
+  <rect x="206" y="448" width="150" height="36" rx="6" fill="#fef3e2" stroke="#444"/>
+  <text x="281" y="470" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">AMD / Intel — Mesa</text>
+  <rect x="364" y="448" width="148" height="36" rx="6" fill="#f3e8fd" stroke="#444"/>
+  <text x="438" y="470" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">NVIDIA — shim</text>
+
+  <line x1="280" y1="490" x2="280" y2="508" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Display hardware -->
+  <rect x="40" y="510" width="480" height="48" rx="8" fill="#f5f5f4" stroke="#444"/>
+  <text x="280" y="532" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Display hardware</text>
+  <text x="280" y="549" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">scanout</text>
+
+  <!-- ================= right column: Metal ================= -->
+
+  <rect x="560" y="128" width="300" height="298" rx="8" fill="#fdeeee" stroke="#444"/>
+  <text x="710" y="150" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Metal — clean-room (07)</text>
+
+  <rect x="572" y="162" width="276" height="44" rx="6" fill="#e8f0fe" stroke="#444"/>
+  <text x="710" y="180" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Layer 1: API framework</text>
+  <text x="710" y="197" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">metal-cpp headers (Apache-2.0)</text>
+
+  <rect x="572" y="216" width="276" height="58" rx="6" fill="#fdeeee" stroke="#444"/>
+  <text x="710" y="234" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Layer 2: shader pipeline</text>
+  <text x="710" y="251" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">MSL frontend · AIR/metallib</text>
+  <text x="710" y="267" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a3412" text-anchor="middle">the single hardest item</text>
+
+  <rect x="572" y="284" width="276" height="130" rx="6" fill="#fdeeee" stroke="#444"/>
+  <text x="710" y="302" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Layer 3: per-GPU backends</text>
+  <text x="710" y="324" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">1. software raster first</text>
+  <text x="710" y="344" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">2. AMD / Intel on Mesa (MIT)</text>
+  <text x="710" y="364" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">3. NVIDIA proprietary = high bar</text>
+  <text x="710" y="392" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#9a3412" text-anchor="middle">not promised: MetalFX, ray tracing</text>
+
+  <polyline points="710,426 710,466 526,466" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="722" y="450" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2563eb">backends drive the GPU</text>
+
+  <!-- apps + CA also call Metal directly -->
+  <polyline points="520,167 560,167" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="530" y="122" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#2563eb">apps + CoreAnimation call Metal directly</text>
+
+  <!-- ================= legend ================= -->
+  <rect x="40" y="588" width="14" height="14" fill="#e8f0fe" stroke="#444"/>
+  <text x="60" y="600" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Apple open source</text>
+  <rect x="185" y="588" width="14" height="14" fill="#e6f4ea" stroke="#444"/>
+  <text x="205" y="600" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">ours</text>
+  <rect x="255" y="588" width="14" height="14" fill="#fdeeee" stroke="#444"/>
+  <text x="275" y="600" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">clean-room required</text>
+  <rect x="425" y="588" width="14" height="14" fill="#fef3e2" stroke="#444"/>
+  <text x="445" y="600" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Mesa-derived</text>
+  <rect x="555" y="588" width="14" height="14" fill="#f3e8fd" stroke="#444"/>
+  <text x="575" y="600" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">proprietary-driver-shim</text>
+
+  <text x="40" y="628" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#444">Control flows down the left column; Metal is the parallel client-to-GPU path. Red is work nobody has done for us.</text>
+</svg>
