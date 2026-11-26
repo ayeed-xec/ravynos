@@ -11,6 +11,8 @@ TEST_KERNEL=""
 OUTPUT=""
 SIZE=34
 OVMF_DIR=/usr/share/OVMF
+AAVMF_DIR=/usr/share/qemu-efi-aarch64
+BOOT_NAME=BOOTX64.EFI
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -36,6 +38,14 @@ while [[ $# -gt 0 ]]; do
 		;;
 	--ovmf-dir)
 		OVMF_DIR="$2"
+		shift 2
+		;;
+	--aavmf-dir)
+		AAVMF_DIR="$2"
+		shift 2
+		;;
+	--boot-name)
+		BOOT_NAME="$2"
 		shift 2
 		;;
 	*)
@@ -66,18 +76,33 @@ if [[ -z "$KERNEL_FILE" ]]; then
 fi
 [[ -f "$KERNEL_FILE" ]]
 
-"$MKFAT" "$OUTPUT" "$SIZE" "EFI/BOOT/BOOTX64.EFI" "$LOADER" "KERNEL.ELF" "$KERNEL_FILE"
+"$MKFAT" "$OUTPUT" "$SIZE" "EFI/BOOT/$BOOT_NAME" "$LOADER" "KERNEL.ELF" "$KERNEL_FILE"
 
-OVMF_CODE=""
-for candidate in "$OVMF_DIR"/OVMF_CODE_4M.fd "$OVMF_DIR"/OVMF_CODE.fd; do
-	if [[ -f "$candidate" ]]; then
-		OVMF_CODE="$candidate"
-		break
-	fi
-done
-if [[ -z "$OVMF_CODE" ]]; then
-	echo "image.sh: no OVMF firmware found in $OVMF_DIR" >&2
-	exit 1
-fi
+FIRMWARE=""
+case "$BOOT_NAME" in
+BOOTX64.EFI)
+	for candidate in "$OVMF_DIR"/OVMF_CODE_4M.fd "$OVMF_DIR"/OVMF_CODE.fd; do
+		if [[ -f "$candidate" ]]; then
+			FIRMWARE="$candidate"
+			break
+		fi
+	done
+	[[ -n "$FIRMWARE" ]] || {
+		echo "image.sh: no OVMF firmware found in $OVMF_DIR" >&2
+		exit 1
+	}
+	;;
+BOOTAA64.EFI)
+	FIRMWARE="$AAVMF_DIR/QEMU_EFI.fd"
+	[[ -f "$FIRMWARE" ]] || {
+		echo "image.sh: no AAVMF firmware found at $FIRMWARE" >&2
+		exit 1
+	}
+	;;
+*)
+	echo "image.sh: unsupported boot name $BOOT_NAME" >&2
+	exit 2
+	;;
+esac
 
-printf 'esp_image=%s\novmf_code=%s\nkernel=%s\n' "$OUTPUT" "$OVMF_CODE" "$KERNEL_FILE"
+printf 'esp_image=%s\nfirmware=%s\nkernel=%s\n' "$OUTPUT" "$FIRMWARE" "$KERNEL_FILE"

@@ -24,7 +24,9 @@ __attribute__((noinline)) static void rv_panic(const char *reason, struct rv_boo
 	rv_serial_puts(" rev=1\n");
 	rv_serial_puts("RVPSTR ");
 	rv_print(reason);
-	rv_serial_puts("RVBA version=");
+	rv_serial_puts("RVBA ptr=");
+	rv_serial_hex64((uint64_t)ba);
+	rv_serial_puts(" version=");
 	rv_serial_hex16(ba->Version);
 	rv_serial_puts(" efiMode=");
 	rv_serial_hex16(ba->efiMode);
@@ -67,7 +69,11 @@ __attribute__((noinline)) static void rv_panic(const char *reason, struct rv_boo
 	rv_print("RVPANIC END");
 
 	for (;;)
+#if defined(__x86_64__)
 		__asm__ volatile("cli; hlt");
+#else
+		__asm__ volatile("wfe");
+#endif
 }
 
 __attribute__((noinline)) static void probe_layer3(struct rv_boot_args *ba)

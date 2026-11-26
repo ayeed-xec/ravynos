@@ -215,13 +215,24 @@ int main(int argc, char **argv)
 		static uint8_t buf[16 * 1024 * 1024];
 		const char *path = argv[i];
 		uint32_t dir_cluster = 0;
-		char comps[8][12];
+		char comps[8][13];
 		int depth = 0;
 		const char *p = path;
 		while (*p) {
 			const char *slash = strchr(p, '/');
 			size_t len = slash ? (size_t)(slash - p) : strlen(p);
-			if (len >= 12 || depth == 8) {
+			size_t base_len = 0, ext_len = 0;
+			int saw_dot = 0;
+			for (size_t i = 0; i < len; i++) {
+				if (p[i] == '.') {
+					saw_dot = 1;
+					ext_len = 0;
+				} else if (saw_dot)
+					ext_len++;
+				else
+					base_len++;
+			}
+			if (base_len > 8 || ext_len > 3 || depth == 8) {
 				fprintf(stderr, "mkfat: bad path %s\n", path);
 				return 1;
 			}

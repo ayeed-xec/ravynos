@@ -23,7 +23,11 @@ int rv_parse_elf(const uint8_t *data, uint64_t size, struct rv_kernel_image *ima
 		return -1;
 	if (data[4] != 2 || data[5] != 1)
 		return -1;
+#if defined(__x86_64__)
 	if (rd16(data + 18) != 62)
+#else
+	if (rd16(data + 18) != 183)
+#endif
 		return -1;
 
 	uint64_t phoff = rd64(data + 32);

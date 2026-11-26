@@ -82,4 +82,71 @@ if [[ "$kernel_needs_link" == 1 ]]; then
 		-o "$BUILD/testkernel.elf" "$BUILD/tk-start.o" "$BUILD/tk-kernel.o" "$BUILD/tk-util.o"
 fi
 
-printf 'mkfat=%s\nloader=%s\ntestkernel=%s\n' "$BUILD/mkfat" "$BUILD/BOOTX64.EFI" "$BUILD/testkernel.elf"
+A64_UEFI_TARGET=aarch64-pc-windows-gnu
+A64_UEFI_CFLAGS=(
+	--target="$A64_UEFI_TARGET"
+	-ffreestanding
+	-fno-builtin
+	-fno-stack-protector
+	-fno-stack-check
+	-mgeneral-regs-only
+	-O2
+	-Wall
+	-Wextra
+	-I"$ROOT/include"
+	-I"$ROOT/loader"
+)
+
+for src in main elf macho util-arm64; do
+	clang "${A64_UEFI_CFLAGS[@]}" -c "$ROOT/loader/$src.c" -o "$BUILD/a64-loader-$src.o"
+done
+clang --target="$A64_UEFI_TARGET" -c "$ROOT/loader/handoff-arm64.S" -o "$BUILD/a64-loader-handoff.o"
+
+a64_needs_link=0
+[[ ! -f "$BUILD/BOOTAA64.EFI" ]] && a64_needs_link=1
+for obj in "$BUILD"/a64-loader-*.o; do
+	[[ "$obj" -nt "$BUILD/BOOTAA64.EFI" ]] && a64_needs_link=1
+done
+[[ "$ROOT/loader/aarch64/efi-objlst.ld" -nt "$BUILD/BOOTAA64.EFI" ]] && a64_needs_link=1
+if [[ "$a64_needs_link" == 1 ]]; then
+	lld-link -out:"$BUILD/BOOTAA64.EFI" \
+		-subsystem:efi_application \
+		-entry:efi_main \
+		-nodefaultlib \
+		-align:4096 \
+		-filealign:4096 \
+		"$BUILD"/a64-loader-*.o
+fi
+
+A64_KTARGET=aarch64-ravynos
+A64_K_CFLAGS=(--target="$A64_KTARGET"
+	-ffreestanding
+	-fno-builtin
+	-fno-stack-protector
+	-fno-stack-check
+	-mgeneral-regs-only
+	-O2
+	-Wall
+	-Wextra
+	-I"$ROOT/include"
+	-I"$ROOT/loader"
+)
+
+clang "${A64_K_CFLAGS[@]}" -c "$ROOT/testkernel/kernel.c" -o "$BUILD/a64-tk-kernel.o"
+clang "${A64_K_CFLAGS[@]}" -c "$ROOT/loader/util-arm64.c" -o "$BUILD/a64-tk-util-arm64.o"
+clang --target="$A64_KTARGET" -c "$ROOT/testkernel/start-arm64.S" -o "$BUILD/a64-tk-start.o"
+
+a64_kernel_needs_link=0
+[[ ! -f "$BUILD/testkernel-a64.elf" ]] && a64_kernel_needs_link=1
+for obj in "$BUILD"/a64-tk-*.o; do
+	[[ "$obj" -nt "$BUILD/testkernel-a64.elf" ]] && a64_kernel_needs_link=1
+done
+[[ "$ROOT/testkernel/kernel-arm64.ld" -nt "$BUILD/testkernel-a64.elf" ]] && a64_kernel_needs_link=1
+if [[ "$a64_kernel_needs_link" == 1 ]]; then
+	ld.lld -T "$ROOT/testkernel/kernel-arm64.ld" -nostdlib -static \
+		-o "$BUILD/testkernel-a64.elf" "$BUILD/a64-tk-start.o" "$BUILD/a64-tk-kernel.o" "$BUILD/a64-tk-util-arm64.o"
+fi
+
+printf 'mkfat=%s\nloader=%s\ntestkernel=%s\nloader-aarch64=%s\ntestkernel-aarch64=%s\n' \
+	"$BUILD/mkfat" "$BUILD/BOOTX64.EFI" "$BUILD/testkernel.elf" \
+	"$BUILD/BOOTAA64.EFI" "$BUILD/testkernel-a64.elf"

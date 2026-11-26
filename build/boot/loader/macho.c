@@ -3,7 +3,11 @@
 #include "kernelimg.h"
 
 #define RV_MACHO_MAGIC64 0xfeedfacf
-#define RV_MACHO_CPU_X86_64 0x01000007
+#if defined(__x86_64__)
+#define RV_MACHO_CPU_HOST 0x01000007
+#else
+#define RV_MACHO_CPU_HOST 0x0100000c
+#endif
 #define RV_LC_SEGMENT64 0x19
 #define RV_LC_UNIXTHREAD 0x5
 #define RV_LC_MAIN 0x28
@@ -29,7 +33,7 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 {
 	if (size < 32 || rd32(data) != RV_MACHO_MAGIC64)
 		return -1;
-	if (rd32(data + 4) != RV_MACHO_CPU_X86_64)
+	if (rd32(data + 4) != RV_MACHO_CPU_HOST)
 		return -1;
 
 	uint32_t ncmds = rd32(data + 16);
@@ -77,10 +81,17 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 			seg->mem_size = memsize;
 		} else if (cmd == RV_LC_UNIXTHREAD && cmdsize >= 184) {
 			uint32_t flavor = rd32(data + offset + 8);
+#if defined(__x86_64__)
 			if (flavor == 4 && !have_entry) {
 				entry_vaddr = rd64(data + offset + 16 + 20 * 8);
 				have_entry = 1;
 			}
+#else
+			if (flavor == 6 && cmdsize >= 16 + 268 && !have_entry) {
+				entry_vaddr = rd64(data + offset + 16 + 32 * 8);
+				have_entry = 1;
+			}
+#endif
 		} else if (cmd == RV_LC_MAIN && cmdsize >= 24 && !have_entry) {
 			entry_vaddr = rd64(data + offset + 8);
 			have_entry = 1;

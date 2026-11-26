@@ -95,7 +95,7 @@ static efi_status rv_alloc_copy(struct rv_kernel_image *image, const uint8_t *da
 	}
 	uint64_t pages = (page_end - page_start) / EFI_PAGE_SIZE;
 	uint64_t addr = page_start;
-	efi_status status = gBS->allocate_pages(EFI_ALLOCATE_ADDRESS, EfiLoaderData, pages, &addr);
+	efi_status status = gBS->allocate_pages(EFI_ALLOCATE_ADDRESS, EfiLoaderCode, pages, &addr);
 	if (status != EFI_SUCCESS)
 		return status;
 	rv_memset((void *)page_start, 0, page_end - page_start);
@@ -286,6 +286,10 @@ efi_status efi_main(efi_handle image_handle, struct efi_system_table *system_tab
 	rv_elf_handoff(image.entry_paddr, bootargs);
 
 	for (;;)
+#if defined(__x86_64__)
 		__asm__ volatile("cli; hlt");
+#else
+		__asm__ volatile("wfi");
+#endif
 	return EFI_LOAD_ERROR;
 }

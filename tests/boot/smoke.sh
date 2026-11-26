@@ -38,3 +38,9 @@ bash "$BOOT/symbolicate.sh" \
 echo "==== smoke: symbolicated panic backtrace ===="
 cat "$BUILD/symbolicated.txt"
 echo "==== smoke: end ===="
+
+if command -v qemu-system-aarch64 >/dev/null 2>&1 && [[ -f /usr/share/qemu-efi-aarch64/QEMU_EFI.fd ]]; then
+	bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/smoke-arm64.sh"
+else
+	echo "smoke: aarch64 prerequisites missing, skipping Apple Silicon boot smoke" >&2
+fi
