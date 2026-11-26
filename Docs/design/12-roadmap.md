@@ -1,9 +1,8 @@
 # 12 — Roadmap: work waves
 
-This document orders the work. It replaces the phase plans in
-[Docs/ROADMAP.md](../ROADMAP.md), which describe the old FreeBSD-based path
-and are kept for history only; nothing in the waves below depends on that
-plan or on the partial work done under it. Each wave has a goal, exit
+This document orders the work. It replaces the old Roadmap 3.0 phase plans
+(now removed), which described the FreeBSD-based path; nothing in the waves
+below depends on that plan or on the partial work done under it. Each wave has a goal, exit
 criteria that are testable statements rather than moods, its dependencies,
 and an honest callout of the hard part. Read it if you want to know what to
 build next, what blocks what, and what the project is deliberately not

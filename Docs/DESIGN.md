@@ -1,7 +1,7 @@
 # System Design & Wave Roadmap (Roadmap 4.0)
 
-**Status:** Authoritative. Supersedes `Docs/ROADMAP.md` (Roadmap 3.0), which is retained only
-as a historical record of P0–P2 work packages.
+**Status:** Authoritative. Supersedes `Docs/ROADMAP.md` (Roadmap 3.0), which has been
+removed along with its P0–P2 work packages.
 **Date:** 2026-11-25
 **Scope:** The full OS: boot, kernel, drivers, userspace, frameworks, UI, installer — on
 x86_64 and arm64, Mac and non-Mac hardware, with later RISC-V/other ports.
@@ -623,7 +623,7 @@ Verified inventory this design builds on:
 - Userspace trees present and awaiting audit (§6.3): `Libraries/` (dyld, objc4,
   Libsystem), `Frameworks/` (AppKit, CoreGraphics, CoreText, Foundation, ...),
   `CoreServices/` (WindowServer, Dock, Filer), `BSD/` userland, `SysApps/`, `ISO/`.
-- Docs: `Docs/ROADMAP.md` (3.0, historical), `Kernel/build/BLOCKERS.md`,
+- Docs: `Kernel/build/BLOCKERS.md`,
   `Kernel/build/HARDENING.md`, `boot/NOTES.md`.
 
 Nothing in this appendix is a claim of running behavior beyond what the boot rig logs

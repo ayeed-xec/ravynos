@@ -2,8 +2,8 @@
 
 This is the design documentation for the operating system itself: what it is, how each
 subsystem works, and the order we build it in. It replaces the older design and roadmap
-documents (kept under `../__OLD/` and in the historical `../ROADMAP.md`); where those and
-this set disagree, these pages win.
+documents (Roadmap 3.0 and the phase plans, now removed); this set is the single source
+of truth.
 
 The target is the macOS 27.2.1 generation (build 26B131, Darwin 27.2, kernel
 xnu-13432.41.4), assembled from Apple's own open-source releases plus our own native
