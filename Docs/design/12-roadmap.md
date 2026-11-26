@@ -228,6 +228,14 @@ Exit criteria:
   lists and opens files on the boot volume.
 - A cold launch of Terminal is measured end to end, setting the W6 budget
   number in [11-quality.md](11-quality.md)'s table.
+- The Swift runtime hosts a dynamically linked Swift binary on our kernel,
+  and the SwiftUI dependency-graph inventory (SwiftUI, SwiftUICore,
+  AttributeGraph and everything below) is recorded from a real SwiftUI
+  app's load commands per [Docs/SWIFTUI-FEASIBILITY.md]
+  (../../Docs/SWIFTUI-FEASIBILITY.md) — this is the evidence behind
+  DESIGN.md's Wave 6 go/no-go verdict. SwiftUI out of the box is a
+  committed exit criterion of DESIGN.md's Wave 8 (the distro), not a
+  deferred maybe, so this measurement cannot be skipped.
 
 Dependencies: W5 (there must be a server to run apps on) and W4 (the
 system volume the apps install to must exist).

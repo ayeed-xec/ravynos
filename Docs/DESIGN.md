@@ -226,6 +226,8 @@ test that proves each behavior claim). A subsystem without a verified spec is no
   **C, C++, Objective-C, Objective-C++** for kernel, drivers and frameworks; **Python 3**
   for build tooling and test harnesses; **shell** only for thin orchestration
   (`build.sh` entry points); Swift considered only after the runtime can host it (post-W6).
+  SwiftUI is a committed milestone, not a maybe: the Swift runtime hosts post-W6, and a
+  stock SwiftUI app runs out of the box at Wave 8 (see the wave exits).
 - Toolchain: clang/LLVM (already validated at clang 21.1.8 against xnu-12377), ld64.lld
   for Mach-O linking, our own mig. No GCC for kernel code (xnu headers assume clang).
 - Host build on Linux is the supported path (that is the team's rig); macOS host builds
@@ -515,17 +517,29 @@ boot policy (dev-mode machine acceptable for the prototype).
 verdict (go/no-go for post-W6).
 - **C+B:** framework audits (§6.3) then width work, framework by framework, each with
   spec + benchmark; no `-dynamic_lookup` band-aids.
+- **B:** Swift runtime hosted — dyld loads a dynamically linked Swift binary on our
+  kernel, and the objc4/Swift interop passes the OBJC-RUNTIME-AUDIT.md checklist. The
+  go/no-go verdict is made on evidence: the SwiftUI dependency graph (SwiftUI,
+  SwiftUICore, AttributeGraph and everything below) inventoried from a real SwiftUI
+  app's load commands, per Docs/SWIFTUI-FEASIBILITY.md.
 - **F:** per-app gap specs from the 20-app run logs.
 
 ### Wave 7 — Closed-source Mac apps (T5) — *gated on T4*
 **Exit:** designated commercial app installs and runs (POC ladder: Electron app → Qt
-app → native AppKit app).
+app → native AppKit app → SwiftUI app).
 - **F:** clean-room RE of the target's observable behavior (§7).
 - **B/C:** runtime/appkit gaps the ladder exposes, each as spec → impl → test.
+- **B:** the SwiftUI rung — SwiftUI/SwiftUICore and their private dependencies
+  (AttributeGraph and below) clean-room implemented to the width the ladder app needs,
+  gated on Wave 6's go verdict; AppKit hosting (NSHostingView) is the same clean-room
+  rule, no emulation and no Apple binaries.
 
 ### Wave 8 — Distro (funding artifact)
 **Exit:** bootable ISO + installer + A/B update + Mac VM demo package; `LICENSES.md`;
-final perf report (all budgets vs. baselines).
+final perf report (all budgets vs. baselines); **a stock SwiftUI app installs and runs
+out of the box from the installed image** — the demo artifact includes it, because
+SwiftUI is what new Mac apps are written in and a distro that cannot run one fails the
+parity argument on the first download.
 - **All lanes** converge; **E** owns release engineering.
 
 ### Sequencing logic
