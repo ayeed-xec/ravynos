@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2026 The ravynOS Authors
 use crate::manifest::Manifest;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -28,8 +30,11 @@ pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) {
             .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '.')
             .collect();
         if FAIL.iter().any(|bad| expr.starts_with(bad)) {
-            failures.push(format!("{}: manifest license '{}' is prohibited", m.name, m.license));
-        } else if !ACCEPT.iter().any(|a| expr.starts_with(a)) {
+            failures.push(format!(
+                "{}: manifest license '{}' is prohibited",
+                m.name, m.license
+            ));
+        } else if !ACCEPT.iter().any(|a| expr.starts_with(&a.to_uppercase())) {
             failures.push(format!(
                 "{}: manifest license '{}' is not on the accept list",
                 m.name, m.license
@@ -100,7 +105,7 @@ fn check(rel: &str, text: &str, failures: &mut Vec<String>) {
             .skip_while(|c| !c.is_ascii_alphanumeric())
             .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '.')
             .collect();
-        if !ACCEPT.iter().any(|a| expr.starts_with(a)) {
+        if !ACCEPT.iter().any(|a| expr.starts_with(&a.to_uppercase())) {
             failures.push(format!("{rel}: SPDX '{expr}' is not on the accept list"));
         }
         return;

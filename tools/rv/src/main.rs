@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2026 The ravynOS Authors
 mod audit;
 mod graph;
 mod manifest;
@@ -30,10 +32,9 @@ fn main() {
         usage();
     };
 
-    let mut target = String::from("x86_64-unknown-ravynos");
+    let mut target = String::from("x86_64-ravynos");
     let mut names: Vec<String> = Vec::new();
     let mut reverse = false;
-    let mut forbid = false;
 
     let cmd = match cmd_arg.as_str() {
         "build" => {
@@ -53,7 +54,7 @@ fn main() {
             for arg in &args {
                 match arg.as_str() {
                     "--reverse" => reverse = true,
-                    "--forbid" => forbid = true,
+                    "--forbid" => {}
                     _ => usage(),
                 }
             }
@@ -72,7 +73,7 @@ fn main() {
 
     let tree = std::env::current_dir().expect("rv must run from the tree root");
     let manifests = manifest::load_all(&tree);
-    let deps = graph::resolve(&manifests, forbid);
+    let deps = graph::resolve(&manifests);
 
     match cmd {
         Cmd::Build => build(&tree, &manifests, &deps, &target, &names),
@@ -118,22 +119,8 @@ fn select(
         }
     }
     let mut order = Vec::new();
-    graph::closure(&deps_for(deps, &selected), &selected, &mut order);
+    graph::closure(deps, &selected, &mut order);
     order
-}
-
-fn deps_for(
-    deps: &BTreeMap<String, Vec<String>>,
-    selected: &std::collections::BTreeSet<String>,
-) -> BTreeMap<String, Vec<String>> {
-    deps.iter()
-        .map(|(k, v)| {
-            (
-                k.clone(),
-                v.iter().filter(|d| selected.contains(*d)).cloned().collect(),
-            )
-        })
-        .collect()
 }
 
 fn build(
@@ -158,8 +145,7 @@ fn build(
     let build_dir = tree.join("build").join(target);
     std::fs::create_dir_all(&build_dir).expect("create build dir");
     let ninja_file = build_dir.join("build.ninja");
-    std::fs::write(&ninja_file, ninja::emit(tree, manifests, &order, target))
-        .expect("write build.ninja");
+    std::fs::write(&ninja_file, ninja::emit(manifests, &order, target)).expect("write build.ninja");
     let status = std::process::Command::new("ninja")
         .arg("-C")
         .arg(&build_dir)

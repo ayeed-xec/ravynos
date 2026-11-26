@@ -1,0 +1,17 @@
+name    = "libhello"
+layer   = "foundation"
+license = "BSD-3-Clause"
+
+sources = [
+    "src/**.c",
+    "src/**.h",
+    "include/**.h",
+]
+
+deps.internal = []
+
+targets = ["x86_64-ravynos"]
+
+[exports]
+headers = ["include/**.h"]
+libs    = ["libhello.a"]

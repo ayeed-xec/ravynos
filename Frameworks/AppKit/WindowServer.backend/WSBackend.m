@@ -54,7 +54,7 @@ kern_return_t WSBackendRegister(mach_port_t replyPort, const char *bundleID, pid
     strncpy(msg.bundleID, bundleID, sizeof(msg.bundleID) - 1);
 
     return mach_msg(&msg.header, MACH_SEND_MSG|MACH_SEND_TIMEOUT, sizeof(msg), 0, MACH_PORT_NULL,
-        2000 /* ms timeout */, MACH_PORT_NULL);
+        2000, MACH_PORT_NULL);
 }
 
 kern_return_t WSBackendSend(unsigned int code, const void *data, unsigned int len)
@@ -75,7 +75,7 @@ kern_return_t WSBackendSend(unsigned int code, const void *data, unsigned int le
     msg.len = len;
 
     return mach_msg(&msg.header, MACH_SEND_MSG|MACH_SEND_TIMEOUT, sizeof(msg), 0, MACH_PORT_NULL,
-        2000 /* ms timeout */, MACH_PORT_NULL);
+        2000, MACH_PORT_NULL);
 }
 
 kern_return_t WSBackendReceive(mach_port_t replyPort, ReceiveMessage *msg, unsigned int timeoutMs)

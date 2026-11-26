@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2026 The ravynOS Authors
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -27,6 +29,8 @@ pub struct Deps {
 #[derive(Deserialize, Default)]
 pub struct Exports {
     #[serde(default)]
+    pub headers: Vec<String>,
+    #[serde(default)]
     pub libs: Vec<String>,
 }
 
@@ -36,11 +40,7 @@ pub fn load_all(tree: &Path) -> BTreeMap<String, Manifest> {
     found
 }
 
-fn collect(
-    root: &Path,
-    dir: &Path,
-    found: &mut BTreeMap<String, Manifest>,
-) {
+fn collect(root: &Path, dir: &Path, found: &mut BTreeMap<String, Manifest>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -50,7 +50,12 @@ fn collect(
             continue;
         }
         let name = path.file_name().unwrap().to_string_lossy();
-        if name == "." || name == ".." || name.starts_with('.') || name == "build" {
+        if name == "."
+            || name == ".."
+            || name.starts_with('.')
+            || name == "build"
+            || name == "target"
+        {
             continue;
         }
         let manifest_path = path.join("manifest.toml");
@@ -61,7 +66,10 @@ fn collect(
             });
             match toml::from_str::<Manifest>(&text) {
                 Ok(mut m) => {
-                    m.dir = path.strip_prefix(root).expect("manifest under tree root").to_path_buf();
+                    m.dir = path
+                        .strip_prefix(root)
+                        .expect("manifest under tree root")
+                        .to_path_buf();
                     found.insert(m.name.clone(), m);
                 }
                 Err(e) => {

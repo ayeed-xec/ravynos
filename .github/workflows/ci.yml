@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches: [main, darwin-clean]
+  pull_request:
+    branches: [main, darwin-clean]
+
+jobs:
+  build:
+    name: rv build + audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang
+          rustup component add rustfmt
+
+      - name: Lint the CI scripts
+        run: |
+          bash -n build/ci/check-format.sh
+          shellcheck build/ci/check-format.sh
+
+      - name: Build the rv harness
+        run: cargo build --manifest-path tools/rv/Cargo.toml
+
+      - name: rv build (discovers components from their manifests)
+        run: cargo run --manifest-path tools/rv/Cargo.toml -- build -t x86_64-ravynos
+
+      - name: rv audit license
+        run: cargo run --manifest-path tools/rv/Cargo.toml -- audit license
+
+  format:
+    name: clang-format / rustfmt gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+          rustup component add rustfmt
+
+      - name: Check formatting
+        run: build/ci/check-format.sh
