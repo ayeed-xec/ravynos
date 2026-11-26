@@ -135,7 +135,7 @@ exports.headers = ["include/**.h"]
 exports.libs    = ["libCoreFoundation.a", "libCoreFoundation.so"]
 deps.internal   = ["libdispatch", "libc"]
 deps.system     = []                   # kernel-provided interfaces, named interfaces only
-targets   = ["x86_64-unknown-ravynos", "aarch64-unknown-ravynos", "riscv64-unknown-ravynos"]
+targets   = ["x86_64-ravynos", "aarch64-ravynos", "riscv64-ravynos"]
 tests     = ["Tests/**"]
 vendored  = { CoreFoundation = "opensource.apple.com:CoreFoundation-XXXX" }
 ```
@@ -196,9 +196,9 @@ Target triples, pinned:
 
 | Target                        | Notes                                            |
 |-------------------------------|--------------------------------------------------|
-| `x86_64-unknown-ravynos`      | the first working system; farm hardware matches  |
-| `aarch64-unknown-ravynos`     | cross-compiled; tests run under QEMU             |
-| `riscv64-unknown-ravynos`     | cross-compiled; QEMU for tests; least mature     |
+| `x86_64-ravynos`              | the first working system; farm hardware matches  |
+| `aarch64-ravynos`             | cross-compiled; tests run under QEMU             |
+| `riscv64-ravynos`             | cross-compiled; QEMU for tests; least mature     |
 
 Each target gets a sysroot under `build/sysroots/<target>/`, assembled by the harness from
 the manifests: headers and libraries from `exports.*` of components already built for that
@@ -252,9 +252,9 @@ Performance budgets are measured by the test runner on the reference hardware, n
 
 ```
 $ rv shell CoreFoundation
-[CoreFoundation x86_64-unknown-ravynos] $ ninja -C $RV_BUILD_DIR
+[CoreFoundation x86_64-ravynos] $ ninja -C $RV_BUILD_DIR
 [1/1] link libCoreFoundation.so
-[CoreFoundation x86_64-unknown-ravynos] $ clang -### -c Sources/CFString.c  # shows the exact flags
+[CoreFoundation x86_64-ravynos] $ clang -### -c Sources/CFString.c  # shows the exact flags
 ```
 
 The shell exports `CC`, `CFLAGS`, `--sysroot`, include and library paths, and `RV_BUILD_DIR`,

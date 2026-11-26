@@ -1,0 +1,16 @@
+subsystem mig_trivial 1000;
+
+#include <mach/std_types.defs>
+#include <mach/mach_types.defs>
+
+
+routine trivial_hello(
+		reqport	: task_t;
+		in	seq	: int32_t;
+	out	status	: int32_t);
+
+routine trivial_add(
+		reqport	: task_t;
+		in	a	: int32_t;
+		in	b	: int32_t;
+	out	sum	: int32_t);

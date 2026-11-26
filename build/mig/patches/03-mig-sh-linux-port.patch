@@ -1,0 +1,50 @@
+# why: mig.sh is the mig driver shell script; port for Linux:
+#      - /usr/bin/arch does not exist, derive host arch from uname
+#      - /usr/bin/xcrun does not exist; default cc to PATH's cc
+#      - clang on Linux rejects -arch; drop it from the cpp line
+#      - GNU sed takes no argument to -i (BSD syntax used upstream)
+# fate: keep until mig moves to our own MIT-licensed implementation.
+diff -u a/migcom.tproj/mig.sh b/migcom.tproj/mig.sh
+--- a/migcom.tproj/mig.sh
++++ b/migcom.tproj/mig.sh
+@@ -76,7 +76,7 @@
+   if [ -x "${xcrunPath}" ]; then
+     MIGCC=`"${xcrunPath}" -sdk "$sdkRoot" -find cc`
+   else
+-    MIGCC=$(realpath "${scriptRoot}/cc")
++    MIGCC=cc
+   fi
+ fi
+ 
+@@ -91,7 +91,8 @@
+ cppflags="-D__MACH30__"
+ 
+ files=
+-arch=`/usr/bin/arch`
++# Linux: /usr/bin/arch does not exist; derive the host arch from uname.
++arch=$(uname -m 2>/dev/null || echo x86_64)
+ 
+ WORKTMP=`/usr/bin/mktemp -d "${TMPDIR:-/tmp}/mig.XXXXXX"`
+ if [ $? -ne 0 ]; then
+@@ -177,10 +178,10 @@
+     if [ -n "$MIG_TRACE_HEADERS" ]
+     then
+       env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=only-direct-system CC_PRINT_HEADERS_FILE="$MIG_TRACE_HEADERS" \
+-        "$C" -E -arch ${arch} "${target[@]}" "${cppflags[@]}" -I "${sourcedir}" "${iSysRootParm[@]}" "${temp}.c" | "$M" "${migflags[@]}"
++        "$C" -E "${target[@]}" "${cppflags[@]}" -I "${sourcedir}" "${iSysRootParm[@]}" "${temp}.c" | "$M" "${migflags[@]}"
+     else
+       env -u CC_PRINT_HEADERS_FORMAT \
+-        "$C" -E -arch ${arch} "${target[@]}" "${cppflags[@]}" -I "${sourcedir}" "${iSysRootParm[@]}" "${temp}.c" | "$M" "${migflags[@]}"
++        "$C" -E "${target[@]}" "${cppflags[@]}" -I "${sourcedir}" "${iSysRootParm[@]}" "${temp}.c" | "$M" "${migflags[@]}"
+     fi
+     if [ $? -ne 0 ]
+     then
+@@ -225,7 +226,7 @@
+     fi
+     if [ -n "$MIG_TRACE_HEADERS" ]
+     then
+-    sed -e 's;"'"${temp}"'.c";"'"$file"'";' -i "" "$MIG_TRACE_HEADERS"
++    sed -e 's;"'"${temp}"'.c";"'"$file"'";' -i "$MIG_TRACE_HEADERS"
+     fi
+     rm -f "${temp}.c"
+ done

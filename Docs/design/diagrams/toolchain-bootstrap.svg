@@ -37,7 +37,7 @@
     <text x="355" y="262">xar, dtrace_ctf, unifdef</text>
   </g>
   <text x="345" y="296" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">outputs: clang, ld64.lld, tapi, mig</text>
-  <text x="345" y="314" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">for x86_64 + aarch64-unknown-ravynos</text>
+  <text x="345" y="314" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1e3a8a">for x86_64 + aarch64-ravynos</text>
   <text x="345" y="336" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">hash published per artifact; hash change without</text>
   <text x="345" y="348" font-family="Helvetica, Arial, sans-serif" font-size="11" font-style="italic" fill="#9a3412">VENDORS bump fails the build</text>
 

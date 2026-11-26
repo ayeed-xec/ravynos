@@ -1,0 +1,18 @@
+# why: glibc only typedefs u_int under _DEFAULT_SOURCE; migcom's type.h
+#      needs it unconditionally on Linux (type.h already special-cases
+#      linux and includes <linux/types.h>, which lacks u_int).
+# fate: keep until mig moves to our own MIT-licensed implementation
+#       (Docs/design/03-kernel.md) or upstream accepts a fix.
+diff -u a/migcom.tproj/type.h b/migcom.tproj/type.h
+--- a/migcom.tproj/type.h
++++ b/migcom.tproj/type.h
+@@ -42,6 +42,9 @@
+ 
+ #ifdef linux
+ #include <linux/types.h>
++/* glibc only typedefs u_int under _DEFAULT_SOURCE; make the build
++ * deterministic regardless of feature macros. */
++typedef unsigned int u_int;
+ #else /* linux */
+ #include <sys/types.h>
+ #endif /* linux */

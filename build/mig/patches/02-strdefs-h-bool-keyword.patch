@@ -1,0 +1,16 @@
+# why: strdefs.h uses `bool` as a parameter name (strbool); that is a
+#      keyword on C23 compilers (gcc 15+, recent clang), where the
+#      vendored header no longer parses.
+# fate: keep until mig moves to our own MIT-licensed implementation.
+diff -u a/migcom.tproj/strdefs.h b/migcom.tproj/strdefs.h
+--- a/migcom.tproj/strdefs.h
++++ b/migcom.tproj/strdefs.h
+@@ -86,7 +86,7 @@
+ 
+ #define streql(a, b)  (strcmp((a), (b)) == 0)
+ 
+-extern char *strbool( boolean_t bool );
++extern char *strbool( boolean_t boolean );
+ extern char *strstring( string_t string );
+ extern char *toupperstr( char *string );
+ 

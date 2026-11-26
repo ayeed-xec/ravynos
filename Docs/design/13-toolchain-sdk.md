@@ -125,7 +125,7 @@ packaging is not.
 - **Stage 1 — our cross-toolchain, built from pinned open source.** LLVM+clang+lld
   (swiftlang/llvm-project swift-6.0-RELEASE), ld64/cctools (APSL), tapi, mig, iig, xar.
   Each is a component with a manifest and a VENDORS pin. Output: `clang`, `ld64.lld`
-  (Mach-O), `tapi`, `mig` for `x86_64-unknown-ravynos` and `aarch64-unknown-ravynos`,
+  (Mach-O), `tapi`, `mig` for `x86_64-ravynos` and `aarch64-ravynos`,
   published as content-addressed artifacts. Every target build uses *only* stage-1 tools.
 - **Stage 2 — the system builds itself.** Libc, Libsystem, dyld, objc4, libdispatch build
   against the rv-assembled sysroot with stage-1 tools. Later (W8, self-hosting milestone)
@@ -218,6 +218,17 @@ All six are in force in `DESIGN.md` and `05-build-system.md` as of this revision
    §2.3 (two views); remove it.
 6. New components with manifests: `Developer/toolchain/*` (llvm, cctools, tapi, mig, …),
    `sdk` (assembler component).
+
+### 2.6 Known boundary of the W1 mig smoke test (recorded from implementation)
+
+`build/mig/build.sh --smoke` proves generation: the vendored defs files drive
+the tool and stubs come out. It deliberately does **not** compile the generated
+stubs — the vendored header set has gaps that stall that compile, e.g.
+`BSD/include/mach/notify.h` includes `<sys/mach/notify.h>`, which is not
+vendored anywhere in the tree. Closing these gaps is sysroot-assembly work for
+the SDK waves (§2.3), not a mig bug. Also recorded: of the upstream
+`mig.xcodeproj` sources, `handler.c` is legacy CMU code upstream no longer
+builds; the compiled set is the remaining ten files.
 
 ## 4. Open questions
 
