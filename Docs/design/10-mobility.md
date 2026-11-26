@@ -265,7 +265,5 @@ without its security stack cannot debug the security stack.
   unlock warnings) apply to permanently flashed installs on
   consumer devices, and do we document flashing at all for the
   first release?
-- [01-principles.md](01-principles.md) cross-references a
-  "10-ios-track.md"; this document is that track under its current
-  name. The reference needs an update in that file, which this
-  document does not own.
+- [01-principles.md](01-principles.md) now references this document
+  under its current name (updated 2026-11-26).

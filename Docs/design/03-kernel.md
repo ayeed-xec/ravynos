@@ -79,7 +79,7 @@ mig change that alters output fails loudly.
 Prior art matters here: the
 [darwin-xnu-build](https://github.com/blacktop/darwin-xnu-build) project
 (MIT) builds current-generation XNU on Linux with a modest patch set, and
-PureDarwin builds XNU 12377 the same way. So we know the approach works
+PureDarwin builds XNU 12377.121.6 the same way. So we know the approach works
 end to end. The known hard parts are the ones those projects document:
 missing mig outputs, Apple-internal headers referenced from a handful of
 files, linker expectations (XNU links as a static Mach-O with a hand-rolled
@@ -304,9 +304,14 @@ becomes a patch with a `fate:` line, per the vendoring policy.
   pmap 3–4 engineer-months, traps/context-switch assembly 1.5–2 months,
   SBI bring-up ~1.5 months, the remainder in IOKit/kext arch glue. Nothing
   lifts directly from `osfmk/arm`; structure ports as a template only.
-- **Timing of the xnu-13432 vendor bump.** Apple publishes kernel sources
-  on their own schedule; we need a decision rule for when to bump (day of
-  release? after N days?) and who owns the rebase of the patch series.
+- **Timing of the xnu-13432 vendor bump.** *Resolved 2026-11-26 by release
+  audit:* xnu-12377.121.6 remains the newest tag published in
+  apple-oss-distributions; xnu-13432.41.4 (Darwin 27.2.0, macOS 27.2
+  "Golden Gate") has no public source drop yet, so the vendored tree is
+  current and no bump is pending. Decision rule: bump the day Apple
+  publishes the tag (checked weekly by lane E); lane A owns rebasing the
+  `Kernel/RVOS/patches/` series the same week; the wave in flight absorbs
+  the cost — no wave pauses for a bump.
 - **GPU kernel-mode driver strategy.** *Decided 2026-11-26: native IOKit
   GPU family first, always* — the Linux DRM KPI shim below is a
   compatibility layer for foreign drivers, not the native path, so it

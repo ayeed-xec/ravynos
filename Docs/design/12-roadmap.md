@@ -235,7 +235,11 @@ Exit criteria:
   (../../Docs/SWIFTUI-FEASIBILITY.md) — this is the evidence behind
   DESIGN.md's Wave 6 go/no-go verdict. SwiftUI out of the box is a
   committed exit criterion of DESIGN.md's Wave 8 (the distro), not a
-  deferred maybe, so this measurement cannot be skipped.
+  deferred maybe, so this measurement cannot be skipped. Reference
+  implementation for the inventory: OpenSwiftUI
+  ([github.com/OpenSwiftUIProject/OpenSwiftUI](https://github.com/OpenSwiftUIProject/OpenSwiftUI),
+  MIT — license verified 2026-11-26), a source-compatible SwiftUI rebuild;
+  it is study material and an API-shape oracle, not a drop-in binary.
 
 Dependencies: W5 (there must be a server to run apps on) and W4 (the
 system volume the apps install to must exist).
@@ -372,16 +376,22 @@ port. arm64 under QEMU is comparatively tame; the long tail is the same
 hardware-reality problem as x86_64 (devicetrees, firmware variety), met
 through contributors' machines and QEMU's device-tree machines.
 
+License constraint (updated 2026-11-26): the Apple Silicon path follows
+Asahi's boot-policy method — a 1TR-enrolled stage-1 loader presenting an
+img4-wrapped Mach-O — but m1n1 relicensed MIT → GPLv2 in November 2026,
+so the loader is our own clean-room code and Asahi sources are forbidden
+input for it, per the license rule in [01-principles.md](01-principles.md).
+
 ### W10 — Phone face bring-up
 
-What this wave attempts: the iOS-alternative track ([10-ios-track.md](10-ios-track.md)) gets
+What this wave attempts: the iOS-alternative track ([10-mobility.md](10-mobility.md)) gets
 its hardware. The evidence this is possible is ios-sweet's proof that
 Apple's open-source XNU plus IOHIDFamily and libpthread hosts unmodified
 iOS userland to the home screen on a Snapdragon 732G, CPU-rendered (per
 [01-principles.md](01-principles.md)); we are not porting their patches,
 but they define the achievable bar.
 
-Exit criteria: defined by [10-ios-track.md](10-ios-track.md), which owns
+Exit criteria: defined by [10-mobility.md](10-mobility.md), which owns
 the track. The wave's position here — last, after W9 and W6 — is the
 schedule's honest statement: phone SoC bring-up needs every port layer
 skill the project owns and a framework stack worth putting on the screen.
@@ -390,7 +400,7 @@ Dependencies: W9 (per-arch port layers) and W6 (a UI stack to show).
 
 The hard part: per-SoC bring-up with no GPU driver, on hardware whose
 firmware we do not control, with the security machinery (AMFI, sandbox)
-that ios-sweet had to run permissive. [10-ios-track.md](10-ios-track.md)
+that ios-sweet had to run permissive. [10-mobility.md](10-mobility.md)
 owns the honesty about what "bring-up" means for a first device.
 
 ## The timeline
@@ -426,7 +436,7 @@ has a reason and a re-entry path.
   W7's first hardware backend, and scheduling it earlier would put a
   dependency on nothing.
 - **Cellular radios.** Modem bring-up is per-device, carrier-dependent and
-  orthogonal to the desktop mission. [10-ios-track.md](10-ios-track.md)
+  orthogonal to the desktop mission. [10-mobility.md](10-mobility.md)
   may pick it up after its first device is real.
 - **The Xcode-equivalent IDE.** A development environment of that size is
   its own multi-year project and is not on the critical path to running
@@ -460,6 +470,6 @@ has a reason and a re-entry path.
   reuse that kernel build driver under the new harness, or rewrite it —
   and who decides when the honest answer is "rewrite, but steal the
   BLOCKERS list"?
-- W10's exit criteria are delegated to [10-ios-track.md](10-ios-track.md),
+- W10's exit criteria are delegated to [10-mobility.md](10-mobility.md),
   which is not yet written. Until it exists, W10 is a placeholder on the
   timeline and should not be promised to anyone.

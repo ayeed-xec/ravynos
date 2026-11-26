@@ -91,7 +91,7 @@ Rules that follow from the tiers:
 |                 + HAL (platform abstraction, §2.4)                  |
 +---------------------------------------------------------------------+
 | Platform:       x86_64 QEMU/OVMF · x86_64 bare metal · arm64 QEMU   |
-|                 virt · arm64 Apple Silicon (m1n1-style loader)      |
+|                 virt · arm64 Apple Silicon (our own stage-1 loader)      |
 +---------------------------------------------------------------------+
 ```
 
@@ -112,12 +112,16 @@ firmware → RVOS loader (Mach-O/img4-capable) → guest_kernel (Mach-O) → lau
 - **x86_64 bare metal (W4 target):** OVMF/UEFI on commodity PCs; loader gains disk/NVMe
   and a real filesystem read path; kexts linked or prelinked.
 - **arm64 QEMU virt (W5):** U-Boot → our arm64 loader entry → xnu arm64.
-- **Apple Silicon (W5/W7):** the Asahi pattern, which we adopt verbatim because it is the
-  only proven path: an m1n1-style stage-1 loader enrolled through Apple's official boot
-  policy from 1TR recoveryOS, presented as the kernelcache slot iBoot expects — i.e. a
-  Mach-O wrapped in img4. Our kernel already *is* a Mach-O, and our Phase-1 loader/patch
-  experience (`patch_macho.py`, `verify.py`) transfers directly. m1n1 is MIT — the license
-  rule holds. Hardware bring-up order per platform: UART/NVMe/PCIe → boot framebuffer →
+- **Apple Silicon (W5/W7):** the Asahi *pattern*, followed in method and not in code: a
+  stage-1 loader enrolled through Apple's official boot policy from 1TR recoveryOS,
+  presented as the kernelcache slot iBoot expects — i.e. a Mach-O wrapped in img4. Our
+  kernel already *is* a Mach-O, and our Phase-1 loader/patch experience (`patch_macho.py`,
+  `verify.py`) transfers directly. **License note (updated 2026-11-26):** m1n1's `main`
+  branch relicensed MIT → GPLv2 in the Asahi relicense announced 2026-11-15, so m1n1
+  source is now forbidden input under our license rule; the stage-1 loader is our own
+  clean-room implementation of the publicly documented boot-policy method, and Asahi
+  sources may not be read or adapted for it. The method itself is not encumbered.
+  Hardware bring-up order per platform: UART/NVMe/PCIe → boot framebuffer →
   full display later. This is the same order the HAL (§2.4) assumes.
 
 Boot-time budget is a performance gate, not a nicety: **≤ 3 s power-to-first-app-frame on
@@ -505,7 +509,7 @@ measured; installed-to-disk boot.
 
 ### Wave 5 — arm64 + Apple Silicon path (portability proof)
 **Exit:** x86_64 and arm64 build in one CI matrix from one graph; kernel boots on arm64
-QEMU virt; m1n1-style loader prototype boots our Mach-O on Apple Silicon under Apple's
+QEMU virt; our own stage-1 loader prototype boots our Mach-O on Apple Silicon under Apple's
 boot policy (dev-mode machine acceptable for the prototype).
 - **D:** HAL interface extraction completed for both arches (the §2.4 rule proven: a
   board port touched only `platform/`).
@@ -532,7 +536,10 @@ app → native AppKit app → SwiftUI app).
 - **B:** the SwiftUI rung — SwiftUI/SwiftUICore and their private dependencies
   (AttributeGraph and below) clean-room implemented to the width the ladder app needs,
   gated on Wave 6's go verdict; AppKit hosting (NSHostingView) is the same clean-room
-  rule, no emulation and no Apple binaries.
+  rule, no emulation and no Apple binaries. Reference implementation for the inventory:
+  OpenSwiftUI ([github.com/OpenSwiftUIProject/OpenSwiftUI](https://github.com/OpenSwiftUIProject/OpenSwiftUI),
+  MIT — license verified 2026-11-26) shows the surface is tractable; it is study
+  material and an API-shape oracle, not a drop-in binary.
 
 ### Wave 8 — Distro (funding artifact)
 **Exit:** bootable ISO + installer + A/B update + Mac VM demo package; `LICENSES.md`;
@@ -613,8 +620,9 @@ gate scans Rust package dependencies too, because some are GPL.
 |---|---|
 | Kernel link stalls on deep symbol gaps (677-undef scale work) | Tranche workplan with weekly exit per tranche; stub removal is a wave exit, never a rolling hope |
 | dyld/objc ABI drift vs. modern apps | Kernel of record is macOS-26 era precisely to avoid the Catalina trap; T1 gate uses current SDK builds, not old ones |
-| GPL contamination via contributor or AI output | CI content fingerprinting (§6.2); review checklist includes provenance question; RE outputs are specs only (§7) |
-| Apple Silicon bring-up cost | Asahi's m1n1 pattern is proven and MIT; scope it as W5 prototype on a dev-mode machine before promising hardware support |
+| GPL contamination via contributor or AI output | CI content fingerprinting (§6.2); review checklist includes provenance question; RE outputs are specs only (§7). Live example (2026-11-15): Asahi relicensed m1n1 MIT → GPLv2 — code adopted under an old license can flip, so provenance records the license at vendor time and CI re-checks it at every pin refresh |
+| Competitor pace: PureDarwin's own AppKit runs a stock macOS Firefox build unmodified (Oct 2026) | Our differentiation — unmodified closed-source GUI apps on the real client protocol — is exactly what their Wayland/own-RPC stack cannot host; W6's app set and the T4 exit are the measured answer (Docs/design/01-principles.md, 07-graphics.md) |
+| Apple Silicon bring-up cost | The boot-policy method is proven (Asahi) but m1n1's code is GPLv2 since 2026-11-15, so our stage-1 loader is clean-room — extra W5 effort; scope it as a prototype on a dev-mode machine before promising hardware support |
 | Bus factor / contributor wall | Low barrier: no toolchain-from-source (clang from distro + our harness), spec system makes lanes independently startable, style rules make diffs reviewable |
 | Perf claims outrunning reality | Budgets are CI gates with baselines; the final report shows all budgets vs. baselines, measured commands included |
 

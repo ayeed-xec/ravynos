@@ -245,13 +245,21 @@ study. The differences are about architecture and targets:
   unmodified iOS 16.7.16 userland (launchd, backboardd, SpringBoard) to the
   home screen on a Snapdragon 732G phone as of 2026-10-18, CPU-rendered and
   with security features permissive. PureDarwin has no iOS story. We are not
-  porting their patches; the design is in [10-ios-track.md](10-ios-track.md).
+  porting their patches; the design is in [10-mobility.md](10-mobility.md).
 - **Compatibility layers as first-class subsystems.** Their driver shim
   ("fbsdkpi") and Linux binary loader ("elftrans", which runs unmodified
   Linux binaries including NVIDIA userspace) prove the approach works, and
   their APFS, ext4 and HFS+ work is real. Our version of the same idea puts
   these layers in `Compat/` with contracts, version pins and tests, as
   described under *Native design* above.
+- **Shipping speed versus target.** As of November 2026 PureDarwin runs a
+  stock macOS Firefox build unmodified against their own AppKit
+  ([github.com/PureDarwin/PureDarwin](https://github.com/PureDarwin/PureDarwin))
+  — they ship the demo faster, and that pace is the benchmark our wave
+  exits must beat. Our target is unchanged and harder: unmodified
+  closed-source Mac GUI software against the real client protocol, which a
+  Wayland/X11 compositor with an own-RPC AppKit cannot host (the argument
+  in [07-graphics.md](07-graphics.md)).
 
 We study their working code and we build our own designs. The clearest
 example: PureDarwin/xnu-loader (https://github.com/PureDarwin/xnu-loader) is
