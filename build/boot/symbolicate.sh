@@ -45,7 +45,7 @@ if command -v llvm-symbolizer >/dev/null 2>&1; then
 	SYMBOLIZER=$(command -v llvm-symbolizer)
 fi
 
-nm -n "$ELF" | awk '$2 ~ /[tTdrRbB]/ { print $1, $3 }' | sort > "$ROOT/build/symbols.sorted"
+llvm-nm -n "$ELF" | awk '$2 ~ /[tTdrRbB]/ { print $1, $3 }' | sort > "$ROOT/build/symbols.sorted"
 
 symbolicate() {
 	local addr=$1

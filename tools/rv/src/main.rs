@@ -146,6 +146,18 @@ fn build(
     std::fs::create_dir_all(&build_dir).expect("create build dir");
     let ninja_file = build_dir.join("build.ninja");
     std::fs::write(&ninja_file, ninja::emit(manifests, &order, target)).expect("write build.ninja");
+    for tool in ["ninja", "clang", "llvm-ar", "ld.lld"] {
+        if std::process::Command::new(tool)
+            .arg("--version")
+            .output()
+            .is_err()
+        {
+            eprintln!(
+                "error: {tool} not found on PATH (the build uses clang, lld and llvm-ar only)"
+            );
+            exit(1);
+        }
+    }
     let status = std::process::Command::new("ninja")
         .arg("-C")
         .arg(&build_dir)

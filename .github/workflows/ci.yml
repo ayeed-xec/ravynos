@@ -16,8 +16,14 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build clang
+          sudo apt-get install -y ninja-build clang lld llvm
           rustup component add rustfmt
+
+      - name: Host tool gate (no GPL program in the build)
+        run: |
+          bash -n build/ci/check-host-tools.sh
+          shellcheck build/ci/check-host-tools.sh
+          build/ci/check-host-tools.sh
 
       - name: Lint the CI scripts
         run: |

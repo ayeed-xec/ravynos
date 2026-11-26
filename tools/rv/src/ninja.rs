@@ -11,17 +11,18 @@ pub fn emit(
     let host = target.ends_with("-linux-gnu");
     let mut out = String::new();
     out.push_str(&format!("target = {target}\n"));
-    out.push_str("rule lib\n  command = ar rcs $out $in\n");
+    out.push_str("rule lib\n  command = llvm-ar rcs $out $in\n");
     if host {
         out.push_str(
             "rule cc\n  command = clang -c $in -o $out $includes\n\
-             rule link\n  command = clang $in -o $out\n\n",
+             rule link\n  command = clang -fuse-ld=lld $in -o $out\n\n",
         );
     } else {
-        out.push_str(
+        out.push_str(&format!(
             "rule cc\n  command = clang --target=$target -ffreestanding -fno-builtin -nostdinc -c $in -o $out $includes\n\
-             rule link\n  command = clang --target=$target -nostdlib -static $in -o $out\n\n",
-        );
+             rule link\n  command = ld.lld {} -static $in -o $out\n\n",
+            ld_emulation(target)
+        ));
     }
     for name in order {
         let m = &manifests[name];
@@ -186,4 +187,16 @@ fn wildcard(pat: &str, s: &str) -> bool {
         pi += 1;
     }
     pi == p.len()
+}
+
+fn ld_emulation(target: &str) -> &'static str {
+    if target.starts_with("x86_64") {
+        "-m elf_x86_64"
+    } else if target.starts_with("arm64") || target.starts_with("aarch64") {
+        "-m aarch64elf"
+    } else if target.starts_with("riscv64") {
+        "-m elf64lriscv"
+    } else {
+        ""
+    }
 }

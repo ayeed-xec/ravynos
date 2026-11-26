@@ -12,36 +12,51 @@ WORK="$SCRIPT_DIR/work"
 BIN="$SCRIPT_DIR/bin"
 LIBEXEC="$SCRIPT_DIR/libexec"
 
-TAG="$(sed -n 's/^\* Tag: //p' "$RAVYNOS_ROOT/tools/mig/_PROVENANCE")"
+TAG=""
+while IFS= read -r line; do
+    case "$line" in
+        "* Tag: "*) TAG="${line#\* Tag: }" ;;
+    esac
+done < "$RAVYNOS_ROOT/tools/mig/_PROVENANCE"
 if [ -z "$TAG" ]; then
     echo "error: no 'Tag:' line in tools/mig/_PROVENANCE" >&2
     exit 1
 fi
 
 need_pkg=()
-command -v flex  >/dev/null 2>&1 || need_pkg+=(flex)
 command -v byacc >/dev/null 2>&1 || need_pkg+=(byacc)
 command -v clang >/dev/null 2>&1 || need_pkg+=(clang)
 if [ ${#need_pkg[@]} -gt 0 ]; then
     echo "installing missing toolchain packages: ${need_pkg[*]}"
     sudo apt-get update -qq && sudo apt-get install -y -qq "${need_pkg[@]}"
 fi
-for tool in flex byacc clang; do
+for tool in byacc clang; do
     command -v "$tool" >/dev/null 2>&1 || {
         echo "error: $tool still missing after apt-get install" >&2; exit 1; }
 done
 
+if [ "${1:-}" = "--regen-lexer" ]; then
+    for tool in flex m4; do
+        command -v "$tool" >/dev/null 2>&1 || {
+            echo "error: --regen-lexer needs $tool (opt-in only)" >&2; exit 1; }
+    done
+    ( cd "$RAVYNOS_ROOT" &&
+        flex -o build/mig/generated/lexxer.c tools/mig/upstream/migcom.tproj/lexxer.l )
+    echo "== regenerated build/mig/generated/lexxer.c from lexxer.l"
+fi
+
 rm -rf "$WORK"
-mkdir -p "$WORK"
+mkdir -p "$WORK" "$BIN"
+clang -fuse-ld=lld -O2 -std=gnu11 -Wall -Wextra -Werror -o "$BIN/rvpatch" "$SCRIPT_DIR/rvpatch.c"
 cp -R "$VENDORED" "$WORK/migcom.tproj"
 
 cd "$WORK"
-for patch in "$PATCHES"/*.patch; do
-    [ -e "$patch" ] || { echo "error: no patches found in $PATCHES" >&2; exit 1; }
-    echo "== applying $(basename "$patch")"
-    patch --batch --forward -p1 < "$patch" || {
-        echo "error: patch FAILED: $patch" >&2
-        echo "       (patch series must apply cleanly onto pristine" >&2
+for pf in "$PATCHES"/*.patch; do
+    [ -e "$pf" ] || { echo "error: no patches found in $PATCHES" >&2; exit 1; }
+    echo "== applying ${pf##*/}"
+    "$BIN/rvpatch" -p1 "$pf" || {
+        echo "error: hunk application FAILED for ${pf##*/}" >&2
+        echo "       (the series must apply cleanly onto pristine" >&2
         echo "        sources; fix the series, not the vendored files)" >&2
         exit 1
     }
@@ -49,9 +64,9 @@ done
 
 cd "$WORK/migcom.tproj"
 byacc -d -b y parser.y
-flex -o lexxer.c lexxer.l
+cp "$SCRIPT_DIR/generated/lexxer.c" lexxer.c
 
-clang -O2 -std=gnu11 -Wall \
+clang -fuse-ld=lld -O2 -std=gnu11 -Wall \
     -I"$SHIM" \
     -DMIG_VERSION="\"$TAG\"" \
     -o "$WORK/migcom" \

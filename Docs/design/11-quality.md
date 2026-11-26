@@ -304,6 +304,14 @@ domain acceptable — is enforced as a build gate, not a convention.
 - The allowlist is explicit per directory, so an import into the wrong
   directory fails even when the license itself is acceptable.
 
+**Host tools are gated too.** A license audit reads files; the programs that run to produce
+them are checked by `build/ci/check-host-tools.sh`, which fails when any script under
+`build/`, `tests/` or `.github/`, or the harness source, invokes a GPL program: `gcc`,
+`bison`, GNU `patch`, GNU `m4`, `make`, `objcopy`, `nm`, `readelf`, `ar`, `ld`. What
+replaces them is ours or LLVM's: `rvpatch` applies the patch series, byacc builds the
+parser, the lexer ships pregenerated, clang compiles, `ld.lld` links, `llvm-ar` archives.
+QEMU is the one GPL program left in the loop, and it lives only in the test harness.
+
 Reviewers do not adjudicate licenses in PRs; the gate does it faster and
 more uniformly. What reviewers do check is provenance: where the code came
 from, and whether the commit message says so.

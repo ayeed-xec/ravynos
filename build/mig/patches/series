@@ -1,5 +1,5 @@
 # Patch series for Apple migcom on Linux. Applied in order by
-# ../build.sh with `patch -p1` onto a pristine copy of
+# ../build.sh with `rvpatch -p1` onto a pristine copy of
 # ../../../tools/mig/upstream/migcom.tproj. Every patch carries
 # why:/fate: headers (Docs/design/12-roadmap.md, W1).
 

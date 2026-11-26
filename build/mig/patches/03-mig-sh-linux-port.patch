@@ -1,7 +1,8 @@
 # why: mig.sh is the mig driver shell script; port for Linux:
 #      - /usr/bin/arch does not exist, derive host arch from uname
-#      - /usr/bin/xcrun does not exist; default cc to PATH's cc
-#      - clang on Linux rejects -arch; drop it from the cpp line
+#      - /usr/bin/xcrun does not exist; preprocess with clang, not cc
+#        (cc is gcc on Debian, GPL-3; clang -E is the same C preprocessor)
+#      - clang on Linux rejects -arch; drop it from the preprocessor line
 #      - GNU sed takes no argument to -i (BSD syntax used upstream)
 # fate: keep until mig moves to our own MIT-licensed implementation.
 diff -u a/migcom.tproj/mig.sh b/migcom.tproj/mig.sh
@@ -12,7 +13,7 @@ diff -u a/migcom.tproj/mig.sh b/migcom.tproj/mig.sh
      MIGCC=`"${xcrunPath}" -sdk "$sdkRoot" -find cc`
    else
 -    MIGCC=$(realpath "${scriptRoot}/cc")
-+    MIGCC=cc
++    MIGCC=clang
    fi
  fi
  

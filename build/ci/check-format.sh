@@ -54,6 +54,18 @@ else
     fi
 fi
 
+echo "== format gate: clang-format (build tooling)"
+mapfile -t tool_c_files < <(tracked ':(glob)build/mig/*.c')
+if [ "${#tool_c_files[@]}" -eq 0 ]; then
+    echo "notice: no build/** .c/.h files tracked yet; nothing to check"
+else
+    if ! clang-format --dry-run -Werror "${tool_c_files[@]}" 2> >(sed 's/^/  /' >&2); then
+        echo "error: clang-format found violations (shown above); run" >&2
+        echo "       'clang-format -i <files>' and commit the result." >&2
+        status=1
+    fi
+fi
+
 if [ "$status" -ne 0 ]; then
     echo "format gate: FAILED"
     exit 1

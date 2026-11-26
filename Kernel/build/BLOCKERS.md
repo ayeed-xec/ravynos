@@ -1,6 +1,7 @@
 # Kernel build blockers — xnu-12377.121.6 on Linux
 
-Updated: 2026-11-25. Tool: clang 21.1.8 (Ubuntu), flex/byacc (no bison: GPL skeleton).
+Updated: 2026-11-26. Tool: clang 21.1.8 + lld (Ubuntu), byacc; the lexer is pregenerated
+and committed, so neither flex nor its GPL `m4` dependency runs at build time.
 
 ## Closed 2026-11-25 (evening round)
 

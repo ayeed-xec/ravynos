@@ -6,7 +6,7 @@ sources = ["hello.c"]
 
 deps.internal = ["libhello"]
 
-targets = ["x86_64-ravynos"]
+targets = ["x86_64-ravynos", "arm64-ravynos", "riscv64-ravynos"]
 
 [exports]
 headers = []
