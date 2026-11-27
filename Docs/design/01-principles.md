@@ -129,7 +129,8 @@ What we do instead when a subsystem is not ready:
 - The component is absent from the build. Applications that need it fail to
   link, loudly, at the point of use.
 - Where partial function exists, the component is present and marked
-  incomplete in its `BUILDstate` declaration, with the exact list of
+  incomplete in its manifest `state` field ([05-build-system.md](05-build-system.md)),
+  with the exact list of
   unimplemented selectors, ioctls or error paths written in the component's
   README. "Incomplete and documented" is a state we accept; "silently
   pretending" is not.
@@ -156,7 +157,8 @@ Acceptable licenses for code in the tree:
 | --- | --- |
 | APSL 2.0 | Apple's own open-source releases |
 | BSD (2/3/4-clause) | XNU-derived and BSD userland code |
-| MIT | Our own code by default; MLX (https://opensource.apple.com/projects/mlx) |
+| BSD-3-Clause | Our own original code: kernel additions, drivers, shims, tools, `rv`, tests (every file carries `SPDX-License-Identifier: BSD-3-Clause`) |
+| MIT | MLX (https://opensource.apple.com/projects/mlx), other permissive imports |
 | Apache-2.0 | metal-cpp, other Apple-adjacent projects |
 | Zlib, ISC | Small vendored utilities |
 | Public domain | Individual imports, verified per file |
@@ -193,15 +195,19 @@ study. The differences are about architecture and targets:
   an explicit dependency graph, so a contributor can build one directory with
   ordinary tools and no Nix.
 - **Graphics.** Their desktop is a Wayland compositor ("Argon", on their
-  neuswc/neuwld) plus X11. That is a working desktop, but it is not the
-  protocol macOS applications speak, so stock Mac GUI software still cannot
-  run against their AppKit, which talks to its own RPC protocol. We build a
-  native window server speaking the protocol the target release uses, and
-  accept that this is the longer road (see [07-graphics.md](07-graphics.md)).
+  neuswc/neuwld) plus X11, and their AppKit talks to its own RPC protocol.
+  That is a working desktop, but stock Mac GUI software still cannot run
+  against it. We build a native window server designed beside our own
+  CoreGraphics, CoreAnimation and AppKit; the wire between them is private to
+  us, and the compatibility surface is the observable behavior of those client
+  frameworks, including the private SPI real applications call. This is the
+  longer road (see [07-graphics.md](07-graphics.md)).
 - **Build hosts.** PureDarwin builds on Linux and macOS hosts. Our build
   matrix targets Linux, FreeBSD, ravynOS itself, Windows and macOS (see the
   portability matrix below), because a self-hosting OS needs a toolchain that
-  is not anchored to one host.
+  is not anchored to one host. No host may be required: in particular,
+  nothing in the build or CI needs a Mac or Apple's proprietary SDK
+  ([13-toolchain-sdk.md](13-toolchain-sdk.md)).
 - **Architectures.** They build for x86_64 PCs, with arm64 work under QEMU on
   specific boards. We design arm64, RISC-V and x86_64 in from day one rather
   than porting to them later; the cost shows up in the port layers
@@ -224,9 +230,9 @@ study. The differences are about architecture and targets:
   ([github.com/PureDarwin/PureDarwin](https://github.com/PureDarwin/PureDarwin))
   — they ship the demo faster, and that pace is the benchmark our wave
   exits must beat. Our target is unchanged and harder: unmodified
-  closed-source Mac GUI software against the real client protocol, which a
-  Wayland/X11 compositor with an own-RPC AppKit cannot host (the argument
-  in [07-graphics.md](07-graphics.md)).
+  closed-source Mac GUI software, whose expectations of AppKit and
+  CoreAnimation behavior a Wayland/X11 compositor with an own-RPC AppKit
+  cannot host (the argument in [07-graphics.md](07-graphics.md)).
 
 We study their working code and we build our own designs. The clearest
 example: PureDarwin/xnu-loader (https://github.com/PureDarwin/xnu-loader) is
@@ -286,7 +292,7 @@ hardware close the loop for architectures we do not run natively.
 - What is the process for adding a build host to the matrix? Presumably a
   host enters at best effort and is promoted, but the promotion criteria
   (what gets exercised, how often) are not yet written down.
-- The license audit is a build gate for the tree, but the toolchain itself
-  (LLVM and friends) is pulled from upstream releases; the boundary between
-  "in the build" and "in the tree" for the no-GPL rule needs a written
-  definition in [05-build-system.md](05-build-system.md).
+- The boundary between "in the build" and "in the tree" for the no-GPL rule
+  is now written down in [05-build-system.md](05-build-system.md), "Tooling
+  boundary". What is still open is enforcement for the host-environment
+  class: today it is a review rule, not a gate.

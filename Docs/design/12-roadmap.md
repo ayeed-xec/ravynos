@@ -1,522 +1,430 @@
 # 12 — Roadmap: work waves
 
-This document orders the work. It replaces the old Roadmap 3.0 phase plans
-(now removed), which described the FreeBSD-based path; nothing in the waves
-below depends on that plan or on the partial work done under it. Each wave has a goal, exit
-criteria that are testable statements rather than moods, its dependencies,
-and an honest callout of the hard part. Read it if you want to know what to
-build next, what blocks what, and what the project is deliberately not
-doing yet.
+This document orders the work. Each wave has a goal, exit criteria that a machine or a
+skeptical reviewer can check, its dependencies, and an honest callout of the hard part. It
+also records where the project stands against those criteria today. Read it to learn what
+to build next, what blocks what, and what is deliberately not scheduled.
 
-## How to read this document
+## One numbering, one authority
 
-Waves are units of work big enough to own, small enough to finish. A wave's
-exit criteria are written so that a machine or a skeptical reviewer can
-check them; if a criterion cannot be checked, it is a wish and does not
-belong here. The owning design document is named for every wave — it
-carries the how, this document carries the when and the what-done.
+The wave numbers here are the wave numbers of [../DESIGN.md](../DESIGN.md) §10 (Roadmap
+4.0): W0 through W8, each tied to a compatibility tier T0–T5. DESIGN.md is the decision
+record and owns the tier definitions, the performance budget table (P1–P10) and the lane
+structure (A–F); this document expands each wave into checkable exit criteria and names
+the subsystem document that carries the how. When the two disagree, DESIGN.md wins and
+this file is the one that gets fixed.
 
-One deliberate absence: there are no dates. Our build fleet is x86_64
-Linux boxes with 8 CPUs, 16 GB of RAM and no GPU, the contributor count is
-small and mostly unknown in advance, and the hard parts are hard in ways
-we cannot schedule. What we can control is order and parallelism, so that
-is what this document commits to. Where the earlier plan left finished
-artifacts in the repository — a vendored xnu-12377.121.6 tree, build
-experiments under `Kernel/build/` — the waves either reuse them or
-explicitly redo them; nothing assumes they exist.
+Work that DESIGN.md does not place in a numbered wave — APFS, Metal, the Linux/FreeBSD
+compatibility subsystems, riscv64, the phone face — runs as **tracks**: parallel lanes
+with their own exit criteria, each attached to the wave that first needs its output. A
+track never gates a wave it is not attached to.
+
+An earlier revision of this file numbered eleven waves (W0–W10) on a different split.
+Those numbers are retired. For readers of older commits and notes, the mapping:
+
+| Retired number | Was | Now |
+|---|---|---|
+| W0 | Skeleton, `rv`, gates | W0 |
+| W1 | xnu builds on Linux (all three triples) | W1 |
+| W1.5 | Tree restructure | W1.5, kept under its own number: it is done |
+| W2 | kite boots the kernel | Boot track (kite), attached to W3 and W4 |
+| W3 | dyld, libc, libdispatch, launchd, IPC | W2 (dynamic runtime) and W3 (userland) |
+| W4 | APFS | APFS track: library in W2, VFS in W4, root volume by W8 |
+| W5 | Framebuffer to WindowServer | W4 |
+| W6 | CoreFoundation, Foundation, first apps | W4 (first window), W6 (width, Terminal, Finder) |
+| W7 | Metal | Metal track: software rasterizer by W6, first hardware backend by W7 |
+| W8 | Compat: driver shims, ELF loader | Compat track, after W3 |
+| W9 | arm64, then riscv64 (port sources started early) | Arch-port lane: arm64 exits at W5, riscv64 as its own track |
+| W10 | Phone face | Phone track, after W5 and W6 |
+
+There are no dates. The build fleet is x86_64 Linux machines with 8 CPUs, 16 GB of RAM and
+no GPU; the contributor count is small. What we control is order and parallelism, and that
+is what this document commits to.
+
+## Where we stand
+
+Checked against branch `darwin-clean` at `338dbda` on 2026-11-27. "Met" means the
+criterion is checkable in CI today; anything else is open.
+
+| Wave | State | Evidence and what remains |
+|---|---|---|
+| W0 | in progress | Met: `rv` (Rust, BSD-3-Clause, `Tools/rv/`) reads TOML manifests, checks layer fences, detects cycles and emits ninja; `rv build`, `rv graph`, `rv shell`, `rv audit license` exist; CI builds the manifested components and runs the SPDX audit, the format check, the host-tool unit tests (`Tests/tools/run.sh`) and the no-GPL host-tool gate (`Tools/ci/check-host-tools.sh`); root `.clang-format`; `VENDORS`. Open: `Apps/hello` is an **ELF** executable, not Mach-O — clang has no `ravynos` OS and `rv` links with `ld.lld -m elf_*` (13-toolchain-sdk.md, open questions); CI does not run `cargo test`/`cargo clippy` for `rv`, so its layer-rule unit tests are not gated; no committed planted-GPL or stripped-header negative case; `rv image`, `rv test`, `rv vendors`, `rv audit size` unimplemented; no content fingerprinting; provenance records only for xnu and mig; no `Docs/spec/`; no tier test app built by our toolchain as Mach-O |
+| W1 | in progress | Met: Apple's migcom (`bootstrap_cmds-138`, APSL) builds from a pristine vendored copy with a three-patch series applied by our `rvpatch`, parser from byacc — no GPL program in the build path; our own UEFI loader (`Boot/loader/`) boots a test kernel to panic-with-output on x86_64 (OVMF), arm64 (AAVMF) and riscv64 (edk2) in QEMU; build rules are triple-clean for `x86_64-ravynos`, `arm64-ravynos`, `riscv64-ravynos`. Open: generated mig stubs not yet compiled (sysroot header gaps); the kernel link still carries the 97-symbol workplan (`Kernel/build/link/REAL-KERNEL-UNDEFS.txt`); the old GRUB rig still sits in `Kernel/build/boot/`; T0 (a static Mach-O on xnu) not yet run |
+| W1.5 | done | `Boot/`, `Tools/`, `Tests/`, `Apps/`, `Foundation/`, `Kernel/port/` replace the old paths; the upstream desktop tree moved under `Legacy/` and out of the build graph |
+| W2–W8 | not started | Nothing in the tree claims these exits. The arch-port lane has skeletons in `Kernel/port/arm64` and `Kernel/port/riscv64` (pmap, traps, SBI) |
+
+The xnu-13432 vendor bump is not pending: Apple has not published that tag, and
+xnu-12377.121.6 remains the newest published source (03-kernel.md). The bump happens the
+week the tag appears, owned by lane A, absorbed by the wave in flight.
 
 ## The waves
 
-### W0 — Repository skeleton, `rv`, license gate, CI
+### W0 — Foundations
 
-Goal: make the tree a place where every later wave is gated from its first
-commit. The harness ([05-build-system.md](05-build-system.md)) and the
-quality gates ([11-quality.md](11-quality.md)) land before the code they
-gate, because a gate added after the code is a negotiation, not a gate.
-
-Exit criteria:
-
-- A clean clone on Linux x86_64 builds a hello-world component with `rv
-  build` and no network access beyond fetching pinned sources.
-- The dependency graph is data in the tree; `rv graph` prints it, and a
-  deliberately planted layer violation fails the build with the offending
-  edge named.
-- The license audit fails the build on a planted GPL file and on a vendored
-  file with a stripped header.
-- CI runs on every commit to the main branch; a red run blocks merge, and
-  the failing-ci-trumps-everything rule from [11-quality.md]
-  (11-quality.md) is in force.
-- Per-component clang-format configs exist and the format check gates.
-
-Dependencies: none. This is where everything starts.
-
-The hard part: there is no technical hard part, which is exactly why this
-wave is first and short. The risk is that it grows — the harness is the
-project's most tempting place to gold-plate. W0 is done when the W1 exit
-criteria can be attempted, not when `rv` is pretty.
-
-### W1 — Vendored xnu builds on Linux x86_64 (all three triples from day one)
-
-What this wave is: Apple's kernel, compiled by our harness on our hosts,
-booting far enough to prove it is alive. The kernel workstream, including
-the vendoring policy and the mig problem, is owned by
-[03-kernel.md](03-kernel.md).
+Goal: every later wave is gated from its first commit. The harness
+([05-build-system.md](05-build-system.md)) and the quality gates
+([11-quality.md](11-quality.md)) land before the code they gate.
 
 Exit criteria:
 
-- The vendored xnu source links to a kernel image on an 8-CPU, 16 GB Linux
-  host using our toolchain, with no macOS host involved at any step.
-- mig runs: the Mach `.defs` files compile and their generated headers are
-  produced by an explicit build rule, with the pinned generated headers
-  catching any behavior change.
-- The kernel boots in QEMU (q35/OVMF, loaded by the reference loader, not
-  yet by kite) to a panic-with-output: a structured panic log, symbolicated
-  by the harness per [03-kernel.md](03-kernel.md)'s debuggability section.
-  "It hangs after three lines" is not an exit state.
-- The vendored delta is a patch series with `why:`/`fate:` headers, and
-  regenerating the pristine upstream tree works.
-- Per-arch from day one (amendment 2026-11-26): every harness rule, mig
-  invocation and boot-script path is triple-clean — `x86_64-ravynos`,
-  `arm64-ravynos`, `riscv64-ravynos` each build every component and pass
-  the same gates on every commit, with no `linux-gnu`, no `unknown`, and no
-  arch-conditional shell escapes in build rules. Kernel port *sources*
-  stay out of W1; the W1 deliverable is a build system on which the W9
-  port work can start the day it begins.
+- A clean clone on Linux x86_64 builds a hello-world component with `rv build` and no
+  network access beyond fetching pinned sources, and **the output is a Mach-O object and
+  executable** (`file` says so; a CI step asserts it).
+- `rv graph` prints the dependency graph; a planted layer violation and a planted
+  undeclared dependency each fail the build with the offending edge named. These planted
+  cases live in the tree as negative tests and run in CI.
+- The license audit fails on a planted GPL file, on a file with no SPDX header, and on a
+  vendored file with a stripped header — again as committed negative tests run by CI.
+- CI runs `cargo test` and `cargo clippy` for `rv`, `rv build`, `rv audit license` and the
+  format check on every push; a red run blocks merge (11-quality.md, "Failing CI trumps
+  everything").
+- One project `.clang-format` governs our own code; vendored trees are excluded from the
+  format gate and keep their upstream style (11-quality.md, Formatting).
+- Provenance records exist for every vendored tree outside `Legacy/` (`Kernel/`, `Tools/mig/`,
+  and each tree as it leaves `Legacy/`), per DESIGN.md §6.2.
+- The tier test apps exist as sources with manifests (T0 static, T1 dynamic, T3 AppKit
+  window), built by our toolchain once W1 and W2 provide one, plus a recorded fixture set of
+  macOS-built third-party binaries (13-toolchain-sdk.md §2.4).
+
+Dependencies: none.
+
+The hard part: there is no technical hard part, which is why the risk is gold-plating. W0 is
+done when W1's criteria can be attempted honestly — and the ELF-versus-Mach-O gap shows
+why "a hello world builds" needs a checkable definition.
+
+### W1 — Kernel links and boots (T0)
+
+What this wave is: Apple's kernel, compiled by our harness on our hosts, linked with zero
+stub symbols, booting far enough to run a static Mach-O. Owned by
+[03-kernel.md](03-kernel.md); lane A.
+
+Exit criteria:
+
+- The vendored xnu links to a kernel image on an 8-CPU, 16 GB Linux host with our
+  toolchain, no macOS host involved, and **zero stub symbols** (`link/stub/` is gone from
+  the boot path). The link is driven by `rv build kernel`.
+- mig is Apple's migcom, vendored pristine with a `why:`/`fate:` patch series applied by
+  `rvpatch`, its parser generated by byacc — no GPL build tooling
+  ([05-build-system.md](05-build-system.md), "Tooling boundary"; met). The generated headers
+  for the kernel's `.defs` set are committed and act as regression fixtures; a mig change
+  that alters them fails CI.
+- T0: a static Mach-O built by our stage-1 toolchain runs on the kernel in QEMU (q35/OVMF)
+  with correct exit status, argv and environment. A panic produces a structured,
+  symbolicated log ([03-kernel.md](03-kernel.md), Debuggability); "it hangs after three
+  lines" is not an exit state.
+- Budgets P2 (QEMU boot to shell), P9 (full kernel build ≤ 5 min on 8 cores) and P10
+  (per-file compile p95 ≤ 1 s) are recorded in CI with baselines (DESIGN.md §5.1).
+- The kernel delta is a patch series under `Kernel/patches/` with `why:`/`fate:`
+  headers, and regenerating the pristine upstream tree works.
+- Per-arch from day one: every harness rule, mig invocation and boot script is
+  triple-clean — `x86_64-ravynos`, `arm64-ravynos` and `riscv64-ravynos` each build every
+  component and pass the same gates on every commit, with no `linux-gnu`, no `unknown`
+  and no arch-conditional shell escapes in build rules (met for the current components).
+  Kernel port *sources* are the arch-port lane's, not W1's.
 
 Dependencies: W0.
 
-The hard part: mig. Apple no longer publishes it as a standalone release,
-so we maintain our own (MIT, pinned by the committed generated headers), and
-makedefs assumes a macOS sysroot in several places. The vendor bump to the
-xnu-13432 line — the tree carries xnu-12377.121.6 today, and the design
-targets xnu-13432.41.4 (Darwin 27.2.0, per [01-principles.md]
-(01-principles.md)) — lands in this wave when Apple publishes the source,
-and the patch series is what makes that bump hours instead of weeks.
+The hard part: the last symbols of the link (kheap sections, boot-args, the blocks
+runtime, Mach primitives) are deep, and each must get a real definition rather than a
+stub. The old GRUB rig in `Kernel/build/boot/` is GPL; our own UEFI loader in `Boot/`
+already boots test kernels on all three architectures, so the GRUB rig should be deleted
+as soon as `Boot/` loads the real kernel.
 
-### W1.5 — Tree restructure to the target layout
+### W1.5 — Tree restructure (done)
 
-Goal: the repository matches the layout in
-[02-architecture.md](02-architecture.md) before W2 adds the first large
-body of new code, so nothing new lands in a directory that is about to move.
-Today our own code is spread across `build/`, `tools/`, `tests/`, `Tests/`,
-`components/`, `apps/` and `Kernel/RVOS/`, beside the upstream desktop tree
-(`Developer/`, `BSD/`, `Frameworks/`, `CoreServices/`, `SystemLibrary/`,
-`SysApps/`).
+The repository was reshaped to the layout in [02-architecture.md](02-architecture.md)
+before W2 adds its first large body of code, in three slices, each a single commit with
+every gate green: `Boot/`, `Tools/`, `Tests/` and `Kernel/port/` from the old `build/`,
+`tools/`, `tests/` and `Kernel/RVOS/platform/`; `components/` and `apps/` folded into
+`Foundation/` and `Apps/`; the upstream desktop tree moved under `Legacy/` and out of the
+build graph. Its exit criteria — only target-layout directories at the top level plus
+`Legacy/`, all gates and the three boot smokes green after each slice, every move a
+`git mv` — are met. `Legacy/` empties as later waves adopt components from it (by W6).
 
-Done in slices, each one a single reviewable commit with every gate green:
+### W2 — Dynamic runtime (T1)
 
-1. `Boot/` from `build/boot/` (loader, mkfat, elf2pe, pefix, image and run
-   scripts); `Tools/` from `tools/rv/`, `build/mig/` and `build/ci/`;
-   `Tests/` absorbs `tests/`; `Kernel/port/` from `Kernel/RVOS/platform/`.
-2. `components/` and `apps/` fold into `Foundation/` and `Apps/`.
-3. The upstream desktop tree moves under `Legacy/` and leaves the build
-   graph; components return from it one at a time as later waves adopt them.
+What we build: dyld, objc4, Libsystem and libdispatch running on our kernel, and the Mach
+IPC surface everything else messages through. Owned by
+[02-architecture.md](02-architecture.md) (process architecture) and
+[08-frameworks.md](08-frameworks.md) (Tier 1 vendoring); lane B.
 
 Exit criteria:
 
-- Every top-level directory is one of the eleven in the target layout, plus
-  `Legacy/` until W6 empties it.
-- CI, the no-GPL gate, the format gate, `cargo test`, the host tool unit
-  tests and the x86_64, arm64 and riscv64 boot smokes pass after each slice.
-- `git log --follow` traces every moved file to its history (moves are
-  `git mv`, never delete-and-add).
+- T1: a dynamic Objective-C program (Foundation only), built by our toolchain against the
+  `rv build sdk` output, loads through dyld, binds its imports against `.tbd` stubs at
+  link time and real dylibs at run time, and runs to completion.
+- Two userland processes complete a Mach IPC round trip through a bootstrap port lookup.
+- Budgets P3 (null syscall), P4 (Mach IPC round trip) and P5 (context switch) are measured
+  in CI as relative regression gates in QEMU (DESIGN.md §5.1).
+- The syscall-surface and dyld/objc behavioral specs exist in `Docs/spec/` and cite the
+  tests that verify them.
 
-Dependencies: W1 boot and harness work. Blocks: W2.
+Dependencies: W1 and W1.5. dyld, objc4 and libdispatch build and unit-test host-side
+while W1 is still linking, against the committed headers.
 
-### W2 — kite boots that kernel from the ESP
+The hard part: dyld assumes things about the shared cache and the kernel ABI that are only
+visible when they break, and the SDK's link surface (13-toolchain-sdk.md §2.3) must exist
+before T1 can be built honestly.
 
-Goal: our own bootloader replaces the reference loader, per
-[04-boot.md](04-boot.md). The kernel stops being a QEMU experiment and
-starts being something an arbitrary UEFI machine can run.
+### W3 — Userland on us (T2)
 
-Exit criteria:
-
-- kite's `BOOTX64.EFI` loads the W1 kernel from an ESP in QEMU under OVMF
-  and hands off; the boot log is versioned and machine-readable.
-- The hand-off is verified by a test kernel that checks its own load
-  address, walks the memory map it was given, and asserts each hand-off
-  precondition — the CI pattern [04-boot.md](04-boot.md) defines.
-- `boot_args` correctness is checked by having the kernel print back every
-  field kite set and CI compare the two views.
-- Every target kite claims (x86_64 first; arm64 and riscv64 firmware paths
-  build, even with only test kernels behind them) builds in CI on every
-  commit.
-
-Dependencies: W1.
-
-The hard part: the 64→32-bit entry switch and the `boot_args` contract must
-be re-verified against the xnu-13432 generation when the vendor bump lands
-([04-boot.md](04-boot.md) flags this), and QEMU's firmware is forgiving in
-ways real boards are not. Real-hardware boots beyond QEMU are a W2
-stretch goal, not an exit criterion — the fleet has no target hardware.
-
-### W3 — Core userland: dyld, libc, libdispatch, launchd, IPC
-
-What we build: the Darwin core userland, running on our kernel. This is where binary
-compatibility is won or lost for every program that does not draw a pixel
-([02-architecture.md](02-architecture.md)), and where the Mach IPC surface
-that everything else messages through first exists end to end. The
-frameworks side of userland is owned by [08-frameworks.md](08-frameworks.md);
-the process architecture is [02-architecture.md](02-architecture.md)'s.
+What we build: a system that boots from a disk image to a login prompt. Lane B with A and
+E.
 
 Exit criteria:
 
-- A statically linked Mach-O binary runs under the W1 kernel in QEMU and
-  completes a multi-step task (the historical plan used a shell; any
-  program that exercises several syscalls and Mach traps qualifies).
-- A dynamically linked Mach-O binary runs: dyld resolves its dylibs from
-  our sysroot and the program's imports bind.
-- launchd runs as PID 1, reads its plists, and starts two daemons, and one
-  of them is restarted by launchd after we kill it.
-- Two userland processes complete a Mach IPC round-trip through a bootstrap
-  port lookup — the operation the W3 performance budget
-  ([11-quality.md](11-quality.md)) then measures and gates.
+- T2: launchd runs as PID 1 from a disk image (not an initrd), reads its plists, starts the
+  daemon set, restarts a daemon that is killed, and the boot reaches a login prompt with
+  our shell and a ported BSD userland, with no stub syscalls on the hot path.
+- The root volume for W3 is **HFS+**, through Apple's open-source hfs kext already in
+  `Kernel/Extensions/hfs`; APFS becomes the root by W8 (APFS track). Saying so here keeps
+  W3 from silently depending on the hardest storage work in the project.
+- The disk image is assembled by `rv image` from manifests, never by a hand-run script.
+- Nightly full-boot trend runs exist (lane E).
 
-Dependencies: W1 and W2 for integration. Development can start host-side
-while W2 proceeds — dyld and libdispatch build and unit-test on Linux
-against the committed headers — which is why the diagram shows W3 starting
-in parallel with W2.
+Dependencies: W2.
 
-The hard part: dyld assumes things about the shared cache and the kernel's
-ABI that are only visible when they break, and launchd's early boot has
-chicken-and-egg staging (mounting the root volume it is supposed to be
-staged from) that [02-architecture.md](02-architecture.md) resolves with
-launchd's own run-level machinery but that has not survived contact with a
-real kernel yet.
+The hard part: launchd's early boot has chicken-and-egg staging (mounting the volume it is
+staged from) that [02-architecture.md](02-architecture.md) resolves with launchd's own
+run-level machinery but that has not met a real kernel yet.
 
-### W4 — APFS: userland library and tools, then VFS backend
+### W4 — Graphics and real hardware (T3)
 
-What we build: the boot filesystem. One on-disk format implementation, three
-frontends — userland tools, kernel VFS backend, bootloader reader — as
-[06-filesystem.md](06-filesystem.md) specifies.
+What this wave delivers: pixels composited by our window server, on QEMU and then on a
+bare-metal x86_64 PC. Owned by [07-graphics.md](07-graphics.md); lanes C and D.
 
 Exit criteria:
 
-- Our tools create an APFS volume containing files; our kernel driver mounts
-  that volume in QEMU and the files read back byte-identical. That is the
-  wave's headline criterion, and it is deliberately two-sided: we made it,
-  and we read it.
-- Volumes created by Apple's tools — the reference corpus in
-  [06-filesystem.md](06-filesystem.md) — mount read-only and pass their
-  per-case assertions.
-- A crash-kill test (QEMU powered off mid-write) ends in a volume that
-  `fsck`-equivalent repair handles or that fails closed, never silently
-  serves wrong data.
-- The bootloader's APFS reader reads the same volume the kernel mounts —
-  same freestanding library, per [06-filesystem.md](06-filesystem.md).
+- A framebuffer console renders the boot log before the window server starts.
+- IOSurface exists and the window server runs as a launchd-started peer process,
+  publishing its Mach port; killing it under load ends with launchd restarting it and
+  every client reconnecting (the CI kill test in 07-graphics.md).
+- T3: an AppKit app built by our toolchain against our SDK shows a window and responds to
+  mouse and keyboard at 60 fps, with P6 (input to photon ≤ 16.6 ms) and P7 (frame pacing)
+  measured — in QEMU software rendering first, then on the bare-metal rig.
+- The system installs to disk and boots on a commodity UEFI x86_64 PC through kite (Boot
+  track), with AHCI or NVMe storage, xHCI HID input and a real NIC; P1 (power to first app
+  frame ≤ 3 s on bare-metal NVMe) is measured.
 
-Dependencies: W3 (the tools need libc and a working userland to run) and
-W1 (the VFS backend needs the kernel).
+Dependencies: W3.
 
-The hard part: the format is documented by outside researchers, not Apple,
-and the encryption internals are out of reach entirely —
-[06-filesystem.md](06-filesystem.md) is blunt about both. Repair semantics
-lag Apple's for years and need the refusal policy that document leaves
-open. This wave is long, and treating it as anything less is how filesystems
-corrupt users' disks.
+The hard part: the observable behavior of the client frameworks is a clean-room target
+(07-graphics.md, "The compatibility surface"), and bare metal is where QEMU's forgiveness
+ends. Software rendering keeps the compositor honest while hiding every GPU question,
+which is the Metal track's job.
 
-### W5 — Display: framebuffer console to WindowServer
+### W5 — arm64 and the Apple Silicon path
 
-What this wave delivers: pixels, composited by our window server, as
-[07-graphics.md](07-graphics.md) designs it. The window server is a peer
-process owning the GPU and compositor, speaking the protocol the target
-release's clients expect — a clean-room target, developed against QEMU's
-software rendering because the build fleet has no GPU.
+What this wave proves: the portability commitment in [01-principles.md](01-principles.md)
+is real. Kernel port layers are [03-kernel.md](03-kernel.md)'s; the boot side is
+[04-boot.md](04-boot.md)'s. Lanes D, A and E.
 
 Exit criteria:
 
-- A framebuffer console renders the boot log before the window server
-  starts (debugging for everything else in this wave depends on it).
-- The window server runs as a launchd-started peer process, composites a
-  fixed test scene, and publishes its Mach port; a test client connects and
-  moves a window at the frame-time budget set at W5's exit per
-  [11-quality.md](11-quality.md) — the budget's method (the window server's
-  own counters, fixed scene, software rendering) is running from the first
-  week, even before the number is set.
-- Killing the window server results in launchd restarting it and clients
-  reconnecting — the restartability that [02-architecture.md]
-  (02-architecture.md) makes the whole point of a userland window server.
+- x86_64 and arm64 build in one CI matrix from one graph; the W1–W3 exit tests pass on
+  arm64 under QEMU `virt` — same tests, new architecture.
+- kite boots the arm64 kernel with the device-tree hand-off, verified by the same
+  test-kernel CI pattern as x86_64.
+- A board port touched only `Kernel/port/` (the HAL rule in DESIGN.md §2.4).
+- A clean-room stage-1 loader prototype boots our Mach-O on Apple Silicon under Apple's
+  boot policy (a development-mode machine is acceptable). m1n1 relicensed to GPLv2, so
+  Asahi sources are forbidden input for it; the boot-policy method itself is not
+  encumbered.
+- No x86_64 criterion regressed while the port landed.
 
-Dependencies: W3 (launchd starts it; clients speak Mach IPC to it).
+Dependencies: W1–W3 for the exit tests. The port *sources* do not wait: an arch-port lane
+owns `Kernel/port/arm64` and `Kernel/port/riscv64` and their pmap, trap and SBI pieces,
+works in parallel with every wave from W1 on, and pulls W2–W4's per-arch criteria forward
+as its own milestones (the three-architecture commitment in
+[01-principles.md](01-principles.md)). Runs alongside W4.
 
-The hard part: the client protocol is a clean-room target — what the
-target release's applications actually speak is not public, and
-[07-graphics.md](07-graphics.md) owns the study-behavior-then-
-reimplement-cleanly work. Software rendering in QEMU keeps us honest about
-the compositor while hiding every GPU question, which is fine for W5 and
-precisely what W7 exists to end.
+The hard part: Apple-silicon assumptions in `osfmk/arm64` are useful in places and dead
+weight on generic hardware; the HAL boundary is unproven until a second board crosses it.
 
-### W6 — Frameworks: CoreFoundation, Foundation, first AppKit apps
+### W6 — Frameworks width (T4)
 
-What we build: the layer macOS applications actually call. CoreFoundation and
-Foundation complete enough to host real apps, the Objective-C runtime
-solid, and the first two apps our own: Terminal, then Finder. Owned by
-[08-frameworks.md](08-frameworks.md).
+What we build: the layer macOS applications call, wide enough for real applications.
+Owned by [08-frameworks.md](08-frameworks.md); lanes C and B.
 
 Exit criteria:
 
-- CoreFoundation and Foundation pass their test suites built from our tree
-  against our kernel and libc — the same suites upstream Apple sources
-  carry, plus our own.
-- Terminal runs on our window server: text in, text out, scrollback, a
-  shell process per tab. It is the first app because it is the smallest
-  honest AppKit exercise and the best debugging tool for everything after.
-- Finder runs: a window with a view backed by our APFS driver mounts,
-  lists and opens files on the boot volume.
-- A cold launch of Terminal is measured end to end, setting the W6 budget
-  number in [11-quality.md](11-quality.md)'s table.
-- The Swift runtime hosts a dynamically linked Swift binary on our kernel,
-  and the SwiftUI dependency-graph inventory (SwiftUI, SwiftUICore,
-  AttributeGraph and everything below) is recorded from a real SwiftUI
-  app's load commands per [Docs/SWIFTUI-FEASIBILITY.md]
-  (../../Docs/SWIFTUI-FEASIBILITY.md) — this is the evidence behind
-  DESIGN.md's Wave 6 go/no-go verdict. SwiftUI out of the box is a
-  committed exit criterion of DESIGN.md's Wave 8 (the distro), not a
-  deferred maybe, so this measurement cannot be skipped. Reference
-  implementation for the inventory: OpenSwiftUI
+- T4: the fixed 20-app set of open-source Mac applications (chosen during W4) launches
+  and functions to the level its AppKit usage requires.
+- Our own Terminal and Finder run: Terminal with a shell per tab and scrollback, Finder
+  listing and opening files on the boot volume.
+- P8 (cold launch of a small app ≤ 500 ms) is measured and gated.
+- Every in-tree framework that ships passed the DESIGN.md §6.3 audit (license, quality,
+  spec); one that failed was reimplemented from spec.
+- The Swift runtime hosts a dynamically linked Swift binary, and the SwiftUI dependency
+  inventory (SwiftUI, SwiftUICore, AttributeGraph and below) is recorded from a real app's
+  load commands per [../SWIFTUI-FEASIBILITY.md](../SWIFTUI-FEASIBILITY.md), producing the
+  go/no-go verdict for W7's SwiftUI rung. OpenSwiftUI
   ([github.com/OpenSwiftUIProject/OpenSwiftUI](https://github.com/OpenSwiftUIProject/OpenSwiftUI),
-  MIT — license verified 2026-11-26), a source-compatible SwiftUI rebuild;
-  it is study material and an API-shape oracle, not a drop-in binary.
+  MIT) is study material and an API-shape oracle, not a drop-in.
+- The Metal track's software-rasterizer exit has passed (below), so apps in the set that
+  touch Metal fail on behavior, not on a missing framework.
 
-Dependencies: W5 (there must be a server to run apps on) and W4 (the
-system volume the apps install to must exist).
+Dependencies: T3 exit (W4).
 
-The hard part is breadth, not depth: the framework surface is enormous and
-the honest version of this wave is "a strict subset, complete and honest
-about its bounds" — the no-stubs doctrine from [01-principles.md]
-(01-principles.md) applied to AppKit, which is where the temptation to stub
-is strongest and the cost of stubbing is highest.
+The hard part is breadth, not depth. The honest version of this wave is a strict subset,
+complete and honest about its bounds — the no-stubs doctrine applied where the temptation
+to stub is strongest.
 
-### W7 — Metal: API layer, software rasterization, first hardware backend
-
-What this wave attacks: the hardest gap in the project, per [07-graphics.md]
-(07-graphics.md). Apple has not released the Metal implementation; the
-Apache-2.0 metal-cpp headers (https://developer.apple.com/metal/cpp) define
-the ABI through Metal 4 on macOS 27, and the implementation is ours,
-clean-room.
+### W7 — Closed-source Mac apps (T5)
 
 Exit criteria:
 
-- The metal-cpp sample suite passes on our software rasterizer — the
-  subset of https://developer.apple.com/metal/sample-code/ that needs no
-  hardware-only feature, run unmodified against our implementation.
-- The API layer is the same code for software and hardware backends; the
-  first hardware backend (target chosen by who shows up with hardware and
-  which driver path [03-kernel.md](03-kernel.md) lands first) passes the
-  same suite on real metal.
-- The shader path works end to end for the samples: source to our compiler
-  backend to execution.
+- T5: a designated commercial application installs and runs, climbing the ladder Electron
+  app → Qt app → native AppKit app → SwiftUI app.
+- Every gap the ladder exposes lands as spec → implementation → test (DESIGN.md §7).
+- The SwiftUI rung runs on our clean-room SwiftUI/SwiftUICore/AttributeGraph, gated on
+  W6's go verdict.
+- The Metal track's first hardware backend passes its exit.
 
-Dependencies: W5 (a surface to render to and a process model to render
-from). Runs alongside W6 — the diagram shows the two branches in parallel —
-because the API layer and the software rasterizer do not need AppKit.
+Dependencies: T4 exit (W6).
 
-The hard part, stated plainly because [07-graphics.md](07-graphics.md)
-says it too: shaders, the AIR/metallib formats and the compiler backend.
-The API surface is knowable from headers and docs; the compiler is a
-multi-year engine of its own. This wave's exit criteria are deliberately
-modest (samples on software) because the honest alternative is a demo, and
-the project does not ship demos as milestones.
+The hard part: closed-source applications reach into private framework SPI (for example
+the CoreGraphics/SkyLight `CGS*`/`SLS*` calls some utilities use); every such call is part
+of the compatibility surface and is specified from observed behavior, never from Apple's
+code.
 
-**Prior art: KosmicKrisp.** LunarG's KosmicKrisp
-(https://docs.mesa3d.org/drivers/kosmickrisp.html, product page
-https://www.lunarg.com/products/kosmickrisp/) is the strongest evidence the
-translation-layer approach can reach production quality: a Vulkan-to-Metal
-driver started from a blank slate in late 2024, Vulkan 1.3 conformant by
-2025 and Vulkan 1.4 conformant as of September 2026, MIT-licensed,
-built on Mesa's Vulkan framework and NIR compiler, targeting Metal 4 on
-M1–M5 Apple silicon, shipped in the LunarG SDK and upstream in Mesa. Two
-lessons we take from it, not its code:
-
-- The NIR compiler stack is why it reached conformance quickly; our shader
-  path should adopt (permissively licensed) shared compiler infrastructure
-  rather than grow a private one.
-- CI on real Apple silicon (LunarG runs M1/M2/M4 machines on macOS 26)
-  is what made it production-grade; "conformant" without that
-  infrastructure is not, and the same bar applies to our hardware
-  backends.
-
-It is not a drop-in for us — it targets macOS on Apple silicon, not
-ravynOS, and depends on Apple's closed Metal runtime — but it defines the
-quality bar for an API-translation layer and, on Apple-silicon hosts, is a
-practical stopgap path for Vulkan applications while our own Metal stack
-grows.
-
-### W8 — Compat: Linux/FreeBSD driver shims and the ELF loader
-
-What we build: hardware support and Linux software, without rewriting either. The
-driver compatibility layer and the ELF loader are first-class subsystems
-under `Compat/`, owned by [09-compat.md](09-compat.md), with contracts,
-version pins and tests.
+### W8 — Distro
 
 Exit criteria:
 
-- A real Linux driver, run against our kernel through the shim, serves a
-  network interface: it passes traffic under iperf in QEMU's user-mode
-  networking equivalent, with packets observed on both ends.
-- The ELF loader runs an unmodified static Linux binary; then a dynamic
-  one against the compat sysroot.
-- NVIDIA userspace talks to the shimmed driver: the userspace side of
-  NVIDIA's driver initializes and reports — the same feat PureDarwin
-  demonstrates with their 580-driver loading and elftrans (per
-  [01-principles.md](01-principles.md)'s PureDarwin comparison), which is
-  our evidence the approach works and our bar to clear properly.
-- The stock-binary compatibility corpus ([09-compat.md](09-compat.md),
-  referenced by [11-quality.md](11-quality.md)) exists and gates the
-  loader.
+- A bootable ISO, a disk installer and an A/B update path; a Mac VM demo package.
+- The installed system's root is an APFS volume group created by our tools (APFS track).
+- `LICENSES.md` states the whole distribution's license picture.
+- The final performance report shows every budget against its baseline, commands included.
+- A stock SwiftUI app installs and runs out of the box from the installed image.
 
-Dependencies: W1–W3 (the shim rides our kernel's driver interfaces; the
-ELF loader needs our process and VM machinery). Runs alongside W5–W7 with
-no dependency on them — different skills, different contributors.
+Dependencies: W7. All lanes converge; lane E owns release engineering.
 
-The hard part: driver shim fidelity. A KPI shim that satisfies 90% of a
-driver's calls fails in the 10% that touches DMA or interrupts, and NVIDIA
-userspace is famously demanding of its kernel counterpart. The corridor
-PureDarwin proved exists; keeping it stable as the kernel vendor-bumps is
-the ongoing cost.
+## Tracks
 
-### W9 — arm64, then riscv64 bring-up (started early, per the day-one amendment)
+### Boot track — kite
 
-What this wave proves: the portability commitments from [01-principles.md]
-(01-principles.md) are real. The kernel port layers are
-[03-kernel.md](03-kernel.md)'s design; this wave is the schedule for
-exercising them on the other architectures.
+Owned by [04-boot.md](04-boot.md); lane D. kite grows from the UEFI loader already in
+`Boot/loader/`, which loads Mach-O and ELF images and boots test kernels on all three
+architectures.
 
-Amendment 2026-11-26: [01-principles.md](01-principles.md) says the three
-architectures are designed in from day one, and the build layer has honored
-that since W1. The port *sources* therefore start here as their own
-long-running track instead of waiting for W1–W8 to serialize ahead of them:
-an arch-port lane owns `osfmk/arm64` and `osfmk/riscv64` (plus their
-pmap/trap/SBI pieces per the table below) and works in parallel with the
-other waves, pulling W2–W4's per-arch criteria forward as its own
-milestones. This wave's exit criteria are unchanged; what changes is that
-the work is no longer scheduled strictly after W8.
+- By W1 exit: the loader boots the real kernel and the GRUB rig in `Kernel/build/boot/`
+  is deleted.
+- By W3 exit: kite's `BOOTX64.EFI` reads the disk image's volume and hands off; a test
+  kernel asserts every hand-off precondition and CI compares the `boot_args` fields kite
+  set against what the kernel prints back.
+- By W4 exit: kite boots the bare-metal x86_64 rig, with an APFS reader for the boot
+  volume once the APFS track provides one.
+- By W5 exit: the arm64 platform layer and device-tree hand-off.
 
-Exit criteria:
+### APFS track
 
-- The exit criteria of W1 through W4 pass on arm64 in QEMU — same tests,
-  same gates, new architecture — then on riscv64.
-- kite boots the arm64 kernel with the DTB hand-off
-  ([04-boot.md](04-boot.md)'s per-arch interface), verified by the same
-  test-kernel CI pattern.
-- No wave's x86_64 criteria regressed while the port landed; the per-arch
-  gates all run in CI.
+Owned by [06-filesystem.md](06-filesystem.md).
 
-Dependencies: W1–W4. The port layers can start host-side as soon as W1's
-structure exists, and arm64 leads riscv64 because XNU has arm support to
-start from and riscv64 has none. The riscv64 estimate is on the order of a
-person-year; the breakdown below ([03-kernel.md](03-kernel.md) owns the
-layer design) is why the wave starts early rather than late:
+- During W2 (host-side, no kernel needed): `libapfs` and its tools read every case of the
+  reference corpus and pass their assertions; volumes our tools create read back
+  byte-identical through Apple's tools on a contributor's Mac, recorded as fixtures.
+- By W4 exit: the kernel VFS backend mounts corpus volumes read-only in QEMU; a crash-kill
+  test (QEMU powered off mid-write) ends in a volume that repair handles or that fails
+  closed, never one that serves wrong data.
+- By W8 exit: read-write root volume group, and kite reads the boot volume through the same
+  freestanding format code.
+
+The hard part: repair semantics will lag Apple's for years and need the refusal policy
+06-filesystem.md leaves open. This track is long; treating it as anything less is how
+filesystems corrupt users' disks.
+
+### Metal track
+
+Owned by [07-graphics.md](07-graphics.md). Apple has not released the Metal
+implementation; the Apache-2.0 metal-cpp headers define the ABI through Metal 4.
+
+- By W6 exit: the subset of Apple's Metal sample code that needs no hardware-only feature
+  runs unmodified on our software rasterizer, with shaders going source → our compiler →
+  execution.
+- By W7 exit: a first hardware backend — a native IOKit GPU driver, per the decision in
+  03-kernel.md — passes the same suite on real hardware, with CI on that hardware.
+
+Prior art: LunarG's KosmicKrisp (https://docs.mesa3d.org/drivers/kosmickrisp.html), a
+Vulkan-to-Metal driver built on Mesa's NIR compiler, reached Vulkan 1.4 conformance with
+CI on real Apple silicon. Two lessons, not its code: adopt permissively licensed shared
+compiler infrastructure rather than growing a private one, and do not call a backend
+conformant without CI on the hardware. It translates *to* Apple's Metal runtime, which we
+do not have, so it is a quality bar and not a component.
+
+### Compat track
+
+Owned by [09-compat.md](09-compat.md) (binaries) and [03-kernel.md](03-kernel.md)
+(drivers). Starts after W3; gates nothing.
+
+- The FreeBSD KPI shim serves a network interface in QEMU with a BSD-licensed driver
+  (vtnet, then em), passing traffic with packets observed on both ends.
+- The ELF loader runs an unmodified static Linux binary, then a dynamic one against the
+  packaged runtime.
+- A permissively licensed Linux driver runs through the Linux KPI shim: a dual-licensed
+  or MIT driver taken under its permissive option (for example an MIT-licensed DRM driver
+  or NVIDIA's open kernel modules, which are dual MIT/GPL). GPL-only Linux drivers are not
+  eligible — see 03-kernel.md, "License eligibility".
+- NVIDIA userspace initializes against the shimmed driver and reports.
+- The pinned compatibility corpus exists and gates the loader.
+
+### riscv64 track
+
+Port sources run in the arch-port lane from W1 on (skeletons in `Kernel/port/riscv64`);
+the exit is scheduled after W5. arm64 leads because XNU has arm support to start from; riscv64 has none.
+Exit: W1–W3's tests pass on riscv64 under QEMU, and kite boots it. The estimate is on the
+order of a person-year:
 
 | Piece | Estimate | What it is |
 |---|---|---|
-| `osfmk` pmap | 3–4 engineer-months | Apple's ARM pmap is welded to PPL, TTE formats and Apple page-table hardware; Sv39/Sv48 is a different machine, rewritten from the RISC-V privileged spec |
-| Trap/context-switch assembly | 1.5–2 months | Exception vectors and entry assembly, rewritten from the spec, not lifted from `arm` |
-| CPU bring-up via SBI | ~1.5 months | Timers, IPIs, `machine_routines` |
-| IOKit/kext arch glue, `pmap_cs` replacement | remainder | No code-signing hardware on early RISC-V boards simplifies this |
+| `osfmk` pmap | 3–4 engineer-months | Sv39 baseline and Sv48 where present, written from the RISC-V privileged spec; Apple's ARM pmap is welded to PPL and Apple page-table hardware |
+| Trap and context-switch assembly | 1.5–2 months | Exception vectors and entry code from the spec |
+| CPU bring-up via SBI | roughly 1.5 months | Timers, IPIs, `machine_routines` |
+| IOKit/kext arch glue, `pmap_cs` replacement | remainder | Early RISC-V boards have no code-signing hardware |
 
-Nothing ports "directly" from `osfmk/arm` — what ports is as a template:
-structure and invariants are reusable, instruction-level code is not.
+Nothing ports directly from `osfmk/arm`; structure and invariants are a template, not code.
 
-The hard part: riscv64 is a from-scratch Mach VM and trap layer, not a
-port. arm64 under QEMU is comparatively tame; the long tail is the same
-hardware-reality problem as x86_64 (devicetrees, firmware variety), met
-through contributors' machines and QEMU's device-tree machines.
+### Phone track
 
-License constraint (updated 2026-11-26): the Apple Silicon path follows
-Asahi's boot-policy method — a 1TR-enrolled stage-1 loader presenting an
-img4-wrapped Mach-O — but m1n1 relicensed MIT → GPLv2 in November 2026,
-so the loader is our own clean-room code and Asahi sources are forbidden
-input for it, per the license rule in [01-principles.md](01-principles.md).
-
-### W10 — Phone face bring-up
-
-What this wave attempts: the iOS-alternative track ([10-mobility.md](10-mobility.md)) gets
-its hardware. The evidence this is possible is ios-sweet's proof that
-Apple's open-source XNU plus IOHIDFamily and libpthread hosts unmodified
-iOS userland to the home screen on a Snapdragon 732G, CPU-rendered (per
-[01-principles.md](01-principles.md)); we are not porting their patches,
-but they define the achievable bar.
-
-Exit criteria: defined by [10-mobility.md](10-mobility.md), which owns
-the track. The wave's position here — last, after W9 and W6 — is the
-schedule's honest statement: phone SoC bring-up needs every port layer
-skill the project owns and a framework stack worth putting on the screen.
-
-Dependencies: W9 (per-arch port layers) and W6 (a UI stack to show).
-
-The hard part: per-SoC bring-up with no GPU driver, on hardware whose
-firmware we do not control, with the security machinery (AMFI, sandbox)
-that ios-sweet had to run permissive. [10-mobility.md](10-mobility.md)
-owns the honesty about what "bring-up" means for a first device.
+Owned by [10-mobility.md](10-mobility.md). Starts after W5 (arm64 port layers) and W6 (a
+UI stack worth showing). Its exit criteria are 10-mobility.md's bring-up order, steps 1–4,
+on one tablet-class device; radios and enforcement follow.
 
 ## The timeline
 
-![Work waves as a timeline with dependency arrows and parallel lanes](diagrams/roadmap-timeline.svg)
+![Waves W0–W8 with tracks as parallel lanes](diagrams/roadmap-timeline.svg)
 
-Figure: the waves left to right in start order, with dependencies as
-arrows. The kernel spine (W0–W3) is serial; storage, display and compat
-fan out from W3; frameworks and Metal proceed as parallel branches; the
-architecture wave re-runs everything, and the phone track sits on top of
-it.
+Figure: the waves left to right, with the tracks below them as parallel lanes and arrows
+where a track's output is needed by a wave.
 
-Reading it as contributor lanes: after W2, three lanes run at once with no
-shared files — kernel/storage (W4), graphics (W5, then W7), compat (W8) —
-and frameworks (W6) joins them once W5 lands. W9 needs the port-layer
-skills from W1–W2 but not the later waves. A new contributor should be able
-to join any lane whose owning document they have read; the lanes share
-`rv`, the gates and the review rules, and otherwise stay out of each
-other's way.
+W0→W1→W2 are strictly serial: each unlocks the next one's test rig. From W3 the work widens,
+keeping three or four lanes active at once — more lanes than the contracts can freeze
+produce collision churn, not speed (DESIGN.md §10, sequencing logic). W4 and W5 run side
+by side; the APFS track starts during W2 because its library needs only a host and a
+corpus; the Compat track joins after W3 with different skills and different contributors.
 
-## What we deliberately do not schedule in the first year
+## Not scheduled in the first year
 
-These are recorded so their absence is a decision, not an oversight. Each
-has a reason and a re-entry path.
+Recorded so the absence is a decision, with a re-entry path.
 
-- **Real-hardware GPU driver backends beyond the first hardware target.**
-  The build fleet has no GPU at all; every hardware backend depends on a
-  contributor with the machine. One target when hardware appears, not a
-  matrix.
-- **MetalFX.** Apple's upscaling technology is part of the public Metal
-  documentation (https://developer.apple.com/metal/) but sits on top of a
-  working Metal stack and hardware backends we do not have. It lands after
-  W7's first hardware backend, and scheduling it earlier would put a
-  dependency on nothing.
-- **Cellular radios.** Modem bring-up is per-device, carrier-dependent and
-  orthogonal to the desktop mission. [10-mobility.md](10-mobility.md)
-  may pick it up after its first device is real.
-- **The Xcode-equivalent IDE.** A development environment of that size is
-  its own multi-year project and is not on the critical path to running
-  real macOS software. The first-year tooling story is `rv`, editors, and
-  the test rig; an IDE conversation happens when the frameworks it would
-  target exist.
-- **Self-hosting.** Building ravynOS on ravynOS requires the toolchain,
-  frameworks and filesystem to all be real. It is a milestone to want,
-  not one to schedule while W3 is unproven.
+- **Hardware GPU backends beyond the first.** The fleet has no GPU; every backend needs a
+  contributor with the machine.
+- **MetalFX and ray tracing.** They sit on a working Metal stack and hardware backends.
+- **Cellular radios.** Per-device and carrier-dependent; 10-mobility.md may pick them up
+  after its first device works.
+- **An Xcode-equivalent IDE.** Its own multi-year project, not on the critical path.
+- **Self-hosting.** Building ravynOS on ravynOS needs the toolchain, frameworks and
+  filesystem to be real; it is a post-W8 milestone (13-toolchain-sdk.md, stage 2).
 
 ## Open questions
 
-- Should W4's userland tools start host-side during W2 (they only need a
-  Linux host to build and the corpus to test against), pulling real APFS
-  work earlier at the cost of splitting the wave? The dependency graph
-  says no; the corpus says the tools are testable without our kernel.
-- Which hardware target is W7's first backend? Decided 2026-11-26: native
-  IOKit drivers have priority always — the Linux DRM KPI shim in
-  [03-kernel.md](03-kernel.md) is a compatibility layer for foreign
-  drivers, not the native path, so it follows rather than leads. KosmicKrisp
-  (W7's prior art above) shows what a translation layer can reach, and
-  equally why we aim past it: it translates *to* Apple's Metal runtime,
-  which we do not have — our IOKit family *is* the runtime's home.
-  The specific chip still waits for contributors with hardware.
-- The waves name no dates; what is the mechanism that notices a wave is
-  stalled? An exit criterion that no one is working toward is silent, and
-  this document does not yet say who re-triages the order when reality
-  disagrees with it.
-- The historical plan's finished work (the static Mach-O guest shell on
-  the old kernel, the build experiments) predates the W0 gates. Does W1
-  reuse that kernel build driver under the new harness, or rewrite it —
-  and who decides when the honest answer is "rewrite, but steal the
-  BLOCKERS list"?
-- W10's exit criteria are delegated to [10-mobility.md](10-mobility.md),
-  which is not yet written. Until it exists, W10 is a placeholder on the
-  timeline and should not be promised to anyone.
+- What notices a stalled wave? With no dates, an exit criterion that nobody works toward is
+  silent. DESIGN.md names a wave log and a decision log (`.mlai/DECISIONS.md`) as the
+  record; neither exists in the tree yet, and someone needs to own re-triage.
+- kite: DESIGN.md's language policy says Rust, and `Boot/loader/` is C and works on three
+  architectures. Rewrite it in Rust before it grows a driver model, or amend the policy
+  for the loader? Either is defensible; leaving the two disagreeing is not.
+- Which commercial application is W7's designated target, and which 20 apps form W6's
+  set? DESIGN.md requires both named before their waves start.
+- Where does riscv64 stop being a track and become a wave — when a contributor commits to
+  it, or when a riscv64 board joins the reference rig?

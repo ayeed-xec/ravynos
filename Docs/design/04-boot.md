@@ -6,6 +6,17 @@ kernel running on x86_64, arm64 and riscv64. Read it if you are working on the l
 itself, bringing up new hardware, or debugging why a kernel that runs under QEMU will
 not boot on real metal.
 
+## Where boot stands today
+
+`Boot/loader/` is our own UEFI loader, in freestanding C (BSD-3-Clause): it loads Mach-O
+and ELF images, and the boot smokes in `Tests/boot/` run it to a test kernel's
+panic-with-output on x86_64 (OVMF), arm64 (AAVMF) and riscv64 (edk2) under QEMU. It is
+kite's starting point. Two things are unsettled. DESIGN.md's language policy says kite is
+Rust, and this loader is C — see Open questions. And the older developer rig in
+`Kernel/build/boot/` still boots the kernel through GRUB multiboot2; GRUB is GPL, so that
+rig is never vendored, never part of a release artifact, and is deleted once `Boot/`
+loads the real kernel (the Boot track in [12-roadmap.md](12-roadmap.md)).
+
 ## Why we write our own bootloader
 
 XNU has a boot contract that no mainstream bootloader speaks. The kernel entry on
@@ -19,8 +30,9 @@ support and no room to grow one on our terms.
 
 So the project writes its own bootloader, from scratch, and gives it a plain name:
 **kite**. It is a native UEFI application (plus a firmware story for riscv64, below),
-written in freestanding C with no libc, BSD licensed, and free of GNU code and GNU
-build tooling. If the name bothers anyone, it is a rename across a handful of files,
+written as a freestanding UEFI application — C today in `Boot/loader/`, Rust with
+`no_std` per DESIGN.md §10's language policy if that policy holds for the loader —
+BSD-3-Clause licensed, and free of GNU code and GNU build tooling. If the name bothers anyone, it is a rename across a handful of files,
 not a design decision — but this document uses kite consistently, and so should the
 tree.
 
@@ -80,10 +92,11 @@ at this specific job.
 
 Two rows deserve their own paragraphs.
 
-The APFS reader is the risky one. Apple does not publish the APFS on-disk format as a
-specification, but independent implementations exist — PureDarwin ships APFS support
-in its tree — so a read-only clean-room reader is a known-feasible amount of work,
-not a research project. We do not need write support in the bootloader; the kernel
+The APFS reader is the risky one, though less than it looks: Apple publishes the
+on-disk format in the *Apple File System Reference*
+(https://developer.apple.com/support/apple-file-system/Apple-File-System-Reference.pdf),
+written so that others can implement read access, so a read-only reader is a
+known-feasible amount of work, not a research project. We do not need write support in the bootloader; the kernel
 mounts root read-write. Until the reader exists, the ESP carries the kernel and kite
 boots from there, which is exactly the layout xnu-loader proves.
 
@@ -171,6 +184,16 @@ plain Mach-O kernel and the kernelcache variants used by the lc-tools pipeline (
 same inputs xnu-loader accepts); other vendor kernelcache wrappers get added only when
 we target the hardware that needs them.
 
+### arm64 devices behind a vendor bootloader
+
+Phones and tablets (the phone track, [10-mobility.md](10-mobility.md)) do not expose
+UEFI to us. Their vendor bootloaders, driven by `fastboot boot`, launch an image in the
+Linux arm64 boot format: a kernel image with the Linux header, plus a DTB. kite gets a
+second arm64 entry for this case — a small stage that presents that header, receives the
+DTB pointer in `x0`, and then performs the same XNU hand-off as the UEFI path. The
+format is a documented boot protocol, not Linux code; we implement it from the
+protocol's description. The platform layer is shared; only the entry differs.
+
 ### riscv64
 
 The firmware story is SBI. On riscv64 the machine starts in machine mode with SBI
@@ -243,10 +266,11 @@ separate build system with its own rules. The constraints:
 - Cross-built from Linux first. Our build machines today are x86_64 Linux hosts with
   8 CPUs and 16 GB of RAM and no GPU, so the loader must cross-compile all three
   targets on a modest host with nothing but clang and the harness.
-- Freestanding C. No libc; the loader carries the handful of string and memory
-  routines it needs, and nothing else.
-- No GNU code and no GPL-linked tooling anywhere in the build path. The UEFI binding
-  layer is ours — small, and ours to own — rather than an imported framework.
+- Freestanding: no libc, no allocator beyond kite's own. The UEFI binding layer is ours
+  (`Boot/loader/efi.h` today) — small, and ours to own. If kite moves to Rust, existing
+  Rust UEFI crates are reference material and may be adopted only after the same license
+  check as any import.
+- No GNU code and no GPL-linked tooling anywhere in the build path.
 - Every target builds in CI on every commit, and the tests run in QEMU: OVMF for the
   x86_64 UEFI path, QEMU's device-tree machines for arm64, and the riscv64 firmware
   QEMU ships. A bootloader that only works on the author's machine is not a
@@ -276,6 +300,14 @@ of staring at a hung machine.
   write it down here rather than leaving it tribal knowledge.
 - Do modules ever load from the ESP at runtime, or does the embedded binary stay the
   only shape? Revisit when Secure Boot covers individually signed files.
+- Language: DESIGN.md §10 says kite is Rust (`no_std`); `Boot/loader/` is C and already
+  boots three architectures. Rewrite before it grows a driver model and filesystems, or
+  amend the policy for the loader? Decide before the module system lands.
 - Crash-dump area sizing: how much memory do we reserve, and does it come out of the
   kernel's allocation or the loader's? Needs the kernel side (see `03-kernel.md`) to
   state its requirement first.
+- Device-tree delivery on vendor-bootloader devices: do we hand XNU the vendor's DTB
+  as-is, merge it with our own nodes, or convert it to XNU's device-tree format?
+  [10-mobility.md](10-mobility.md) needs the answer before its first device.
+- Does the 4 KiB/16 KiB page-size choice for arm64 kernels change what kite must
+  reserve and map before the hand-off?

@@ -27,14 +27,16 @@ before they can judge it.
 
 ### Formatting
 
-Formatting is mechanical and therefore not negotiable in review. Every
-component directory carries a `.clang-format` committed alongside its sources;
-the harness's format check runs it and fails the build on a diff. There is no
-project-wide clang-format file, because there should not be one: a component
-built from Apple's CoreFoundation sources formats like CoreFoundation, and a
-from-scratch server written in modern C++ formats like the rest of `Server/`.
-The per-component config is the commitment that reviewers never discuss
-whitespace.
+Formatting is mechanical and therefore not negotiable in review. Our own new
+code — the RVOS overlay, `rv`, kite, the window server, tools — follows the one
+project `.clang-format` at the tree root (LLVM-based, 4-space indent, 100
+columns, DESIGN.md §14.1) and `rustfmt` for Rust; the format check
+(`Tools/ci/check-format.sh`) fails CI on a diff. Vendored trees are excluded
+from the gate and keep their upstream style: a component built from Apple's
+CoreFoundation sources formats like CoreFoundation, and a patch against XNU
+formats like the file it touches. A vendored component that needs a
+formatter config of its own carries one in its directory, which then
+overrides the root. Either way, reviewers never discuss whitespace.
 
 For files that are neither clang-formatted (assembly, mig `.defs`, property
 lists), the component's README states the convention in one line.
@@ -170,9 +172,10 @@ away.
   Apple's own tools on a macOS host, each with the assertions our
   implementation must satisfy. Our APFS code is judged against volumes the
   reference implementation made, not against volumes we made.
-- **The stock-binary compatibility corpus.** [09-compat.md](09-compat.md)
-  owns the collection of real macOS and Linux binaries our loaders and
-  loaders' ABI surface must handle. A change to dyld, the ELF loader, or the
+- **The stock-binary compatibility corpora.** [09-compat.md](09-compat.md)
+  owns the Linux and FreeBSD binaries the ELF loader and ABI environments
+  must handle; [13-toolchain-sdk.md](13-toolchain-sdk.md) §2.4 owns the
+  macOS-built fixture set dyld and the frameworks must run. A change to dyld, the ELF loader, or the
   Mach-O image loader runs the corpus; "it compiles" is not evidence about
   binary compatibility.
 
@@ -195,25 +198,34 @@ reserves the mechanism: the harness measures what it builds, compares
 against the budget table, and fails the build with old and new numbers in
 the error. This document owns the table.
 
-The rule for filling the table in is the important part, so it comes first:
-**we do not invent numbers now.** A budget written before the subsystem
-exists is a guess wearing the costume of a requirement, and a wrong guess
-either poisons the gate (everyone learns to override it) or strangles the
-implementation. What every budget needs from day one is a **name**, a
-**measurement method**, and a **gate**; the number itself is set when the
-subsystem lands, from measurement on the reference hardware, and the gate
-arms at that moment.
+Two kinds of number live here, and they must not be confused. DESIGN.md §5.1
+sets **targets** — P1 to P10, the numbers the project commits to reaching,
+such as a Mach IPC round trip of at most 2 µs. A **gate** is different: it
+fails the build when a change regresses more than 5 % against the baseline
+recorded at the wave where the budget arms. A target with no measurement
+yet is a commitment; a gate needs a measurement, so its baseline is recorded
+when the subsystem lands and the gate arms at that moment. Neither is
+invented by reviewers.
 
-The initial table, with methods specified and numbers deliberately open:
+The table, with wave numbers per [12-roadmap.md](12-roadmap.md):
 
-| Budget | Method | Gate | Number |
+| Budget | Target (DESIGN.md §5.1) | Method | Gate arms |
 |---|---|---|---|
-| Mach IPC round-trip | fixed ping-pong between two userland processes, median of N runs on the reference QEMU configuration and reference hardware when it exists | CI job per commit once W3 lands | set at W3 exit |
-| Boot to launchd | serial-log timestamp from kernel entry to launchd's first message, same VM configuration every run | CI job per commit once W2 lands | set at W3 exit |
-| Window-server frame time | compositor frame under fixed scene, measured by the window server's own counters, software rendering in QEMU first | CI job once W5 lands | set at W5 exit |
-| Cold launch of a framework-heavy app | process start to first frame, measured end to end in the test rig | CI job once W6 lands | set at W6 exit |
-| Kernel image and section sizes | the harness's per-component section-size report (05's measurement, this table's threshold) | armed from W1 | set at W1 exit |
-| Bootloader footprint | kite binary size, measured at link time | armed from W2 | set at W2 exit |
+| P2 Boot to shell, QEMU | ≤ 10 s, trend only | serial-log timestamps, same VM configuration every run | W1 |
+| P9 Full kernel build, 8 cores | ≤ 5 min | harness timing report | W1 |
+| P10 Per-file compile p95 | ≤ 1 s | harness per-file timings | W1 |
+| P3 Null syscall | ≤ 300 ns | `Tests/perf/syscall_null`, p50/p99 | W2 (relative in QEMU) |
+| P4 Mach IPC round trip | ≤ 2 µs | fixed ping-pong between two processes through a bootstrap lookup | W2 (relative in QEMU) |
+| P5 Context switch | ≤ 1 µs | `Tests/perf/ctx_switch` | W2 (relative in QEMU) |
+| P6 Input to photon | ≤ 16.6 ms at 60 Hz | instrumented window server checkpoints (07-graphics.md) | W4 |
+| P7 Frame pacing | < 0.5 % dropped over 60 s | scripted composition load | W4 |
+| P1 Power to first app frame, bare metal | ≤ 3 s | bare-metal NVMe rig | W4 |
+| P8 Cold launch, small app | ≤ 500 ms | process start to first frame | W6 |
+| Kernel image and section sizes | none yet | per-component section-size report | W1, baseline only |
+| Bootloader footprint | none yet | kite binary size at link time | Boot track's first exit, baseline only |
+
+QEMU's TCG distorts absolute latency, so P3–P5 gate as ratios against the QEMU
+baseline and are confirmed in absolute terms on bare metal at W4.
 
 Three properties of a good budget follow from the table and are worth
 stating because they discipline the entries we add later:
@@ -292,7 +304,7 @@ contributor is on their first PR.
 
 ## License hygiene as a mechanical gate
 
-The policy in FACTS.md — no GPL, LGPL or AGPL anywhere in the tree or
+The policy in [01-principles.md](01-principles.md) — no GPL, LGPL or AGPL anywhere in the tree or
 linked into the build; APSL, BSD, MIT, Apache-2.0, Zlib, ISC and public
 domain acceptable — is enforced as a build gate, not a convention.
 [05-build-system.md](05-build-system.md) runs the audit as a build step:
@@ -384,7 +396,8 @@ asking anyone.
 - Fuzzing runs "continuously," which implies infrastructure beyond per-commit
   CI (a target, a corpus store, a triage owner). The budget for that
   infrastructure is not yet allocated.
-- The stock-binary compat corpus is named here and owned by
-  [09-compat.md](09-compat.md), which is not yet written. Until it exists,
-  the corpus is a placeholder in the gates, and the gates that reference it
-  cannot arm.
+- Both stock-binary corpora have owners but no contents yet. Until the first
+  pinned entries land, the gates that reference them cannot arm.
+- The build states this document uses (`working`, `experimental`) are now
+  specified in 05-build-system.md's manifest schema but not yet parsed by
+  `rv`; until they are, the no-stubs states are enforced by review only.

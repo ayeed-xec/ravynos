@@ -56,9 +56,11 @@ and is described under *Process architecture* below.
 
 **Window server — [07-graphics.md](07-graphics.md).** A hard gap and the
 centerpiece of the GUI story. The window server is a peer process that owns
-the GPU and the compositor, speaking the protocol the target release's
-applications expect. There is no Wayland or X11 underneath to lean on; the
-protocol, the compositor and the GPU drivers are ours. On the machine
+the GPU and the compositor. Applications never speak to it directly: they
+link our CoreGraphics, CoreAnimation and AppKit, and the wire between those
+frameworks and the server is ours to design. There is no Wayland or X11
+underneath to lean on; the protocol, the compositor and the GPU drivers are
+ours. On the machine
 reality we have today (no GPU in the build fleet), development starts with
 software rendering against QEMU.
 
@@ -71,11 +73,13 @@ the Apache-2.0 metal-cpp headers covering Metal 4 through macOS 27
 the ABI; shaders, the AIR/metallib formats and the compiler backend are the
 hard parts, and the design says so plainly instead of glossing them.
 
-**APFS and storage — [03-kernel.md](03-kernel.md).** The kernel expects
+**APFS and storage — [06-filesystem.md](06-filesystem.md).** The kernel expects
 APFS; Apple's APFS implementation is closed. Filling this gap clean-room is
 a prerequisite for a self-hosting system, since the boot volume must be APFS.
-HFS+ read, and secondary filesystems such as FAT, NTFS and ext4, are useful
-in the meantime and are the pragmatic early path for bring-up.
+Until our APFS backend exists, HFS+ through Apple's open-source hfs kext is
+the bring-up root filesystem (W3 boots from it, per
+[12-roadmap.md](12-roadmap.md)); FAT, NTFS and ext4 are secondary
+filesystems.
 
 **Frameworks — [08-frameworks.md](08-frameworks.md).** CoreFoundation,
 Foundation and upward through AppKit. Apple releases some of this as source;
@@ -92,63 +96,65 @@ on them, and nothing below the frameworks may know they exist.
 
 ## Project structure
 
-The layout follows the dependency direction, the way Apple's own source
-drops group components: a component's neighbors in the tree are its
-dependencies and dependents, and nothing jumps a layer. The tree:
+Layers are a property of components, not of directories. Every component
+declares its layer in its manifest (`layer = "frameworks"`,
+[05-build-system.md](05-build-system.md)), and the harness enforces the fences
+between layers wherever the component lives. The directories follow the
+layers anyway, since the W1.5 restructure ([12-roadmap.md](12-roadmap.md)),
+so a component's neighbors in the tree are usually its layer-mates.
+
+The tree as it stands, with the layer its components declare:
 
 ```
 ravynos/
 ├── Kernel/
-│   ├── xnu/                 vendored Apple XNU, unmodified
-│   ├── port/                our per-architecture / per-board port layers
-│   └── patches/             patches applied to xnu/ at build time
-├── Boot/                    UEFI bootloader, per-arch loaders
-├── Foundation/              Libc, libpthread, libdispatch, objc4, dyld,
-│                            CoreFoundation
-├── Frameworks/              CoreGraphics, CoreText, AppKit, ...
-├── Server/
-│   ├── WindowServer/        compositor, protocol endpoint, GPU drivers
-│   ├── launchd/             PID 1 and its plists
-│   └── configd/             system configuration daemon
-├── Compat/
-│   ├── linux-syscall/       Linux binary support (native subsystem)
-│   ├── freebsd-driver-pi/   FreeBSD driver portability interface, pinned
-│   └── README.md            per-layer contracts and version pins
-├── Apps/                    Finder, Terminal, Settings, installer
-├── Tests/                   per-layer suites + cross-layer ABI tests
-├── Tools/                   build harness, toolchain scripts, mig, audits
-├── Legacy/                  upstream ravynOS imports, pending manifesting
-└── Docs/                    the documents in this directory
+│   ├── xnu/                 vendored Apple XNU, pristine            kernel
+│   ├── port/                our per-arch port layers (arm64, riscv64) kernel
+│   ├── patches/             quilt series against xnu/ (first patch creates it)
+│   ├── Extensions/          IOKit families, FreeBSDPort shim, kexts kernel / compat
+│   ├── IOKitUser/           IOKit user library                      foundation
+│   └── build/               kernel compile/link driver until rv owns it   (tool)
+├── Boot/                    UEFI loader, mkfat, elf2pe, test kernels  bootloader
+├── Foundation/              Libc, libdispatch, objc4, dyld, CF (libhello today) foundation
+├── Apps/                    our applications, tier test apps        apps
+├── Tests/                   boot smokes, host-tool tests, ABI and perf suites (test)
+├── Tools/                   rv, mig (vendored migcom + rvpatch), CI gates (tool)
+├── Legacy/                  upstream ravynOS imports, outside the build graph
+└── Docs/                    this documentation
 ```
 
-![Repository layout and dependency direction](diagrams/repo-layout.svg)
+`Frameworks/`, `Server/` and `Compat/` join the tree when their first
+manifests land; nothing exists there yet. `Legacy/` holds the imported
+upstream trees (desktop sources, the old SDK snapshot); nothing in the build
+graph references it, and a tree leaves it only by gaining a manifest and
+passing the DESIGN.md §6.3 audit.
 
-Figure: solid arrows are allowed dependency directions; dashed lines are
-contracts (a defined interface, not a link).
+![Layers and dependency direction](diagrams/repo-layout.svg)
 
-What each top-level directory contains, and the dependency fences on both
-sides:
+Figure: solid arrows are allowed dependency directions between layers;
+dashed lines are contracts (a defined interface, not a link).
 
-| Directory | Contains | May depend on | May be depended on by |
+The fences, as the harness enforces them (`Tools/rv/src/graph.rs`):
+
+| Layer | Contains | May depend on | May be depended on by |
 | --- | --- | --- | --- |
-| `Kernel/` | Vendored XNU, port layers, patch set | Nothing in-tree (vendor drop + port layers it declares) | `Foundation/`, `Server/`, `Compat/`, `Boot/` contract |
-| `Boot/` | UEFI loader, arch loaders | Its own code only; consumes the `boot_args` contract | Nothing (nothing links against it) |
-| `Foundation/` | Libc, libpthread, libdispatch, objc4, dyld, CoreFoundation | Kernel's documented syscall/Mach surface, via the SDK | `Frameworks/`, `Server/`, `Apps/`, `Compat/` never |
-| `Frameworks/` | CoreGraphics, CoreText, AppKit and the rest | `Foundation/` only (plus the SDK) | `Server/`, `Apps/` |
-| `Server/` | WindowServer, launchd, configd | `Foundation/`, `Frameworks/` where a server hosts views | `Apps/`; nothing links into servers |
-| `Compat/` | Linux/FreeBSD subsystems with pinned versions | Kernel KPI surface only | Nothing in-tree; userland binaries at runtime |
-| `Apps/` | Our applications | `Frameworks/`, `Foundation/`, servers via Mach ports | `Tests/` |
-| `Tests/` | Suites for every layer + ABI tests | Everything (read-only, test-only links) | Nothing |
-| `Tools/` | Build harness, toolchain bootstrap, mig, license audit | Nothing in-tree (self-contained) | Builds everything |
-| `Legacy/` | Imported upstream ravynOS trees (desktop sources, SDK snapshot) | Nothing in-tree | Nothing; nothing in the build graph references it until a tree is manifested per [05-build-system.md](05-build-system.md) |
-| `Docs/` | This design documentation | Nothing | Nothing |
+| `bootloader` | kite and its modules | nothing in-tree; consumes the `boot_args` contract | nothing |
+| `kernel` | XNU, port layers, IOKit families, kexts | nothing in-tree beyond its own layer | `foundation`, `compat` |
+| `foundation` | Libc, libpthread, libdispatch, objc4, dyld, CoreFoundation, IOKit user lib | `kernel` (exported interfaces, via the SDK) | `frameworks`, `server`, `apps` |
+| `frameworks` | Foundation, CoreGraphics, CoreText, AppKit and the rest | `foundation` | `server`, `apps` |
+| `server` | WindowServer, launchd, configd | `foundation`, `frameworks` | `apps` (see the note below) |
+| `compat` | Linux/FreeBSD subsystems with pinned versions | `kernel` KPI surface only | nothing in-tree |
+| `apps` | our applications | `frameworks`, `foundation`, `server` | nothing |
 
-Two entries deserve a note. `Compat/` never links `Foundation/`: a
+Tests and tools sit outside the fence table: a test may link anything and
+nothing links a test; a tool builds everything and links nothing in the image.
+
+Three entries deserve a note. `compat` never depends on `foundation`: a
 compatibility layer that depends on the platform it exists to supplement
-cannot be tested against a moving Foundation, so it touches only the kernel
-interfaces its contract names. And `Boot/` is deliberately outside the
-vertical order — it runs before anything else exists and depends on nothing
-in the tree, only on the `boot_args` contract the kernel defines.
+cannot be tested against a moving Foundation. `bootloader` is outside the
+vertical order — it runs before anything else exists. And the `apps → server`
+edge exists for one reason only: an app may include a server's published
+client header (a Mach message definition). Nothing links a server binary.
 
 ## Dependency rules
 
@@ -157,28 +163,30 @@ harness (see [05-build-system.md](05-build-system.md)), which rejects a
 target that violates them, so a violation is a build break and not a
 conversation.
 
-1. **Dependencies point down the stack only**: `Apps/` → `Frameworks/` →
-   `Foundation/` → kernel. No upward include, no sideways shortcut.
+1. **Dependencies point down the stack only**: `apps` → `frameworks` →
+   `foundation` → `kernel`. No upward include, no sideways shortcut.
 2. **Frameworks never call the kernel directly.** A framework reaches the
-   kernel through `Foundation/` (Libc, libdispatch, Mach wrappers), never by
+   kernel through the `foundation` layer (Libc, libdispatch, Mach wrappers), never by
    including kernel-internal headers. This keeps one choke point per
    syscall surface.
 3. **Userland never includes kernel-internal headers.** Userland builds
    against the SDK the harness produces from the kernel's exported
    interfaces; anything else would couple the whole tree to XNU internals.
-4. **`Compat/` never links `Foundation/`.** Compatibility subsystems touch
+4. **`compat` never links `foundation`.** Compatibility subsystems touch
    the kernel KPI surface their contract names, and nothing else.
-5. **Everything below `Frameworks/` builds before anything above it**, and
-   each directory builds standalone given its declared dependencies —
-   `Foundation/` builds against a stock XNU tree with nothing else checked
-   out.
+5. **Everything below `frameworks` builds before anything above it**, and
+   each component builds standalone given its declared dependencies — the
+   `foundation` components build against a stock XNU tree with nothing else
+   checked out.
 6. **No circular dependencies**, including test targets: a suite in
    `Tests/` may link anything, but nothing links `Tests/`.
 7. **Vendored code stays vendored.** Files under `Kernel/xnu/` and other
    vendored drops are never edited in place; changes are patch files under
-   `patches/`, so an upgrade re-applies a known list.
-8. **The harness owns the graph.** The dependency graph is data in `Tools/`,
-   not convention in documentation; the audit tools (dependency direction,
+   `Kernel/patches/` (or the owning tool's `patches/`, as `Tools/mig/patches/` does), so an upgrade
+   re-applies a known list.
+8. **The harness owns the graph.** The dependency graph is data — the
+   manifests plus the fence table in `Tools/rv/` — not convention in
+   documentation; the audit tools (dependency direction,
    license headers, build states) run on every build.
 
 ## Process architecture at runtime
@@ -206,7 +214,7 @@ pixel or audio data, but the control path is messages). This keeps the
 contract between processes inspectable and matches the ABI macOS software
 already speaks.
 
-**Where daemons live.** System daemons live under `Server/` and their
+**Where daemons live.** System daemons are `server`-layer components and their
 service definitions live with them as plists; per-user agents are defined
 the same way and launched into the user's session. Daemons do not listen on
 wildcard ports or scan for hardware at arbitrary times; they are started
@@ -233,17 +241,19 @@ run-level machinery; we inherit that rather than inventing a second one.
 
 ## Open questions
 
-- Where exactly does dyld sit? It is listed under `Foundation/` here, but it
-  is also toolchain-adjacent (it must be built in lockstep with the loader
-  in `Tools/`). [05-build-system.md](05-build-system.md) needs to settle the
-  build-order edge this creates.
-- Does `Server/` depend on `Frameworks/`, or only on `Foundation/`? A
-  server that hosts views (the login screen, Finder's desktop) needs AppKit;
-  a server that must never pay framework startup cost (configd) should not
-  link it. The rule may need to be per-server rather than per-directory.
+- Where exactly does dyld sit? It is a `foundation` component here, but it
+  is also toolchain-adjacent (the SDK's `.tbd` stubs and the linker must
+  agree with it, [13-toolchain-sdk.md](13-toolchain-sdk.md)). The build-order
+  edge this creates is not yet written into a manifest.
+- The `server → frameworks` edge is allowed by the fence table because a
+  server that hosts views (the login screen, the desktop) needs AppKit. A
+  server that must never pay framework startup cost (configd, launchd)
+  should not link it. Whether that becomes a per-component fence or stays a
+  review rule is undecided.
 - The first-boot order above assumes the storage userland helpers can be
   staged from the root volume; on a truly fresh install, the installer's
-  staging step needs its own design (installer not yet assigned a document).
+  staging step needs its own design. The installer belongs to W8 (DESIGN.md
+  §2.7) but has no design document yet.
 - riscv64 has no XNU platform support to start from. Whether the port layer
   abstraction is strong enough to admit a from-scratch riscv64 port without
   touching vendored code is unproven; [03-kernel.md](03-kernel.md) owns this

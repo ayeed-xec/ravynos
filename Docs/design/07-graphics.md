@@ -67,7 +67,7 @@ and stays boring.
 running ported drivers versus a native IOKit GPU family — was decided
 2026-11-26 in [03-kernel.md](03-kernel.md): the **native IOKit GPU family
 comes first**; the DRM KPI shim is a deferred compatibility layer for
-foreign drivers (NVIDIA's), contract-tested in `tests/kpi/drm`. This
+foreign drivers (NVIDIA's), contract-tested in `Tests/kpi/drm`. This
 document depends on that answer only for its vocabulary: whichever path a
 given device takes, the userland drivers above it speak our IOKit
 accelerator KPI, and the choice does not change the shape of Metal or the
@@ -145,6 +145,14 @@ expect is therefore knowable only by studying both — which makes this a
 clean-room-with-study effort under the same rules as Metal: study observable
 behavior, write our own implementation, never copy anything derived from
 Apple's compiled code into the tree ([01-principles.md](01-principles.md)).
+
+Private SPI belongs to that surface too. Some shipping applications and many
+utilities call undocumented CoreGraphics/SkyLight functions (the `CGS*` and
+`SLS*` families: window levels, spaces, event taps). Those calls land in our
+frameworks, not on the wire, so they are framework work like any other —
+specified from observed behavior, implemented by us — and W7's closed-source
+ladder ([12-roadmap.md](12-roadmap.md)) is where the needed set gets
+measured.
 
 The practical consequence: the protocol is versioned and documented in this
 tree like any other contract, but it is allowed to change freely while no
@@ -225,15 +233,19 @@ The plan is ordered by honesty, not by desirability:
    CPU rendering carries a real desktop further than intuition suggests.
 2. **AMD and Intel through Mesa infrastructure.** The compiler backends and
    driver infrastructure Mesa ships for these GPUs are MIT-licensed —
-   acceptable under our license rules — and the compiler work for our
-   backends can build on them. PureDarwin reaches AMD/Intel/nouveau GPUs
+   acceptable under our license rules, after the per-directory audit, since
+   Mesa carries a few differently licensed files — and the compiler work for
+   our backends can build on them. The kernel side is a native IOKit GPU
+   driver first ([03-kernel.md](03-kernel.md)). PureDarwin reaches AMD/Intel/nouveau GPUs
    through their in-kernel driver compatibility layer and Vulkan through
    Mesa, which tells us the licensing and the architecture both hold.
 3. **NVIDIA proprietary userspace as the high bar.** NVIDIA's own driver is
    the only practical path to their newer GPUs, and PureDarwin has proved
    the route: NVIDIA's 580 driver running through their PDNLoader, with
-   nvidia-smi and Vulkan working. Ours is the same shape — a shim layer in
-   `Compat/` ([02-architecture.md](02-architecture.md)) hosting a proprietary
+   nvidia-smi and Vulkan working. Ours is the same shape — the Linux KPI
+   shim in the `compat` layer ([02-architecture.md](02-architecture.md))
+   hosting NVIDIA's open kernel modules, taken under their MIT option
+   ([03-kernel.md](03-kernel.md), "License eligibility"), under a proprietary
    userspace we do not modify. We do not write the shim until layers 1 and 2
    exist; a proprietary driver with nothing above it proves nothing.
 
@@ -277,9 +289,10 @@ they measure:
 - How much AIR/metallib coverage do unmodified applications actually require
   in the first milestone, and which LLVM-level backend do we target for
   translating it — our own, or Mesa-derived infrastructure?
-- Which QEMU display device do we standardize on for CI — a simple
-  framebuffer or virtio-gpu — and does the choice constrain the kernel port
-  layer's scanout API?
+- CI standardizes on virtio-gpu (DESIGN.md §2.4 lists it among the first
+  drivers) with the UEFI GOP framebuffer as the boot console. Still open: does
+  virtio-gpu's 2D-only mode constrain the scanout API the port layer exposes,
+  or do we design that API against bare-metal KMS first?
 - Does the client ABI cover Quartz Event Services (event taps and synthetic
   input) at the level applications expect? Input routing is the server's
   job, but the observable API lives in the frameworks, and some utilities

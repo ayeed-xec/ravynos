@@ -48,7 +48,7 @@ falsifiable — for contributors, investors, and ourselves.
 | **T0** | Exec format: we load and run a static Mach-O | A static Mach-O (`clang -static`) built **by our stage-1 toolchain** runs on our kernel; correct exit status, argv, env. An equivalent Apple-SDK-built binary is a *test fixture* for cross-checking, never a build input | W1 |
 | **T1** | Dynamic linkage: dyld + objc runtime work | A trivial *dynamic* Objective-C app (Foundation only) built by our toolchain links via dyld,objc4 and runs to completion | W2 |
 | **T2** | POSIX/BSD surface: real userland lives on us | launchd starts from disk; our shell + a ported set of BSD userland tools run a full boot-to-login cycle with no stub syscalls on the hot path | W3 |
-| **T3** | Graphics: window server + AppKit slice | An AppKit app built by our toolchain against `rv build sdk` output shows a window, responds to mouse/keyboard at ≥ 60 fps with the W3 latency budget (§5) | W4 |
+| **T3** | Graphics: window server + AppKit slice | An AppKit app built by our toolchain against `rv build sdk` output shows a window, responds to mouse/keyboard at ≥ 60 fps within budgets P6/P7 (§5) | W4 |
 | **T4** | Frameworks width: the 20-app set | A fixed set of 20 real-world open-source Mac apps (chosen in W4, licenses permitting) launch and function at the level their AppKit usage requires | W6 |
 | **T5** | Closed-source Mac apps | A designated commercial app (POC candidate: an Electron- or Qt-based app, then a native AppKit app) installs and runs | W7 |
 
@@ -109,7 +109,9 @@ firmware → RVOS loader (Mach-O/img4-capable) → guest_kernel (Mach-O) → lau
 ```
 
 - **x86_64 QEMU (dev rig):** GRUB 2.12 multiboot2 → 64-bit loader → Mach-O at
-  0x100000000. Works today (BIOS and q35/OVMF paths in `Kernel/build/boot/`).
+  0x100000000. Works today (BIOS and q35/OVMF paths in `Kernel/build/boot/`). GRUB is
+  GPL, so this rig is a transitional developer tool: never vendored, never in a release
+  artifact, and deleted when kite (`design/04-boot.md`) meets its first exit, by W3.
 - **x86_64 bare metal (W4 target):** OVMF/UEFI on commodity PCs; loader gains disk/NVMe
   and a real filesystem read path; kexts linked or prelinked.
 - **arm64 QEMU virt (W5):** U-Boot → our arm64 loader entry → xnu arm64.
@@ -141,7 +143,7 @@ bare-metal NVMe**; the QEMU dev rig targets ≤ 10 s and only trends matter ther
   - `Kernel/build/config-include/` — committable stand-ins for build-time generated
     config headers (`kernel_config.h`, `mach_kdp.h`, `mach_ldebug.h`, `san/` forwarders).
   - `Kernel/Extensions/FreeBSDPort/` — the driver shim.
-  - `Kernel/RVOS/` (new, W1) — the overlay tree for the small amount of genuinely ours
+  - `Kernel/port/` (new, W1) — the overlay tree for the small amount of genuinely ours
     kernel code (platform init, DMI/SMBIOS quirks, the scheduler guard equivalents for
     the new kernel) plus the quilt-style patch series against xnu (§8.2).
 - **Old-kernel phase-1 patches do not carry over.** The scheduler-guard and `sh2` __TEXT
@@ -154,13 +156,14 @@ bare-metal NVMe**; the QEMU dev rig targets ≤ 10 s and only trends matter ther
 ### 2.4 Driver architecture and the HAL
 
 - **Policy: FreeBSD is a driver source, not a second OS.** FreeBSD 11.4 (pre-iflib)
-  drop-in drivers compile against xnu KPIs through the `FreeBSDPort` shim
+  drop-in drivers compile against xnu KPIs through the `FreeBSDPort` shim today; the
+  long-term contract is the FreeBSD 15.1-RELEASE pin in §10, reached with the iflib port
   (`sglist_seg` matched to 11.4, `BUS_READ/WRITE_IVAR` dispatched through the driver's
   `device_method_t` by name). The iflib port for modern FreeBSD is deferred to a dedicated
   phase after W4 — recorded in `Kernel/build/HARDENING.md`.
 - **HAL for portability.** Every platform-specific fact (uart, interrupt controller,
   timer, framebuffer, DMA) is reached through a small HAL interface
-  (`Kernel/RVOS/platform/<arch>-<board>/`), never poked from driver or kernel logic
+  (`Kernel/port/<arch>-<board>/`), never poked from driver or kernel logic
   directly. Rule: **a new board port = new HAL directory + device configuration, zero
   edits elsewhere.** This is the mechanism that makes "any hardware, Mac and non-Mac"
   a build-graph property rather than a porting project per device.
@@ -237,7 +240,10 @@ test that proves each behavior claim). A subsystem without a verified spec is no
   SwiftUI is a committed milestone, not a maybe: the Swift runtime hosts post-W6, and a
   stock SwiftUI app runs out of the box at Wave 8 (see the wave exits).
 - Toolchain: clang/LLVM (already validated at clang 21.1.8 against xnu-12377), ld64.lld
-  for Mach-O linking, our own mig. No GCC for kernel code (xnu headers assume clang).
+  for Mach-O linking, Apple's migcom from `bootstrap_cmds` (APSL, vendored pristine under
+  `Tools/mig/`, Linux delta as a patch series). No GCC for kernel code (xnu headers assume
+  clang). No GPL build tooling either: parser generators are byacc-class, not bison
+  (`design/05-build-system.md`, "Tooling boundary").
 - Host build on Linux is the supported path (that is the team's rig); macOS host builds
   are a convenience, not a requirement.
 
@@ -292,7 +298,7 @@ later:
   `vm_map.c`, 7.26 s → target for batch mode).
 - CI gate: any budget regresses > 5 % vs. the wave baseline → build fails, with the diff
   printed. New subsystems without benchmarks cannot merge (CI blocks on missing budget
-  coverage for files under `CoreServices/`, `Kernel/RVOS/`, `Libraries/`).
+  coverage for files under `CoreServices/`, `Kernel/port/`, `Libraries/`).
 
 ---
 
@@ -307,12 +313,13 @@ later:
 | **Forbidden** | GPL, LGPL, AGPL — any version, any artifact of derivation | Not in the tree, not in build tooling, not in generated output. Includes darling and its forks (standing decision 2026-11-24) |
 
 Apple's APSL 2.0 is OSI-approved and is the license Apple itself ships Darwin under;
-the kernel staying APSL is both unavoidable and correct. **Our** original code is released
-under **BSD-3-Clause** (kernel, drivers, shims — matches the BSD heritage and keeps the
-whole OS redistributable) and **MIT** (build tools, scripts, test harnesses). This mirrors
+the kernel staying APSL is both unavoidable and correct. **Our** original code — kernel
+additions, drivers, shims, build tools, `rv`, scripts, test harnesses — is released under
+**BSD-3-Clause**, which matches the BSD heritage and keeps the whole OS redistributable
+under one license for everything ours. This mirrors
 ravynOS community practice (their FAQ: clean-room originals "released under the FreeBSD
 license or the MIT license") and yields an OS whose combined license story is: APSL
-kernel + BSD/MIT everything ours. A final `LICENSES.md` at W8 states the whole picture
+kernel + BSD-3-Clause everything ours. A final `LICENSES.md` at W8 states the whole picture
 for distribution.
 
 ### 6.2 Provenance discipline
@@ -321,7 +328,7 @@ for distribution.
   tag/commit, license, local modifications. The pattern already exists for xnu
   (`Kernel/_PROVENANCE/`); W0 extends it to all of `Libraries/`, `Frameworks/`, `BSD/`.
 - Every original file carries an SPDX header (`SPDX-License-Identifier: BSD-3-Clause`).
-- CI license gate (`tools/license-audit.py`): scans SPDX tags + a filename/blocklist
+- CI license gate (`Tools/license-audit.py`): scans SPDX tags + a filename/blocklist
   heuristic; a new file without an SPDX tag or matching a forbidden-license fingerprint
   fails the build. Content-level fingerprinting (n-gram match against known GPL sources)
   is a W1 addition so GPL-derived *rewrites* are caught too.
@@ -388,7 +395,7 @@ the only study method that leaves the license story intact for funding due dilig
 `Kernel/xnu/` is a pristine import of the `apple-oss-distributions` xnu tag — currently
 xnu-12377.121.6 at commit `fde4c10515`. The import commit is tagged locally
 (`xnu-12377.121.6-import`). **No working-tree edits to `Kernel/xnu/` are committed.** All
-our kernel-adjacent work lives in `Kernel/build/`, `Kernel/RVOS/`, and
+our kernel-adjacent work lives in `Kernel/build/`, `Kernel/port/`, and
 `Kernel/Extensions/`.
 
 ### 8.2 When a genuine gap forces a kernel change
@@ -399,7 +406,7 @@ process:
 1. File an RFC in `Docs/rfc/` stating the gap, the alternatives exhausted
    (config-include, shim, overlay symbol override), and the minimal in-tree change.
 2. Approve at wave level; implement as a patch in the quilt series
-   `Kernel/RVOS/patches/NNNN-<name>.patch` with a `MANIFEST` (purpose, upstream status).
+   `Kernel/patches/NNNN-<name>.patch` with a `MANIFEST` (purpose, upstream status).
 3. Patches are written in upstream style (§8.3) and kept *small and droppable* — if
    Apple later ships the same fix in a new tag, the patch is deleted, not maintained.
 
@@ -414,7 +421,7 @@ non-obvious. No diff contains formatting churn.
 Upgrade windows are scheduled **between waves**, never mid-wave:
 
 1. Import the new tag as a new vendored commit; tag `xnu-<ver>-import`.
-2. Regenerate: mig headers (`Kernel/build/mig/build.sh`), export-headers flattening,
+2. Regenerate: mig headers (`Tools/mig/build.sh`), export-headers flattening,
    `config-include` diffs (medium/large/xlarge MASTER profile).
 3. Re-apply the patch series; delete patches the new tag obsoleted; resolve the rest.
 4. Full batch build; per-tranche regression (same object list, 0-error gate); kernel
@@ -435,11 +442,11 @@ colliding: **lanes own directories, contracts own interfaces.**
 
 | Lane | Owns (exclusive write) | Mission |
 |---|---|---|
-| **A — Kernel build** | `Kernel/build/`, `Kernel/RVOS/` | Compile/link the vendored kernel; batch build; budgets P2, P9, P10 |
+| **A — Kernel build** | `Kernel/build/`, `Kernel/port/` | Compile/link the vendored kernel; batch build; budgets P2, P9, P10 |
 | **B — Core runtime** | `Libraries/` (dyld, objc4, Libsystem) | T1; budgets P3–P5 |
 | **C — UI stack** | `CoreServices/` (WindowServer, Dock), `apps/` | T3; budgets P6–P8 |
-| **D — Drivers/HAL** | `Kernel/Extensions/`, `Kernel/IOKit*`, `Kernel/RVOS/platform/` | Real hardware, every board port |
-| **E — Harness/CI** | `tools/`, `Tests/`, CI config, `Docs/spec/` infra | License gate, perf gate, spec system, build engine 2.0 |
+| **D — Drivers/HAL** | `Kernel/Extensions/`, `Kernel/IOKit*`, `Kernel/port/` | Real hardware, every board port |
+| **E — Harness/CI** | `Tools/`, `Tests/`, CI config, `Docs/spec/` infra | License gate, perf gate, spec system, build engine 2.0 |
 | **F — Spec** | `Docs/spec/` | Functional specs, clean-room behavioral observations, tier test apps |
 
 ### 9.2 Coordination rules
@@ -462,7 +469,10 @@ colliding: **lanes own directories, contracts own interfaces.**
 ## 10. Wave roadmap
 
 Waves replace phases. A wave **exits** when its exit criteria pass on the reference rig
-and its perf gates hold; partial waves do not unlock the next one. Mapping from the old
+and its perf gates hold; partial waves do not unlock the next one. Each wave's checkable
+exit criteria, the parallel tracks this section does not number (APFS, Metal, Compat,
+kite, riscv64, phone), and the current status live in
+[design/12-roadmap.md](design/12-roadmap.md), which uses these wave numbers. Mapping from the old
 P0–P6: W1 ≈ P2 completion, W2 ≈ P4 (runtime), W3 ≈ P2 userland, W4 ≈ P3+P6, W5 ≈ new
 (arm64), W6 ≈ P4 width, W7 ≈ P5, W8 ≈ distro (new).
 
@@ -474,7 +484,7 @@ records exist for every vendored tree.
   hooks); build scopes from one component to one bootable image (`rv build <component>`,
   `rv image`; the harness builds the whole system and any single part of it through the
   same graph — `Docs/design/05-build-system.md`, "Build scopes");
-  `tools/license-audit.py` with content fingerprinting; `.clang-format` + style
+  `Tools/license-audit.py` with content fingerprinting; `.clang-format` + style
   checker; CI pipeline (build matrix, license gate, perf smoke).
 - **E/F:** spec system seeded (`Docs/spec/` with the contract set of §2.5).
 - **F:** tier test apps built **by our own toolchain** (T0 static, T1 dynamic, T3 AppKit
@@ -574,7 +584,7 @@ wave, not a drive-by bump. Checked 2026-11-26 against kernel.org and freebsd.org
 
 | Contract | Pin | Support window | Rationale |
 |---|---|---|---|
-| Linux KPI (driver shim) | **6.18.y longterm** (6.18.65 at pin time) | EOL Dec 2028 | Longterm gets fixes for years; the 7.x stable line churns weekly and is for testing new drivers, not for a contract |
+| Linux KPI (driver shim) | **6.18.y longterm** (6.18.65 at pin time) | EOL Dec 2028 | Longterm gets fixes for years; the 7.x stable line churns weekly and is for testing new drivers, not for a contract. Only permissively licensed (or dual-licensed, taken permissively) drivers are eligible — most Linux drivers are GPL (`design/03-kernel.md`, "License eligibility") |
 | FreeBSD KPI | **15.1-RELEASE** (stable/15 branch) | Branch EOL Dec 31, 2029 | Current production line; the branch-based model guarantees the 4-year window our shims need |
 | GPU/DRM subset | DRM/KMS ABI **as of 6.18** | Matches the Linux KPI pin | One kernel baseline for all three contracts keeps the shim test matrix honest |
 
@@ -592,7 +602,7 @@ switching there gains nothing and loses compatibility.
 
 | Layer | Language | Why |
 |---|---|---|
-| Bootloader (`kite`) | Rust (no-std, `uefi-rs`) | Small new surface, and a bug here stops the machine from booting |
+| Bootloader (`kite`) | Rust (`no_std`; our own thin UEFI bindings, any adopted crate license-checked first) | Small new surface, and a bug here stops the machine from booting |
 | Vendored xnu | C, untouched (patch series only) | Apple's source must remain diffable against upstream |
 | Our kernel additions | C in xnu's style | Rust inside a C kernel needs a dedicated owner per component; allow it only for self-contained parts |
 | IOKit-compatible drivers | C++ (Apple's driver model); Rust for new self-contained drivers | Precedent: Asahi Linux's Apple GPU driver is Rust |

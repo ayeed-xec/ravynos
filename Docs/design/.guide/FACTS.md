@@ -101,3 +101,17 @@ x86_64 + arm64 + riscv).
 ## Machine reality
 - Our build machines today: x86_64 Linux, 8 CPUs, 16 GB RAM, no GPU. Cross-compilation must
   work on modest hosts; arm64/riscv targets are cross-compiled or QEMU-emulated for tests.
+
+## Added 2026-11-26 (design audit)
+- Apple publishes the APFS on-disk format: "Apple File System Reference",
+  https://developer.apple.com/support/apple-file-system/Apple-File-System-Reference.pdf
+  (first released 2018, revised 2020). It covers read-side structures including keybags;
+  it does not cover write-side policy or Secure Enclave/T2-bound keys.
+- NVIDIA open GPU kernel modules are dual MIT/GPLv2 (since R515; default from R560),
+  https://download.nvidia.com/XFree86/Linux-x86_64/595.84/README/kernel_open.html.
+  The older proprietary module reports license "NVIDIA".
+- Most Linux kernel drivers are GPL-2.0-only. Permissive exceptions used by FreeBSD's
+  drm-kmod: the amdgpu, i915 and nouveau DRM drivers (MIT). FreeBSD keeps GPL-licensed
+  LinuxKPI pieces in a separate linuxkpi_gplv2 module.
+- Stock clang emits ELF for an unknown OS: --target=x86_64-ravynos and
+  --target=x86_64-apple-ravynos both produce ELF objects (verified locally).

@@ -76,6 +76,12 @@ source we own.
 The ABI environment is a native subsystem in the kernel — the same
 privilege, the same address space discipline as the BSD layer — that
 implements the Linux kernel interfaces userland programs actually call.
+Reaching it needs one change to vendored code: the trap path must route a
+Linux-ABI task's syscalls to our table instead of the BSD one. That is a
+permanent patch in `Kernel/patches/`, filed as an RFC under DESIGN.md
+§8.2 and kept to a per-task personality check; everything behind the check
+lives in the `compat` layer. Its RFC is not yet written
+([03-kernel.md](03-kernel.md), open questions).
 "Serves the syscalls" is the contract; how each cluster is satisfied
 differs:
 
@@ -98,8 +104,9 @@ Linux programs read `/proc/self/maps`, `/proc/cpuinfo`,
 `/sys/class/*` and friends as part of ordinary startup. Those trees do
 not exist on our root filesystem, and bolting a global /proc onto the
 system for their sake would be wrong. The design is projected
-filesystems mounted where a Linux-ABI session needs them, built on the
-VFS projection machinery in [06-filesystem.md](06-filesystem.md):
+filesystems mounted where a Linux-ABI session needs them, built as
+synthetic VFS backends per [06-filesystem.md](06-filesystem.md),
+"Synthetic filesystems":
 
 ```
 /                      our root, mounted read-only for the session
@@ -168,8 +175,8 @@ and the tests are.
 ## The NVIDIA case study
 
 [03-kernel.md](03-kernel.md) covers the kernel side: NVIDIA's
-proprietary kernel-mode driver compiled against our version-pinned
-Linux KPI shim and linked as a kext. This section is the userspace
+open kernel modules (dual MIT/GPLv2, taken under MIT) compiled against our
+version-pinned Linux KPI shim and linked as a kext. This section is the userspace
 side, because the two halves meet at a boundary we own end to end.
 
 NVIDIA's GL, Vulkan and CUDA libraries are Linux ELF binaries that
@@ -269,6 +276,11 @@ corpus decides. Until then, the native path carries ML work, and the
 compat path grows workload by workload as the corpus promotes it.
 
 ## Test strategy
+
+This section owns the Linux and FreeBSD corpus. The macOS-binary corpus — the
+tier test apps and the fixture set of third-party macOS-built binaries — is
+owned by [13-toolchain-sdk.md](13-toolchain-sdk.md) §2.4 and DESIGN.md §11
+(`Tests/apps/`), and runs under the same tier rules below.
 
 A compatibility layer without a pinned corpus is a demo that rots. The
 compat fleet is a set of real, version-pinned binaries run in CI on

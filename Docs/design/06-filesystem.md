@@ -33,34 +33,41 @@ APFS brings properties the system is designed around:
 HFS+ stays read-capable for migration — Apple's hfs source is open (it is part of what the
 ios-sweet project boots with, and it is in Apple's open-source releases), so a read
 implementation is a matter of porting and licensing discipline, not behavioral study.
-FAT, NTFS and ext4 are secondary filesystems; NTFS and ext4 ride the compat driver path
-described in `03-kernel.md` rather than a native xnu VFS backend each.
+FAT, NTFS and ext4 are secondary filesystems. Their Linux drivers are GPL and therefore not
+eligible for the compat driver path (`03-kernel.md`, "License eligibility"); ext4 comes
+from FreeBSD's BSD-licensed ext2fs, and NTFS has no permissive implementation we can take
+(see Secondary filesystems).
 
 ## The hard truth
 
-Apple has never open-sourced APFS. Say it plainly and design around it. What is public:
+Apple has never open-sourced its APFS implementation. Say it plainly and design around
+it. What is public:
 
-- **The on-disk format is documented by outside researchers** — notably the nxfs / apfs
-  reference work and the `apsfstools` project's nx common structure documentation — good
-  enough to write a reader, with care.
+- **Apple's own format specification.** The *Apple File System Reference*
+  (https://developer.apple.com/support/apple-file-system/Apple-File-System-Reference.pdf)
+  documents the on-disk structures — container and volume superblocks, the object map,
+  B-trees, snapshots, encryption keybags — and was published so others can implement
+  read access. It is our primary source. It does not specify write-side policy
+  (allocation strategy, transaction batching, repair), which we learn from behavior.
 - **Apple's own binaries implement it**: every macOS system ships `mkfs.apfs`-equivalent
   tools, `fsck_apfs`, and the kernel driver. We can create reference volumes and study
   their behavior.
 - **Existing reader implementations** exist, of varying provenance and license (Linux
   staging `apfs` driver, various FUSE readers, `apfs-fuse`, `apsfstools`). Some are GPL,
-  which we cannot touch per the license policy in FACTS.md.
+  which we cannot touch per the license policy in `01-principles.md`.
 
-We do not get the format specification from Apple, we do not get the source, and we do not
-get their encryption internals. Everything below follows from that.
+We get the format, but not the source, not the write-side behavior, and not the
+hardware-bound parts of encryption (keys held by a Secure Enclave or T2 never leave it).
+Everything below follows from that.
 
 ## Clean-room discipline
 
-The rule in FACTS.md is: study observable behavior, write our own implementation, never copy.
+The rule in `01-principles.md` is: study observable behavior, write our own implementation, never copy.
 For filesystems the discipline is sharper because the format has both open documentation and
 GPL implementations of it:
 
-- **Read behavior, never code.** We may read the outside format documentation, run Apple's
-  tools on reference volumes, and diff `hexdump` output of known states. We may not read
+- **Read the specification and behavior, never code.** We may read Apple's reference,
+  run Apple's tools on reference volumes, and diff `hexdump` output of known states. We may not read
   GPL-licensed source (the Linux staging driver, `apfs-fuse`) or BSD-licensed source with
   attribution requirements we cannot meet cleanly, and then write "ours" — that poisons the
   clean-room claim for the whole tree.
@@ -69,10 +76,11 @@ GPL implementations of it:
   every file; the APFS tree additionally gets a provenance note per file, so an audit can
   tell "written from the nx format docs and reference volumes" from "written by someone who
   read apfs-fuse last week".
-- **Reference volumes are the spec.** We build a corpus of APFS images with Apple's own
-  tools (create, snapshot, clone, grow, corrupt, repair) on macOS hosts, commit the volume
-  *generation scripts* (not the volumes) to the tree, and test our implementation against
-  them. Any behavior question is settled by making a volume and observing, not by guessing.
+- **Reference volumes settle what the reference does not.** We build a corpus of APFS
+  images with Apple's own tools (create, snapshot, clone, grow, corrupt, repair) on a
+  contributor's Mac, commit the *generation scripts* to the tree, and store the resulting
+  images as hash-pinned test fixtures. Any behavior question the reference leaves open is
+  settled by making a volume and observing, not by guessing.
 
 ## Two pieces: userland first, kernel second
 
@@ -111,8 +119,11 @@ implementation must pass against it:
 | deliberately corrupted block | bit-flip script        | verifier flags it; repair restores or refuses loudly |
 | encrypted volume, ours       | our `mkapfs --encrypt` | mounts with the right key; fails closed without it |
 
-The scripts run on macOS hosts in the project farm. A contributor without a Mac tests
-against generated fixtures checked into the repository, and the farm is the authority.
+The scripts run on a Mac, once per corpus revision, by whoever owns the corpus. CI and
+every other contributor test against the stored fixtures, fetched by hash like any other
+pinned input — nothing in CI needs a Mac, which is the rule in
+[13-toolchain-sdk.md](13-toolchain-sdk.md) §2.4. The fixtures are third-party test inputs,
+not build inputs: Apple's tools made them, nothing of Apple's tools is in them.
 
 ## Directory layout and the volume group
 
@@ -173,16 +184,17 @@ did not publish. Being honest about what we do instead:
   primitive or code studied under the same clean-room rule as everything else — apple's
   corecrypto is source-available under its own APSL-style license
   (https://github.com/apple/corecrypto) and is a candidate, with a per-file license check
-  before any import (FACTS.md). The layer sits below the filesystem, as a dm-crypt-style
+  before any import (`01-principles.md`). The layer sits below the filesystem, as a dm-crypt-style
   block-device filter, so `libapfs` and the VFS backend are written once for encrypted and
   unencrypted volumes alike.
 - **The compatibility boundary is clear and narrow**: we can read and write *our* encrypted
-  volumes; we cannot claim to unlock FileVault volumes created by macOS whose keybag
-  machinery we have not implemented. An encrypted volume made by macOS mounts as "encrypted,
+  volumes; we cannot claim to unlock FileVault volumes created by macOS. Their keys are
+  bound to the Mac's Secure Enclave or T2 on modern hardware, and the keybag formats the
+  reference documents are only half of that story. An encrypted volume made by macOS mounts as "encrypted,
   unsupported", not as "corrupt". Nothing in our installer or tools pretends otherwise.
 - Password and key management is ours: PBKDF wrapped keys in the volume header, the passphrase
-  prompt lives in the boot loader and in `rv`'s volume tools, not in a ported Apple keychain
-  daemon that expects services we did not build.
+  prompt lives in the boot loader and in the system's `apfs` volume tools, not in a ported
+  Apple keychain daemon that expects services we did not build.
 
 The trade-off is real: a macOS user's FileVault disk does not carry over. We say so in the
 installer instead of half-supporting it.
@@ -220,9 +232,9 @@ section) and hands the kernel the volume role and UUID it expects in `boot_args`
 | Filesystem | Role                          | Implementation path                       |
 |------------|-------------------------------|-------------------------------------------|
 | HFS+       | migration read from old volumes | port of Apple's open hfs source, read-capable |
-| FAT        | ESP, USB sticks, cameras      | native, small, in-kernel                   |
-| NTFS       | interop with Windows volumes  | compat driver path (03-kernel.md)          |
-| ext4       | interop with Linux volumes    | compat driver path (03-kernel.md)          |
+| FAT        | ESP, USB sticks, cameras      | Apple's open-source msdosfs (`Kernel/Extensions/msdosfs`) |
+| NTFS       | interop with Windows volumes  | none yet: Linux ntfs3 and ntfs-3g are GPL; a clean-room read-only driver is unscheduled |
+| ext4       | interop with Linux volumes    | FreeBSD's ext2fs (BSD), which reads and writes ext4, through the FreeBSD KPI shim (03-kernel.md) |
 
 HFS+ read is the migration requirement, not a legacy support promise: the installer offers
 to import a user's files from an HFS+ volume, and the system mounts HFS+ read-only by
@@ -237,8 +249,9 @@ get filled in from measurement on the reference hardware when the implementation
 
 - **Fine-grained snapshots** at update, backup and (optionally) commit boundaries, at a cost
   on the order of metadata writes, not data copies.
-- **Low-overhead clones for builds.** `rv` (05-build-system.md) stages per-target sysroots
-  and cache volumes as APFS clones of a base volume: a clone is nearly free at creation and
+- **Low-overhead clones for builds.** On a ravynOS build host — once self-hosting exists;
+  the Linux fleet uses its own filesystems — `rv` (05-build-system.md) stages per-target
+  sysroots and cache volumes as APFS clones of a base volume: a clone is nearly free at creation and
   shares storage until written. The build cache volume, the sysroot volume and the test
   scratch volume are all clones; a clean build tree is `clone` + `rm`, not `cp -a`.
 - **Copy-on-write across the volume group**, so the system volume can be snapshotted during
@@ -260,6 +273,16 @@ get filled in from measurement on the reference hardware when the implementation
 The measurement harness lives with the test runner (`rv test` targets), so the numbers are
 produced by the same build that produces the system.
 
+## Synthetic filesystems
+
+Some trees are generated from kernel state rather than stored: `/dev` (XNU's devfs), and
+the Linux-ABI session's `/proc` and `/sys` ([09-compat.md](09-compat.md)). They share one
+design rule — content is computed on read from kernel state, and a field we cannot
+compute honestly is absent rather than invented — and one mechanism: a small VFS backend
+per tree, written against the same `vfsops`/`vnodeops` surface as the APFS backend, with
+no backing store. The Linux projections live in the `compat` layer and mount only inside
+a Linux-ABI session; nothing in the native namespace depends on them.
+
 ## Open questions
 
 - Volume group layout details: how many volumes (system, data, preboot, VM, recovery), and
@@ -274,5 +297,9 @@ produced by the same build that produces the system.
 - Repair semantics: `apfs_repair` in userland can fix what fsck_apfs fixes on the corpus,
   but our repair will be less complete than Apple's for years. What the tool does when it
   cannot fix a volume (refuse? salvage?) needs a policy before the first release.
-- Compat driver path capabilities for NTFS and ext4 (read-write? journal replay?) are owned
-  by `03-kernel.md`; this document assumes read-write eventually and promises nothing.
+- ext4 through FreeBSD's ext2fs: which features (journal replay, extents, metadata
+  checksums) does the pinned FreeBSD release support, and is that enough to promise
+  read-write?
+- NTFS: is read-only interop worth a clean-room driver, and who owns it?
+- When the APFS backend replaces HFS+ as the root (by W8), does the installer convert an
+  existing HFS+ root or require a fresh install?

@@ -48,14 +48,21 @@ ISC only. No LGPL, no GPL-derived code, no "mostly permissive with one
 problematic file" — the audit either passes the whole directory or the
 adoption does not happen.
 
-The precedent, and the most important Tier 2 case, is AppKit itself. The
-AppKit seed is the BSD-licensed mySTEP-lineage AppKit that PureDarwin
-maintains under `src/Frameworks`
-([github.com/PureDarwin/PureDarwin](https://github.com/PureDarwin/PureDarwin))
-— a working AppKit with real lineage, which is why we start from it rather
-than from an empty file. The seed carries one caveat that shapes the work:
-PureDarwin's AppKit binds to their own WindowServer RPC protocol. We re-bind
-ours to ours. The binding layer — how a view's layer tree reaches the server,
+The most important Tier 2 case is AppKit itself, and there are two candidate
+seeds. The first is already in our tree: ravynOS's own framework sources
+under `Frameworks/` (AppKit, Foundation, CoreGraphics, CoreText and more),
+which upstream ravynOS states are clean-room originals released under BSD or
+MIT terms. DESIGN.md §6.3 makes them the first choice, each framework passing
+a license check, a quality gate (no unresolved symbols) and spec coverage
+before it is built in, and being reimplemented from spec if it fails. The
+second is the mySTEP-lineage AppKit PureDarwin maintains under
+`src/Frameworks`
+([github.com/PureDarwin/PureDarwin](https://github.com/PureDarwin/PureDarwin)),
+described as BSD-licensed; mySTEP's history touches GNUstep, which is LGPL,
+so that seed is admissible only file by file after the audit, never as a
+directory import. Either seed carries the caveat that shapes the work: its
+AppKit binds to a window server protocol that is not ours. We re-bind to
+ours. The binding layer — how a view's layer tree reaches the server,
 how events arrive — is rewritten against the window server designed in
 [07-graphics.md](07-graphics.md); what we keep from the seed is the API-shape
 and behavioral work that is binding-independent. The same logic applies to
@@ -174,12 +181,14 @@ complete" is not a milestone, "enough AppKit for Terminal" is.
 
 | Framework | Current best source | License | Gap notes | First milestone |
 | --- | --- | --- | --- | --- |
-| CoreFoundation | Apple release, Tier 1 | APSL | Cross-build on Linux hosts via the harness | launchd and the build harness run on it |
-| objc4 | Apple release, Tier 1 | APSL | Cross-build; class and selector ABI pinned to target | A two-class program with categories and protocols runs |
-| libdispatch / libpthread / libclosure | Apple releases, Tier 1 | APSL | Same cross-build discipline as objc4 | GCD queues serve launchd and Foundation |
-| dyld + libc++ / libc++abi | Apple releases, Tier 1 | APSL | Built in lockstep with the toolchain ([05-build-system.md](05-build-system.md)) | A two-dylib `.app` loads and runs |
-| Foundation | Tier 2 seed (mySTEP lineage) + our fills | BSD (seed) | Closed at Apple; seed re-bound to our stack | Our own daemons and tools link it |
-| AppKit | Tier 2 seed (PureDarwin mySTEP AppKit) | BSD (seed) | Re-bind from their WindowServer RPC to ours; behavior gaps against stock apps | NSWindow + NSView + NSAlert enough for Terminal |
+| CoreFoundation | Apple release, Tier 1 | APSL-2.0 | Cross-build on Linux hosts via the harness | launchd runs on it |
+| objc4 | Apple release, Tier 1 | APSL-2.0 | Cross-build; class and selector ABI pinned to target | A two-class program with categories and protocols runs |
+| libdispatch | Apple release, Tier 1 | Apache-2.0 | Same cross-build discipline as objc4 | GCD queues serve launchd and Foundation |
+| libpthread / libclosure | Apple releases, Tier 1 | APSL-2.0 | Same cross-build discipline as objc4 | Blocks and threads in the T1 test app |
+| dyld | Apple release, Tier 1 | APSL-2.0 | Agrees with the SDK's `.tbd` stubs and the linker ([13-toolchain-sdk.md](13-toolchain-sdk.md)) | A two-dylib `.app` loads and runs |
+| libc++ / libc++abi | LLVM releases | Apache-2.0 WITH LLVM-exception | Pinned with the stage-1 toolchain | C++ exceptions cross a dylib boundary |
+| Foundation | Tier 2 seed (in-tree ravynOS Foundation, audited) + our fills | BSD/MIT (seed) | Closed at Apple; seed re-bound to our stack | Our own daemons and tools link it |
+| AppKit | Tier 2 seed (in-tree ravynOS AppKit, audited; PureDarwin's file by file) | BSD/MIT (seed) | Re-bind to our window server; behavior gaps against stock apps | NSWindow + NSView + NSAlert enough for the T3 test app, then Terminal |
 | CoreGraphics | Tier 3 (headers public in the SDK) | — | Closed at Apple; context and path semantics are the work | CGContext draws the text and rects Terminal needs |
 | CoreText | Tier 3 (headers public) | — | Closed internals; font parsing and shaping | Measure and draw Latin text without fallback surprises |
 | CoreAnimation (QuartzCore) | Tier 3 (headers public) | — | Client library plus server render-tree semantics | A committed layer tree composites in the window server |
@@ -273,6 +282,9 @@ IDE comes much later, if the platform earns it.
   what does the corecrypto per-file license audit permit? This gates the
   code-signing milestone and nothing else in the inventory moves until it is
   answered.
+- Which in-tree ravynOS frameworks pass the DESIGN.md §6.3 audit? Nobody has
+  run it yet, and the inventory's seed column is a hypothesis until someone
+  does.
 - Where does Foundation cross from Tier 2 seed to Tier 3 rewrite — or does
   it never cross? The seed's API coverage versus the behavior stock
   applications expect needs a measured comparison, not a preference.
@@ -281,6 +293,11 @@ IDE comes much later, if the platform earns it.
   it run on our Metal or on the backends directly? Unwritten either way.
 - Swift runtime version pinning: which Swift release matches the ABI target
   of the 27.2.1 generation, and who tracks the drift?
+- SwiftUI is a committed W8 exit (DESIGN.md §10) but has no row in the
+  inventory and no design beyond
+  [../SWIFTUI-FEASIBILITY.md](../SWIFTUI-FEASIBILITY.md). It needs a row
+  (Tier 3, clean-room, OpenSwiftUI as study material) and an owner before W6
+  produces its go/no-go verdict.
 - The media stack has no document and no owner. It is the largest row in the
   inventory without a design; it needs one before anyone promises video.
 - Should the inventory gain a "verified against stock binary" column — an

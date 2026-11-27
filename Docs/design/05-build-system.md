@@ -54,7 +54,7 @@ not an ad-hoc script, owns every host difference — one place to look, one plac
 **Deterministic and cacheable.** Compile outputs are content-addressed; two builds of the
 same manifest, sources and toolchain produce bit-identical objects, so a cache hit is safe to
 trust. Remote cache is optional infrastructure (sccache or an equivalent), never a
-dependency: a lone contributor on the 8-CPU, 16 GB machine described in FACTS.md must get a
+dependency: a lone contributor on the 8-CPU, 16 GB machine described in `01-principles.md` must get a
 full build with no network beyond the source checkouts.
 
 **Incremental.** Touch one file in one framework and nothing outside that framework's
@@ -69,7 +69,7 @@ target, inside QEMU with the cross-compiled userland. A component that claims a 
 its manifest and cannot run it fails the gate, not a dashboard nobody reads.
 
 **License audit gate.** Every file in the tree is fingerprinted against a license header
-database. GPL, LGPL and AGPL fail the build — the rule in FACTS.md is a build gate, not a
+database. GPL, LGPL and AGPL fail the build — the rule in `01-principles.md` is a build gate, not a
 convention. See the section below.
 
 **Size and performance budget gates.** `11-quality.md` sets budgets for image size, boot
@@ -91,7 +91,8 @@ commands scale from a single directory to the whole system, with no special case
 - `rv image [-t <target>]` — the whole-system build: runs the full graph, then assembles
   the run-time artifacts from the outputs, in the formats each wave's exit criteria name
   — the boot image (kernel + bootloader + boot-args payload), the disk image launchd
-  boots from in W3, the ISO and the Mac VM demo package in W8. Image assembly is
+  boots from in W3, the ISO and the Mac VM demo package in W8 (wave numbers per
+  [12-roadmap.md](12-roadmap.md)). Image assembly is
   manifest-described too (which components land in which partition), so an image is
   reproducible from source and auditable, never a hand-run script over build outputs.
 
@@ -113,6 +114,8 @@ top-level driver out of the interpreted-scripting layer). Subcommands:
 
 ```
 rv build [-t <target>] [<component>|<layer>...]   # one component, a layer, or everything
+rv build sdk [-t <target>]                # assemble the SDK (13-toolchain-sdk.md §2.3)
+rv bootstrap                              # build and verify the stage-1 toolchain (13 §2.1)
 rv image [-t <target>]                    # whole-system build + image assembly (boot image, disk, ISO)
 rv test  [<component>...]                 # run component tests
 rv shell [<component>]                    # environment for manual builds
@@ -121,6 +124,9 @@ rv vendors [check|bump <name>]            # VENDORS file operations
 rv audit [license|size]                   # run the audit gates by hand
 ```
 
+Implemented today: `rv build`, `rv graph`, `rv shell` and `rv audit license`. The rest are
+specified here and tracked as W0 and later exit items in [12-roadmap.md](12-roadmap.md).
+
 Every component — kernel, bootloader, libc, dyld, launchd, each framework, each daemon,
 each tool — declares itself in one small manifest at its directory root. The format is
 TOML, because it parses in every language we care about and diffs cleanly. A framework
@@ -128,17 +134,23 @@ manifest:
 
 ```toml
 name      = "CoreFoundation"
-layer     = "core-foundation"        # layer per 02-architecture.md
-license   = "APSL-2.0"               # must match LICENSES/CoreFoundation
+layer     = "foundation"             # one of the layers in 02-architecture.md's fence table
+license   = "APSL-2.0"               # SPDX; must match the component's LICENSE file
+state     = "incomplete"             # working | incomplete | experimental (01-principles.md)
 sources   = ["Sources/**.c", "Sources/**.h"]
 exports.headers = ["include/**.h"]
-exports.libs    = ["libCoreFoundation.a", "libCoreFoundation.so"]
-deps.internal   = ["libdispatch", "libc"]
+exports.libs    = ["libCoreFoundation.dylib"]
+deps.internal   = ["libdispatch", "Libc"]
 deps.system     = []                   # kernel-provided interfaces, named interfaces only
 targets   = ["x86_64-ravynos", "aarch64-ravynos", "riscv64-ravynos"]
 tests     = ["Tests/**"]
-vendored  = { CoreFoundation = "opensource.apple.com:CoreFoundation-XXXX" }
+vendored  = { CoreFoundation = "opensource.apple.com:CoreFoundation-<tag>" }
 ```
+
+Layer names are the ones the harness knows: `bootloader`, `kernel`, `foundation`,
+`frameworks`, `server`, `compat`, `apps`, plus `build-toolchain` for the stage-1 tools
+(13-toolchain-sdk.md §2.2). The `state` field is specified here and not yet parsed by
+`rv`; until it is, the no-stubs doctrine's build states are a review rule.
 
 A daemon's manifest is the same shape with fewer exports. The kernel's manifest adds mig
 inputs (below). Nothing else is declarative; build logic that is genuinely per-component
@@ -166,9 +178,9 @@ include of a higher-layer header, present for three years. The check is one line
 the graph resolver and it fails loudly:
 
 ```
-$ rv graph --forbid
+$ rv build AppKit
 error: AppKit -> WindowServer (private) violates layer rules
-       app-kit may not depend on server layer
+       frameworks may not depend on server layer
        (02-architecture.md, layer table)
 ```
 
@@ -200,12 +212,23 @@ Target triples, pinned:
 | `aarch64-ravynos`             | cross-compiled; tests run under QEMU             |
 | `riscv64-ravynos`             | cross-compiled; QEMU for tests; least mature     |
 
+These are the harness's target names. They are not yet valid LLVM triples for our
+purpose: stock clang does not know a `ravynos` OS and silently emits **ELF** for
+`x86_64-ravynos`, so today's W0 build produces ELF objects. The harness must map each
+name to a triple that emits Mach-O with the load commands we commit to — the open
+question in [13-toolchain-sdk.md](13-toolchain-sdk.md) — and CI asserts the object format
+so the mistake cannot return silently.
+
 Each target gets a sysroot under `build/sysroots/<target>/`, assembled by the harness from
 the manifests: headers and libraries from `exports.*` of components already built for that
 target, plus the imported external libraries the VENDORS file pins. The sysroot is a build
 output, not a checked-in binary blob, so it is reproducible from source and auditable.
+The sysroot is the internal, per-build view; the SDK that `rv build sdk` assembles under
+`build/sdk/<target>/` (13-toolchain-sdk.md §2.3) is the published view of the same
+outputs — headers, `.tbd` link stubs, module maps and `SDKSettings.json`. Components
+build against the sysroot; applications build against the SDK.
 
-The compiler is clang, the linker is lld, both driven by the harness's own flag table. There
+The compiler is clang, the linker is lld (`ld64.lld` for Mach-O), both driven by the harness's own flag table. There
 is no `configure` and nothing probes the host: the flag table says exactly what each
 target-and-host pair gets, which is where the host-matrix differences (linker defaults,
 cppflags) live. Flags that differ between hosts are data in the harness, reviewed in one
@@ -233,15 +256,38 @@ native binaries, target-side tests under QEMU with the component's cross-built d
 in the sysroot. The gate is that declared tests run and pass in CI; a skipped test is a
 manifest change, reviewed like code.
 
-**License audit.** The tree carries a license header database (SPDX expressions plus the
-exact header texts we accept). At build time, every file is fingerprinted and checked:
+**License audit.** Every file carries an SPDX header; `rv audit license` checks each
+against the accept list today. The design adds a license header database (SPDX
+expressions plus the exact header texts we accept) and content fingerprinting, so that a
+GPL-derived rewrite with a false header is caught too (DESIGN.md §6.2). At build time,
+every file is checked:
 
-- accept: APSL, BSD, MIT, Apache-2.0, Zlib, ISC, public domain (per FACTS.md)
+- accept: APSL, BSD, MIT, Apache-2.0, Zlib, ISC, public domain (per `01-principles.md`)
 - fail: GPL, LGPL, AGPL — any version, anywhere, including build tooling we link or run
 - every vendored file keeps its upstream header; a stripped header fails the audit
 
 The audit runs as a build step, not a CI afterthought, so a bad import cannot enter the
 tree through a local build. `rv audit license` runs it by hand with a report of what and why.
+
+## Tooling boundary
+
+"No GPL in the build" needs a line drawn, because every build runs on some host with some
+operating system under it. Three classes:
+
+| Class | Examples | Rule |
+|---|---|---|
+| In the tree | our code, vendored sources, generated files we commit | No GPL, LGPL or AGPL. Enforced by the license audit |
+| Build tooling | compilers, linkers, assemblers, parser and lexer generators, archive and image tools, anything whose output or code enters a build artifact | No GPL, LGPL or AGPL, even when the tool grants an output exception. clang/lld (Apache-2.0 with LLVM exception), byacc (public domain), flex (BSD), ninja (Apache-2.0) qualify; GNU bison, GNU as/ld, GCC and GRUB do not |
+| Host environment | the build host's kernel, shell, coreutils, git, QEMU and OVMF as test executors | Allowed, because nothing they contain reaches an artifact. They are recorded in the build log, never vendored, never invoked to produce bytes that ship |
+
+The test for a borderline tool is the artifact: if any byte of a release image, the SDK or
+a committed file was produced by the tool's code (including a generated parser skeleton or
+a bootloader embedded in an image), the tool is build tooling. Under that test the old
+GRUB rig in `Kernel/build/boot/` is a violation being retired, not an exception. The
+mechanical side exists: `Tools/ci/check-host-tools.sh` fails CI when a script under
+`Boot/`, `Tools/`, `Tests/` or `.github/` invokes a GPL program (11-quality.md, "Host
+tools are gated too"). Rust crates `rv` and kite depend on are build tooling and are
+scanned by the license gate.
 
 **Budgets.** `11-quality.md` owns the numbers; the harness owns the measurement. Per-target
 artifact sizes and section sizes per component are recorded on every build, compared against
@@ -253,7 +299,7 @@ Performance budgets are measured by the test runner on the reference hardware, n
 ```
 $ rv shell CoreFoundation
 [CoreFoundation x86_64-ravynos] $ ninja -C $RV_BUILD_DIR
-[1/1] link libCoreFoundation.so
+[1/1] link libCoreFoundation.dylib
 [CoreFoundation x86_64-ravynos] $ clang -### -c Sources/CFString.c  # shows the exact flags
 ```
 
@@ -267,23 +313,28 @@ inspectable rather than merely present.
 ## Toolchain and mig
 
 **Where mig-generated headers come from.** The kernel's manifest lists its `.defs` files;
-the harness runs `mig` (built as a host tool, itself a component with a manifest) over them
-and places the generated headers in the kernel's build directory and, for the userland-side
-stubs, into the sysroot of the targets that need them. Generated code is not checked in.
-`03-kernel.md` owns the list of kernel interfaces that go through mig; the harness owns
-running it at the right time and invalidating dependents when a `.defs` file changes.
+the harness runs `mig` — Apple's migcom, vendored and built as a host tool with its own
+manifest (`03-kernel.md`) — over them and places the generated headers in the kernel's
+build directory and, for the userland-side stubs, into the sysroot of the targets that
+need them. A reference copy of the generated output is committed as a regression fixture;
+the build always regenerates and fails if the two differ, so a mig or `.defs` change
+cannot alter the IPC surface unnoticed. `03-kernel.md` owns the list of kernel interfaces
+that go through mig; the harness owns running it at the right time and invalidating
+dependents when a `.defs` file changes.
 
 **Where vendored Apple sources are pinned.** A single `VENDORS` file at the tree root pins
 every external source, with the exact tag from the release index at
 https://opensource.apple.com/releases/ (Apple's open-source downloads live on GitHub under
 github.com/apple, indexed per release at https://opensource.apple.com/projects/):
 
-```
-# name            upstream                                    tag / commit
-xnu               github.com/apple-oss-distributions/xnu     xnu-13432.41.4
-CoreFoundation    github.com/apple-oss-distributions/CF      <tag pinned per release>
-libdispatch       github.com/apple-oss-distributions/libdispatch <tag>
-...
+```toml
+[vanillas."opensource.apple.com:xnu"]
+tag     = "xnu-12377.121.6"          # bumps to the xnu-13432 line when Apple publishes it
+license = "APSL-2.0"
+
+[vanillas."opensource.apple.com:libdispatch"]
+tag     = "libdispatch-1273.40.2"
+license = "Apache-2.0"
 ```
 
 The pins we care about most today: the vendored kernel in this clone is xnu-12377.121.6
@@ -317,9 +368,10 @@ source bump is not the code that stops compiling — it is the ABI that quietly 
   Starlark?) before the first hundred manifests is cheaper than a migration after.
 - How much of ninja's semantics do we rely on? If `rv` should also emit to another executor
   (a distributed build farm, Bazel's protocol), the emission boundary needs defining now.
-- Do we self-host mig or vendor one? Self-hosting keeps the tree self-contained but adds a
-  host-tool bootstrap; vendoring adds a license and pin we do not otherwise carry.
 - The license header database will have false positives on vendored files with unusual
   formatting; the appeals process (who re-fingerprints a file by hand) is unwritten.
+- `rv graph --forbid` is accepted but does nothing distinct today: layer checks run on
+  every graph resolution. Keep the flag as a no-op alias, or give it a meaning (print every
+  edge the fences would reject, without failing)?
 - Whether `rv graph` should gain a "what breaks if I change this header" query as a
   first-class command, or stay a filter on the printed graph.

@@ -70,7 +70,7 @@ single device; the value is the playbook, and the playbook is concrete:
 | Boot via the device's own bootloader | `fastboot boot` boots a kernel image from the vendor bootloader without flashing anything ([developer.android.com](https://developer.android.com/tools/releases/platform-tools)) — bring-up stays reversible, the device stays recoverable |
 | Per-SoC device tree | one device tree per SoC, delivered at boot; a board is data plus a port layer, not a kernel fork |
 | UFS storage | the storage path goes through the SoC's UFS controller; our storage stack meets it at the controller driver ([06-filesystem.md](06-filesystem.md)) |
-| Touch as I2C-HID | digitizers present as I2C-HID devices, a standard driver surface our shimmed or native drivers can serve |
+| Touch as I2C-HID | digitizers present as I2C-HID devices, a standard driver surface IOHIDFamily serves natively |
 | Framebuffer path first | display comes up as a plain framebuffer before any GPU driver; bring-up is visible early |
 | Security staged last | permissive first; AMFI and sandbox enforcement arrive from real code later, after the platform boots |
 
@@ -101,9 +101,11 @@ because their SoC's GPU driver did not exist in their tree — the exact
 software-rendering trap, at 20-30 fps, that
 [07-graphics.md](07-graphics.md) refuses on the desktop. The phone
 face does not repeat it. GPU bring-up is part of the phone plan from
-the first target device, using the driver shim environment from
-[03-kernel.md](03-kernel.md) where the SoC vendor's Linux driver
-covers the hardware and our own IOKit drivers where they exist.
+the first target device, as a native IOKit GPU driver — the rule
+[03-kernel.md](03-kernel.md) sets for every GPU. Phone SoC GPU kernel
+drivers in Linux (Adreno's msm, Mali's panfrost/panthor) are GPL, so the
+shim is not a path for them; their permissively licensed userspace
+counterparts in Mesa are study material for the hardware's behavior.
 
 **Our own daemons, our own shell.** The phone face needs the
 iOS-generation daemon set — the ones ios-sweet proves must exist:
@@ -148,9 +150,9 @@ it.
 
 **Boot path.** The device's own bootloader stays in charge. Our boot
 stage is delivered with `fastboot boot` during bring-up — nothing
-flashed, device always recoverable — and our bootloader
-([04-boot.md](04-boot.md)) hands the kernel its `boot_args` plus the
-per-SoC device tree. A permanently flashed install is an
+flashed, device always recoverable — as kite's vendor-bootloader entry
+([04-boot.md](04-boot.md), "arm64 devices behind a vendor bootloader"),
+which hands the kernel its boot arguments and the per-SoC device tree. A permanently flashed install is an
 end-user convenience designed later, after bring-up stabilizes.
 
 **SoC and devices.** UFS storage, the display framebuffer path, touch
@@ -190,15 +192,15 @@ ship, and radios are the slowest item on the list.
 | Capability | Phone face status | Why |
 |---|---|---|
 | Kernel boot, framebuffer, touch | design target, playbook proven | ios-sweet demonstrates the pattern ([ios-sweet](https://github.com/dipa-studio/ios-sweet)) |
-| GPU acceleration | design target from the first device | SoC vendor Linux drivers exist for target-class hardware; shimmed per [03-kernel.md](03-kernel.md) |
-| Wi-Fi, Bluetooth | long pole, required for ship | per-device drivers plus firmware loading; tractable where Linux drivers exist to shim |
+| GPU acceleration | design target from the first device | native IOKit driver; the Linux kernel drivers for these GPUs are GPL and not eligible for the shim ([03-kernel.md](03-kernel.md)) |
+| Wi-Fi, Bluetooth | long pole, required for ship | per-device drivers plus firmware loading; tractable where a permissively licensed Linux driver exists to shim (several Qualcomm and Broadcom Wi-Fi drivers are ISC) |
 | Cellular | not a first-target requirement | modem management is a project of its own; defer |
 | Security enforcement (AMFI, sandbox) | staged after bring-up | permissive first; real enforcement built from real code once the platform boots |
 
 The first bring-up targets are tablet-class devices, not phones, for
-one reason: tablet-class SoCs have Wi-Fi and Bluetooth covered by
-Linux drivers we can shim through the driver environment in
-[03-kernel.md](03-kernel.md), which moves the long pole off the
+one reason: tablet-class SoCs more often carry Wi-Fi modules whose Linux
+drivers are permissively licensed and can run through the driver
+environment in [03-kernel.md](03-kernel.md), which moves the long pole off the
 critical path. A tablet face — touch, arm64, no cellular dependency —
 exercises the whole architecture and defers only the worst driver
 work. Phones follow when radio coverage justifies a device.
@@ -209,22 +211,22 @@ The playbook implies an order, and the order is a commitment about
 what gets built first — it is how we keep bring-up reversible and
 debuggable instead of a pile of simultaneous unknowns:
 
-1. **Kernel boots on the device.** Our bootloader hands the
-   xnu-13432 arm64 image and the per-SoC device tree to the
-   vendor's bootloader for launch; the kernel reaches userspace
+1. **Kernel boots on the device.** The vendor's bootloader launches
+   kite's vendor-bootloader entry, which hands over the arm64 kernel
+   (the xnu-13432 line once published) and the per-SoC device tree; the kernel reaches userspace
    with a serial console. Nothing is flashed; a bad image is a
    reboot away from the last good state.
 2. **Framebuffer and touch.** The display comes up as a plain
    framebuffer and the digitizer as I2C-HID. This is the first
    milestone where the system is visibly interactive, and it is
    reachable without GPU, radios or security enforcement.
-3. **Storage.** UFS comes up through the shimmed or native
-   controller driver, and the root volume mounts
+3. **Storage.** UFS comes up through a native IOKit controller
+   driver (Linux's UFS drivers are GPL), and the root volume mounts
    ([06-filesystem.md](06-filesystem.md)).
 4. **The phone session.** launchd's device plists stage the
    daemons; the home-screen shell renders through the window
    server into the framebuffer. GPU acceleration lands here or in
-   step 3's wake, via the driver shim — CPU rendering is a
+   step 3's wake, via the native GPU driver — CPU rendering is a
    fallback for debugging, never a milestone.
 5. **Radios.** Wi-Fi, then Bluetooth, in that order — Wi-Fi is
    the one tablet-class devices need to be useful at all.
@@ -249,14 +251,16 @@ without its security stack cannot debug the security stack.
 
 ## Open questions
 
-- Which SoC is the first bring-up target? The criteria are driver
-  coverage in the Linux world we can shim (GPU, Wi-Fi, BT, UFS,
-  I2C-HID touch), a documented boot path, and mainline device tree
+- Which SoC is the first bring-up target? The criteria are Wi-Fi and
+  Bluetooth drivers we may legally shim, public documentation or
+  permissively licensed userspace for the GPU and UFS controller (both
+  need native drivers), a documented boot path, and mainline device tree
   quality — the device itself is not chosen yet.
 - Device tree delivery: what format our bootloader hands XNU's port
   layer, and whether the per-SoC device tree consumes the vendor
   tree's data directly or through a conversion step. This edge
-  belongs to [04-boot.md](04-boot.md) and is unsettled there too.
+  belongs to [04-boot.md](04-boot.md) and is listed in its open
+  questions.
 - Is the backboard-equivalent a separate peer process, or a role
   inside the window server? The desktop document owns the window
   server's process boundary ([07-graphics.md](07-graphics.md)); the
@@ -265,5 +269,6 @@ without its security stack cannot debug the security stack.
   unlock warnings) apply to permanently flashed installs on
   consumer devices, and do we document flashing at all for the
   first release?
-- [01-principles.md](01-principles.md) now references this document
-  under its current name (updated 2026-11-26).
+- The first-device criteria need a license column: a device whose
+  Wi-Fi has only a GPL Linux driver needs a native driver before the
+  phone track can call it supported.
