@@ -17,7 +17,7 @@ container (GAP-40 remainder).
 | Area | Score | Verdict |
 |---|---|---|
 | `Tools/rv` (WP0.1–WP0.3) | 9/10 | passes: Mach-O for x86_64 and arm64 (checked with `file`), every S01 output kind (framework, app, xpc-service, dext, plugin, bundle, kext), `-isysroot` and stub linking, `rv test` and `rv image`, errors returned instead of `process::exit`, E-DUP-NAME with a fixture, 61 unit tests |
-| Stage-1 bootstrap (WP0.4) | 6/10 | builds on the host and `--verify` rebuilds and compares hashes (GAP-55); BUG-28 — the Swift fork's `ld64.lld` refused every Mach-O input — is fixed by ADR-31 and the rebuild that proves it is in flight; not in CI |
+| Stage-1 bootstrap (WP0.4) | 7/10 | upstream `llvmorg-21.1.6` builds and installs on the host: `bin/clang -print-targets` lists riscv64, aarch64 and x86-64, and `bin/ld64.lld` links an x86_64 Mach-O executable (BUG-28, ADR-31); `--verify` rebuilds and compares hashes (GAP-55); not in CI |
 | `Boot/loader` (WP0.9) | 6/10 | three-arch boot smokes green; device tree still missing (W1) |
 | `Tools/mig` | 8/10 | passes: byacc-generated parser, three-patch rvpatch series, corrected `--regen-lexer` paths, `_PROVENANCE` repaired |
 | CI and gates | 7/10 | arm64 build, Mach-O assertion, SPDX gate, boot smokes, license audit and whole-tree host-tool gate all wired; still on `ubuntu-latest` with no `Tools/ci/Containerfile` (GAP-40 remainder) |
@@ -422,7 +422,10 @@ that backs it:
   The pin is now upstream `llvm/llvm-project` at `llvmorg-21.1.6` and the tree builds
   `X86;AArch64;RISCV` (ADR-31). The lld-only target of the new cache entry links
   `x86_64` Mach-O (`file` reports a Mach-O executable, exit 0) and RISCV codegen
-  compiles; the full stage-1 install and `--verify` are still running.
+  compiles. The full upstream stage-1 install then completed (`stage1 verify OK:
+  a72995bd…c4c77f`, clang 21.1.6, exit 0): its `bin/clang -print-targets` lists
+  `riscv64`, `riscv32`, `aarch64` and `x86-64`, and its `bin/ld64.lld` links an x86_64
+  Mach-O executable (exit 0). The `--verify` rebuild of that install is still running.
 - GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, and
   it passed on 2026-11-27 (`stage1 verify OK: ece9693de…b5c6378`, clang 21.1.6), but
   stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
@@ -441,8 +444,8 @@ that backs it:
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: verify implemented and passed on the Swift pin; the ADR-31 upstream rebuild is in flight, and stage-1 still lacks `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe) |
-| W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 5/10, loader 6/10, CI 7/10) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: verify implemented, passed on the Swift pin and running on the ADR-31 upstream install, whose tools now build, install and link Mach-O; stage-1 still lacks `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe) |
+| W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 7/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
 | W0: no GPL material in the repository | open (GAP-46: migcom's bison/flex output pruned and enforced by `VENDORS.prune`; XNU's bison-generated `OSUnserialize*` files remain, ADR-17) |
