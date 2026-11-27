@@ -16,14 +16,13 @@ fn usage() -> ! {
     exit(2);
 }
 
-pub fn run(tree: &Path, args: &[String]) {
+pub fn run(tree: &Path, args: &[String]) -> Result<(), String> {
     let script = tree.join("Tools/toolchain/stage1.sh");
     if !script.is_file() {
-        eprintln!(
+        return Err(format!(
             "error: {} not found (rv bootstrap runs from the tree root)",
             script.display()
-        );
-        exit(1);
+        ));
     }
 
     let mut cmd = std::process::Command::new("bash");
@@ -48,11 +47,11 @@ pub fn run(tree: &Path, args: &[String]) {
         }
     }
 
-    let status = cmd.status().unwrap_or_else(|e| {
-        eprintln!("error: cannot run {}: {e}", script.display());
-        exit(1);
-    });
+    let status = cmd
+        .status()
+        .map_err(|e| format!("error: cannot run {}: {e}", script.display()))?;
     if !status.success() {
-        exit(status.code().unwrap_or(1));
+        return Err(format!("error: {} failed with {status}", script.display()));
     }
+    Ok(())
 }

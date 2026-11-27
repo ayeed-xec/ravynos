@@ -270,7 +270,9 @@ fn collect(
         if meta.file_type().is_symlink() || !meta.is_dir() {
             continue;
         }
-        let name = path.file_name().unwrap().to_string_lossy();
+        let Some(name) = path.file_name().map(|n| n.to_string_lossy()) else {
+            continue;
+        };
         if name == "."
             || name == ".."
             || name.starts_with('.')

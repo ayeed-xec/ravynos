@@ -102,10 +102,7 @@ fn run(
     let deps = graph::resolve(&manifests)?;
     match cmd {
         Cmd::Build => build(tree, &manifests, &deps, target, names),
-        Cmd::Bootstrap => {
-            bootstrap::run(tree, args);
-            Ok(())
-        }
+        Cmd::Bootstrap => bootstrap::run(tree, args),
         Cmd::Graph => {
             print_graph(&manifests, &deps, reverse);
             Ok(())
