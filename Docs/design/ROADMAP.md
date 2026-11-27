@@ -155,11 +155,13 @@ material, and the tree holds only the SYSTEM-DESIGN section 3.2 layout (ADR-30).
 - **WP0.3** (L1, S01) Compile rules for `.c .m .mm .cpp .S`, depfiles, dylib, framework,
   executable, kext and bundle outputs; sysroot assembly; `rv shell` fixed. Needs
   WP0.1. Done: header edit rebuilds dependents only; a two-dylib test links.
-- **WP0.4** (L1, S02) Stage-1 toolchain, first part: LLVM from `swiftlang/llvm-project`
+- **WP0.4** (L1, S02) Stage-1 toolchain, first part: LLVM from `llvm/llvm-project`
   (clang, lld, LLVM tools, libclang), byacc, unifdef, migcom, rvpatch, mkfat, elf2pe;
   `rv bootstrap`; `rust-toolchain.toml`; `rv` built static with musl; CI container from
   `Tools/ci/Containerfile` without bison, flex or m4. Done: `rv bootstrap --verify`
-  reproduces its hashes (weekly job); CI uses the cached stage 1.
+  reproduces its hashes (weekly job); CI uses the cached stage 1. The pin is upstream
+  `llvmorg-21.1.6`, not the Swift fork, whose lld refuses every Mach-O input (ADR-31,
+  BUG-28); the tree builds `X86;AArch64;RISCV` so clang can target `riscv64-unknown-e`.
 - **WP0.5** (L14) License audit over the whole tree, every file type; crate scanning;
   host-tool gate over every script with the full deny list. Done: planted cases in
   `Tests/rv/` fail as designed.

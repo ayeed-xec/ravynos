@@ -625,7 +625,7 @@ patches  = "Kernel/patches"
 
 - `rv vendors check` compares `git rev-parse HEAD:<path>` with `tree`. Any difference
   fails CI.
-- `fetch = true` trees (the LLVM tree `swiftlang/llvm-project` and Swift, S02) are
+- `fetch = true` trees (the LLVM tree `llvm/llvm-project` and Swift, S02) are
   downloaded to `build/vendor/<name>`, verified by `commit`, and never committed.
 - `subdirs` vendors only the listed upstream paths; `tree` then covers those paths.
 - `prune` lists paths, relative to `path`, that are deliberately absent because the
@@ -717,7 +717,7 @@ Apple install names, ad hoc signatures on arm64.
   Stage 0 builds only `rv` and stage 1.
 - **Stage 1** is built by `rv bootstrap` into `build/toolchain/<hash>/`, in three
   steps:
-  - W0: LLVM from one tree, `swiftlang/llvm-project` at the Swift release tag
+  - W0: LLVM from one tree, `llvm/llvm-project` at the Swift release tag
     (`fetch = true` in `VENDORS`): clang, lld (`ld64.lld`, `ld.lld`, `lld-link`),
     `llvm-ar`, `llvm-objdump`, `llvm-readtapi`, `llvm-lipo`, `dsymutil`, `llvm-nm`,
     `llvm-strip`, libclang. Also `byacc` (public domain), `unifdef` (BSD-2-Clause),
@@ -791,7 +791,7 @@ bison, flex or m4; a CI step asserts their absence before the build.
 
 **Sources.**
 
-- LLVM (`swiftlang/llvm-project`): fetched by pin, Apache-2.0 WITH LLVM-exception.
+- LLVM (`llvm/llvm-project`): fetched by pin, Apache-2.0 WITH LLVM-exception.
   riscv64 Mach-O patch ours.
 - Swift (`swiftlang/swift`): fetched by pin, Apache-2.0 WITH Swift runtime library
   exception.
@@ -2882,7 +2882,7 @@ W2 set: CoreFoundation and the T1 program need `libc++`, `libc++abi`, `libobjc` 
   `removefile`, `CommonCrypto`, `cctools` (libmacho), `keymgr`, `configd`
   (libsystem_configuration), `mDNSResponder` (libsystem_dnssd), `ICU` (Apple); LLVM
   `compiler-rt`, `libunwind`, `libcxx`, `libcxxabi` from the one LLVM tree
-  (`swiftlang/llvm-project`, S02); FreeBSD `msun`, Citrus iconv, OpenBSM, OpenPAM,
+  (`llvm/llvm-project`, S02); FreeBSD `msun`, Citrus iconv, OpenBSM, OpenPAM,
   libedit; zlib, bzip2, xz, libarchive, SQLite, libxml2, libxslt (MIT), curl (curl),
   libpcap (BSD-3-Clause), Heimdal (BSD-3-Clause), ncurses.
 - `libdispatch` shares its VENDORS pin with S05's `Kernel/libfirehose_kernel/upstream/`
@@ -3284,8 +3284,8 @@ S02's.
   (property wrappers, result builders, `Observation`, metadata access). W5 records a
   SwiftUI scope checkpoint from the census; SwiftUI is built in W6.
 - The Swift compiler (`swift-frontend`, `swift-driver`) is S02's. It joins stage 1 in
-  W2, built from `swiftlang/swift` and the one LLVM tree (`swiftlang/llvm-project`)
-  at the same release tag. Before then the pinned swift.org release toolchain of that
+  W2, built from `swiftlang/swift` and the one LLVM tree (`llvm/llvm-project`)
+  at the matching LLVM release. Before then the pinned swift.org release toolchain of that
   tag compiles the runtime.
 - The runtime joins the shared cache (S14 stage b).
 - Swift is required from W2: T1 has a Swift twin, `t1-swift`.
@@ -3299,7 +3299,7 @@ S02's.
 
 **Sources.** Vendored with `fetch = true` (downloaded to `build/vendor/<name>`,
 verified by commit, not committed): `swiftlang/swift`, `swiftlang/swift-foundation`,
-`swiftlang/swift-experimental-string-processing`, `swiftlang/llvm-project` (shared with
+`swiftlang/swift-experimental-string-processing`, `llvm/llvm-project` (shared with
 S02); all Apache-2.0 with Runtime Library Exception. Clean-room, BSD-2-Clause: closed
 overlays, Combine.
 

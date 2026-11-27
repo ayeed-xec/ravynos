@@ -1,7 +1,7 @@
-* Fetched from GitHub: swiftlang/llvm-project.git (fetch=true, never committed)
-* Tag: swift-6.4.3-RELEASE
-* Commit: fb5f84d903a3b4e7aea15cd5666598a46f56c833
-* Upstream URL: https://github.com/swiftlang/llvm-project
+* Fetched from GitHub: llvm/llvm-project.git (fetch=true, never committed)
+* Tag: llvmorg-21.1.6
+* Commit: a832a5222e489298337fbb5876f8dcaf072c5cca
+* Upstream URL: https://github.com/llvm/llvm-project
 * Files fetched: the complete upstream source tree, unmodified, under
   build/vendor/llvm-project (shallow clone at the pinned commit)
 * Not fetched: nothing; every Linux delta is carried in the stage-1 build

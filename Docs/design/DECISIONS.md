@@ -298,3 +298,19 @@ as a new component in its layout directory after the seed audit and review, and 
 sources come back as fresh vendor imports from tagged releases. History before `5112c72bc`
 is not rewritten again, so the reference stays valid.
 
+
+### ADR-31 — The stage-1 LLVM tree is upstream, not the Swift fork
+
+The stage-1 toolchain fetched `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`. That
+fork carries a downstream patch in its lld that makes `ld64.lld` refuse every Mach-O
+input with `This version of lld does not support linking for platform macOS`, on every
+host, so the built stage 1 could not link a single ravynOS target (BUG-28, reproduced by
+linking one object with that `ld64.lld`). Upstream `llvm/llvm-project` at
+`llvmorg-21.1.6` — the LLVM release that Swift tag is built from — links the same object,
+as the Ubuntu package of that release does.
+
+The pin is `llvm/llvm-project` at `llvmorg-21.1.6`
+(`a832a5222e489298337fbb5876f8dcaf072c5cca`), and the tree builds `X86;AArch64;RISCV` so
+clang can target `riscv64-unknown-e`. Swift keeps its own pin (`swiftlang/swift`), which
+builds against this tree at W2; the fork choice there is unaffected. Unchanged: one LLVM
+tree for compiler and linker, fetched by pin, never committed (ADR-10).

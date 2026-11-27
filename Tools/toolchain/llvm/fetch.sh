@@ -42,7 +42,10 @@ verify_tag_against_commit() {
     # The peeled tag object must resolve to the pinned commit, so the tag in the
     # provenance file cannot silently drift from the commit it claims to name.
     local peeled
-    peeled=$(git ls-remote --tags --refs "$URL" "refs/tags/${TAG}" | awk '{print $1}')
+    peeled=$(git ls-remote "$URL" "refs/tags/${TAG}^{}" | awk '/\^\{\}$/ {print $1; exit}')
+    if [ -z "$peeled" ]; then
+        peeled=$(git ls-remote --tags --refs "$URL" "refs/tags/${TAG}" | awk '{print $1}')
+    fi
     if [ "$peeled" != "$COMMIT" ]; then
         echo "error: tag ${TAG} resolves to ${peeled:-<nothing>} upstream, not the pinned commit ${COMMIT}" >&2
         exit 1

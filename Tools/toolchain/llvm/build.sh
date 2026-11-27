@@ -67,7 +67,7 @@ echo "llvm build: configuring (clang $(clang -dumpversion), ninja, $JOBS jobs)"
         -DCMAKE_CXX_FLAGS="-g0" \
         -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
         -DLLVM_ENABLE_PROJECTS="clang;lld" \
-        -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+        -DLLVM_TARGETS_TO_BUILD="X86;AArch64;RISCV" \
         -DLLVM_DISTRIBUTION_COMPONENTS="clang;lld;llvm-ar;llvm-nm;llvm-symbolizer;llvm-strip" \
         -DLLVM_APPEND_VC_REV=OFF \
         -DLLVM_ENABLE_BINDINGS=OFF \
