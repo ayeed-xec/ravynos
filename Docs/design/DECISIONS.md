@@ -124,10 +124,13 @@ stubs are generated from our libraries.
 
 **Accepted.** FreeBSD and Linux drivers run natively in our kernel or in a user-space
 driver host, behind interfaces we write (BSD-3-Clause). Permissively licensed drivers
-live in this repository. GPL-only drivers live in a separate repository, are built
-against our published driver kit, are distributed through a separate opt-in channel,
-and are installed by the user; they never enter this repository, its builds, or the
-shipped image. Native IOKit drivers always have priority.
+live in this repository. Sourcing order: native IOKit drivers; BSD- and ISC-licensed
+drivers from FreeBSD, OpenBSD and NetBSD; Linux drivers available under a permissive
+license or a permissive option of a dual license. The supported hardware list must be
+reachable with these alone (ADR-24). GPL-only drivers are an optional last resort: they
+live in a separate repository, are built against our published driver kit, are installed
+by the user from an opt-in channel, and never enter this repository, its builds, the
+shipped image, or any tier.
 
 ### ADR-15 — Languages
 
@@ -189,9 +192,20 @@ keeps DTrace. No other CDDL code enters the tree.
 
 ### ADR-23 — WebKit and JavaScriptCore
 
-**Proposed** (owner to confirm). Parts of WebKit and JavaScriptCore are LGPL, so they
-never enter this repository. A separate repository builds them for ravynOS against our
-SDK and publishes them through the opt-in channel used for GPL drivers; installing them
-places `WebKit.framework` and `JavaScriptCore.framework` at Apple's paths. Without them,
-applications that link WebKit fail to launch with a message naming the missing package.
+**Accepted.** Parts of Apple's WebKit and JavaScriptCore are LGPL, so they never enter
+this repository and nothing depends on them (ADR-24). The default system provides
+`JavaScriptCore.framework` and `WebKit.framework` at Apple's paths as our own
+implementations of their public APIs over permissively licensed engines, as S30
+specifies. Apple's LGPL WebKit may be built in a separate repository and installed by the
+user as an optional replacement.
+
+### ADR-24 — Permissive first
+
+**Accepted.** The system does not rely on GPL or LGPL software. Wherever a permissively
+licensed implementation exists or can be written, the design uses it; no tier, wave exit
+or part of the default image depends on GPL or LGPL code. GPL or LGPL software may be
+offered only as an optional extra, from a separate repository and channel, beside a
+permissive default. The accepted licenses are extended with BSL-1.0, CC0, the FreeType
+license (FTL) and the libpng license, all permissive. MPL and other file-level copyleft
+licenses are not accepted, except CDDL for XNU's DTrace files (ADR-22).
 
