@@ -76,6 +76,11 @@ as its wave starts.
   second.
 - **No stubs, no shortcuts.** A work package is not done if it closes its test with a
   stub, a disabled check or a weakened test (SYSTEM-DESIGN section 2.4).
+- **Owner's identity on every commit.** Agents set git's `user.name` and `user.email`
+  to the project owner before committing; no AI name, email, co-author trailer or
+  session link appears in any commit (ADR-29).
+- **Review gate.** A branch merges only with a score of at least 8 out of 10 from a
+  reviewer that did not write it (SYSTEM-DESIGN section 2.7).
 - **Status in one place.** A lane updates STATUS.md in the same change that closes a
   work package or finds a gap.
 - **Specs before closed behavior.** L13 delivers the spec, or a documented

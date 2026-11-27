@@ -220,6 +220,49 @@ against `.tbd` stubs, and excluded from the cycle check. `rv` rejects any other
 edge before anything compiles. A framework never includes kernel-internal headers; it
 reaches the kernel through Libsystem.
 
+### 2.7 Engineering standard
+
+ravynOS is built the way Apple's own engineers build macOS (ADR-28). Each layer follows
+the conventions of the Apple code it sits beside:
+
+- **Kernel and drivers**: IOKit's object model and lifecycle (`init`, `probe`, `start`,
+  `stop`, `free`); one `IOWorkLoop` per driver with `IOCommandGate` and
+  `IOInterruptEventSource`; `IOMemoryDescriptor` and `IODMACommand` for every buffer a
+  device touches; `OSObject` reference counting; matching through `Info.plist`
+  personalities; power management through `PMinit`/`registerPowerDriver`; KPIs only from
+  the exported symbol sets. XNU code follows XNU's style (`zone`, `lck_*`, `kern_return_t`,
+  Mach naming).
+- **System libraries**: Libc and Libsystem conventions, `os_log` for logging,
+  libdispatch for concurrency, Mach and XPC for IPC, MIG for typed Mach interfaces.
+- **Frameworks**: Apple's API naming and memory rules (Cocoa naming guidelines, Create
+  and Copy rules, toll-free bridging), `NSError` domains and codes, availability
+  annotations on every public declaration, HeaderDoc-style comments on public headers.
+- **Daemons**: launchd plists, Mach service names, XPC services, sandbox profiles,
+  `os_log` subsystems and categories, the way Apple's daemons are packaged.
+- **Bundles and layout**: Apple's bundle structure, `Info.plist` keys, install paths and
+  file-system layout.
+
+A component that imitates the surface while doing something else underneath — a
+pretend implementation, a translation hack, an always-success shortcut — is rejected.
+Code taken from another project (PureDarwin, the BSDs, `Legacy/`) is accepted only when
+it already meets this standard; otherwise the component is written natively (ADR-27).
+
+**Review gate.** A change merges only when an engineer or agent that did not write it
+scores it at least 8 out of 10: correctness, tests, design fit, readability and hygiene,
+0 to 2 points each, none at 0. The score and a one-line reason per criterion go in the
+merge commit message.
+
+**Code reads as written by an experienced engineer.** Comments only where the reason is
+not obvious, in one line where possible; no comment that restates the code, no banners,
+no preambles on obvious functions. No over-defensive checks, no speculative abstraction,
+no generic names (`data`, `info`, `handler`, `manager`, `utils`). Each file matches the
+style of the code around it. Commit subjects are imperative, at most 50 characters, and
+name the subsystem; the body says why, in plain sentences.
+
+**Commit identity.** Every commit in this repository is authored and committed under the
+project owner's identity, configured in git. No commit carries an AI tool's name, email
+or co-author line, and no message mentions how the change was produced.
+
 ## 3. Architecture
 
 ### 3.1 The stack

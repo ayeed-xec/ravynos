@@ -169,8 +169,8 @@ no code at all.)
 - GAP-42 `Kernel/Extensions/IOUSBFamily/src/IOUSBController.cpp`, `IOUSBControllerV2.cpp`,
   `IOUSBDevice.cpp`, `IOUSBInterface.cpp` and `include/IOKit/usb/IOUSBController.h` are
   PureDarwin's reconstruction of Apple's closed classes and carry no license header.
-  They may not be built until PureDarwin states their license (PUREDARWIN-SEEDS.md
-  section 6) or they are rewritten.
+  They are not built; they are replaced by a native USB host stack designed in S10
+  (ADR-27).
 - GAP-41 XNU's system-call and libsyscall generators use host sed, awk and Perl
   (`bsd/kern/makesyscalls.sh`, `libsyscall/xcodescripts/*.pl`); no Rust replacements
   exist.

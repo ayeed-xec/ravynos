@@ -257,6 +257,28 @@ license, with "MPL-2.0 OR BSD-2-Clause" files taken as BSD-2-Clause; MPL-2.0-onl
 GPL, LGPL, CDDL and unlicensed files are not taken; taken code is vendored with
 `_PROVENANCE` and patches like any upstream; PureDarwin's in-place XNU edits are re-cut
 as reviewed patch series; and its architecture (Nix build, Wayland display path,
-stubbed services) is not adopted. The kernel, driver and audio work it provides
+stubbed services) is not adopted. Code is taken only when it is a native implementation that meets
+SYSTEM-DESIGN section 2.7; code that only imitates an Apple interface, takes shortcuts,
+or carries no license header is not taken, and the component is written natively with a
+better design. The headerless IOUSBFamily files already in the tree are rewritten this
+way (GAP-42). The kernel, driver and audio work it provides
 shortens S06, S09, S10, S11 and S27 the most.
+
+### ADR-28 — Built the way Apple builds macOS
+
+**Accepted.** Every subsystem is designed and written the way Apple's engineers design
+and write the corresponding part of macOS: IOKit's driver model and lifecycle, XNU's
+kernel conventions, Libsystem and libdispatch idioms, Mach, MIG and XPC for IPC, Cocoa's
+API conventions and memory rules, launchd and bundle packaging, `os_log` logging. The
+details are SYSTEM-DESIGN section 2.7. Two reasons: Mac software depends on the
+behavior those conventions produce, not only on the symbol names, and engineers who know
+macOS can read, review and extend code that follows them. The review gate (section 2.7)
+enforces it.
+
+### ADR-29 — Commit identity
+
+**Accepted.** All commits are authored and committed as the project owner. No commit
+carries an AI tool's name, email, co-author trailer or session link, and no commit
+message describes how a change was produced. Agents working on this repository set git's
+`user.name` and `user.email` to the owner's identity before committing.
 
