@@ -5342,6 +5342,9 @@ Each wave ends when its tier passes in CI on x86_64 and arm64.
 | W6 | T5 | S12 (full), S16 (SwiftUI), S28 (one GPU), S30 |
 | W7 | installable distribution | S19 (APFS root), S32 (apps), S33 (OS), S34 |
 
+The work packages that produce each wave, the parallel lanes that own them, and the
+critical path are in [ROADMAP.md](ROADMAP.md).
+
 Tracks that gate no wave: S08 riscv64, S11 foreign drivers (from W3), S35 Linux and
 FreeBSD binaries, S36 phone and tablet.
 

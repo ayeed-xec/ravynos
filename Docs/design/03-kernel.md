@@ -14,7 +14,7 @@ entry point begins.
 We ship Apple's XNU. Not a fork we maintain as a separate kernel, not a
 Mach/BSD hybrid we assemble from parts — the same source Apple publishes
 with each macOS release, vendored into this tree. The design targets the
-xnu-13432.41.4 line: Darwin 27.2.0, the kernel released with macOS 27.2.1
+xnu-13432.41.4 line: Darwin 26.2.0, the kernel released with macOS 27.2.1
 build 26B131 on 2026-11-09
 ([developer.apple.com/news/releases](https://developer.apple.com/news/releases/?id=11092026d),
 [macosdb.com](https://macosdb.com/macos/release/27.2.1-26B131/)). Apple's
@@ -347,7 +347,7 @@ becomes a patch with a `fate:` line, per the vendoring policy.
   lifts directly from `osfmk/arm`; structure ports as a template only.
 - **Timing of the xnu-13432 vendor bump.** *Resolved 2026-11-26 by release
   audit:* xnu-12377.121.6 remains the newest tag published in
-  apple-oss-distributions; xnu-13432.41.4 (Darwin 27.2.0, macOS 27.2
+  apple-oss-distributions; xnu-13432.41.4 (Darwin 26.2.0, macOS 27.2
   "Golden Gate") has no public source drop yet, so the vendored tree is
   current and no bump is pending. Decision rule: bump the day Apple
   publishes the tag (checked weekly by lane E); lane A owns rebasing the

@@ -16,7 +16,7 @@ ravynOS is an operating system that runs real macOS software natively. The
 compatibility target is the macOS 27.2.1 generation, build 26B131 ("Golden
 Gate", released 2026-11-09 —
 https://developer.apple.com/news/releases/?id=11092026d), which corresponds to
-Darwin 27.2.0 and XNU xnu-13432.41.4~25
+Darwin 26.2.0 and XNU xnu-13432.41.4~25
 (https://macosdb.com/macos/release/27.2.1-26B131/). The system is built from
 Apple's own open-source releases — kernel, libc, dyld, libdispatch, the Objective-C runtime and CoreFoundation, published under
 https://opensource.apple.com/releases/ and on https://github.com/apple — plus

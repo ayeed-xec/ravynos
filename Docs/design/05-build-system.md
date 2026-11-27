@@ -340,7 +340,7 @@ license = "Apache-2.0"
 ```
 
 The pins we care about most today: the vendored kernel in this clone is xnu-12377.121.6
-(Darwin 25.5 generation) and the design upgrades it to the xnu-13432 line (Darwin 27.2.0,
+(Darwin 25.5 generation) and the design upgrades it to the xnu-13432 line (Darwin 26.2.0,
 shipped in macOS 27.2.1, build 26B131 — see
 https://developer.apple.com/news/releases/?id=11092026d and
 https://macosdb.com/macos/release/27.2.1-26B131/) when Apple publishes the source. The

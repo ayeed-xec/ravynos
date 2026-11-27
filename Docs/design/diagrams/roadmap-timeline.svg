@@ -1,68 +1,167 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" width="900" height="620">
-  <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M0,0 L8,4 L0,8 z" fill="#2563eb"/>
-    </marker>
-  </defs>
-  <rect x="0" y="0" width="900" height="620" fill="#ffffff"/>
-  <text x="30" y="40" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Waves W0–W8 and parallel tracks</text>
-  <text x="30" y="62" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Waves follow DESIGN.md §10. Tracks run beside them; blue arrows mark the wave that needs a track.</text>
-  <rect x="30" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="77" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W0</text>
-  <text x="77" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Foundations</text>
-  <rect x="136" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="183" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W1</text>
-  <text x="183" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Kernel · T0</text>
-  <rect x="242" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="289" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W2</text>
-  <text x="289" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Runtime · T1</text>
-  <rect x="348" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="395" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W3</text>
-  <text x="395" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Userland · T2</text>
-  <rect x="454" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="501" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W4</text>
-  <text x="501" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Graphics · T3</text>
-  <rect x="560" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="607" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W6</text>
-  <text x="607" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Width · T4</text>
-  <rect x="666" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="713" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W7</text>
-  <text x="713" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Closed · T5</text>
-  <rect x="772" y="95" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="819" y="116" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W8</text>
-  <text x="819" y="134" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Distro</text>
-  <rect x="507" y="180" width="94" height="52" rx="8" fill="#e6f4ea" stroke="#444"/>
-  <text x="554" y="201" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W5</text>
-  <text x="554" y="219" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">arm64 · ASi</text>
-  <line x1="124" y1="121" x2="135" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="230" y1="121" x2="241" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="336" y1="121" x2="347" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="442" y1="121" x2="453" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="548" y1="121" x2="559" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="654" y1="121" x2="665" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="760" y1="121" x2="771" y2="121" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <polyline points="395,147 395,206.0 506,206.0" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text x="611" y="210" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">runs beside W4</text>
-  <rect x="136" y="290" width="465" height="34" rx="8" fill="#f5f5f4" stroke="#444"/>
-  <text x="146" y="312" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Boot track: kite replaces the GRUB rig</text>
-  <line x1="362" y1="290" x2="362" y2="150" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <line x1="468" y1="290" x2="468" y2="150" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <line x1="587" y1="290" x2="587" y2="235" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <rect x="242" y="336" width="624" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
-  <text x="252" y="358" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">APFS track: libapfs, then VFS, then root</text>
-  <line x1="468" y1="336" x2="468" y2="150" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <line x1="786" y1="336" x2="786" y2="150" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <rect x="454" y="382" width="306" height="34" rx="8" fill="#fdeeee" stroke="#444"/>
-  <text x="464" y="404" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Metal track: software rasterizer, then hardware</text>
-  <line x1="640" y1="382" x2="640" y2="150" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <line x1="680" y1="382" x2="680" y2="150" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
-  <rect x="348" y="428" width="518" height="34" rx="8" fill="#f5f5f4" stroke="#444" stroke-dasharray="5,4"/>
-  <text x="358" y="450" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Compat track: KPI shims, ELF loader (gates nothing)</text>
-  <rect x="548" y="474" width="318" height="34" rx="8" fill="#f5f5f4" stroke="#444" stroke-dasharray="5,4"/>
-  <text x="558" y="496" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">riscv64 track</text>
-  <rect x="560" y="520" width="306" height="34" rx="8" fill="#f5f5f4" stroke="#444" stroke-dasharray="5,4"/>
-  <text x="570" y="542" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Phone track</text>
-  <rect x="30" y="576" width="14" height="14" rx="3" fill="#e6f4ea" stroke="#444"/><text x="52" y="588" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">wave (tier exit)</text>
-  <rect x="170" y="576" width="14" height="14" rx="3" fill="#fdeeee" stroke="#444"/><text x="192" y="588" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">hardest gap</text>
-  <rect x="290" y="576" width="14" height="14" rx="3" fill="#f5f5f4" stroke="#444" stroke-dasharray="4,3"/><text x="312" y="588" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">dashed: continues past W8</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 710" width="900" height="710">
+<rect x="0" y="0" width="900" height="710" fill="#ffffff"/>
+<text x="30" y="38" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Lanes and waves</text>
+<text x="30" y="58" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">Rows are lanes; filled cells are waves with work packages. Every wave exits on x86_64 and arm64.</text>
+<rect x="192" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="232" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W0</text>
+<text x="232" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">gates</text>
+<rect x="277" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="318" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W1</text>
+<text x="318" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">T0</text>
+<rect x="362" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="402" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W2</text>
+<text x="402" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">T1</text>
+<rect x="447" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="488" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W3</text>
+<text x="488" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">T2</text>
+<rect x="532" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="572" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W4</text>
+<text x="572" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">T3</text>
+<rect x="617" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="658" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W5</text>
+<text x="658" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">T4</text>
+<rect x="702" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="742" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W6</text>
+<text x="742" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">T5</text>
+<rect x="787" y="74" width="81" height="30" rx="6" fill="#e8f0fe" stroke="#444"/>
+<text x="828" y="87" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#1a1a1a">W7</text>
+<text x="828" y="100" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">distro</text>
+<text x="30" y="129" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L1 Build, toolchain</text>
+<rect x="192" y="113" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="277" y="113" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="113" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="447" y="113" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="532" y="113" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="113" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="702" y="113" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="113" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<text x="30" y="159" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L2 Boot</text>
+<rect x="192" y="143" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="277" y="143" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="143" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="143" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="532" y="143" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="143" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="702" y="143" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="143" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="189" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L3 Kernel core</text>
+<rect x="192" y="173" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="173" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="173" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="447" y="173" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="173" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="173" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="702" y="173" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="787" y="173" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="219" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L4 x86_64</text>
+<rect x="192" y="203" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="203" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="203" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="203" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="203" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="203" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="702" y="203" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="203" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="249" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L5 arm64</text>
+<rect x="192" y="233" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="233" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="233" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="233" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="233" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="233" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="702" y="233" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="233" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="279" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L6 Drivers</text>
+<rect x="192" y="263" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="263" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="263" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="263" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="263" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="617" y="263" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="702" y="263" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="787" y="263" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="309" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L7 Core runtime</text>
+<rect x="192" y="293" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="293" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="362" y="293" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="447" y="293" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="293" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="617" y="293" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="293" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="293" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="339" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L8 Services</text>
+<rect x="192" y="323" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="323" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="362" y="323" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="447" y="323" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="323" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="323" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="323" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="323" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="369" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L9 Storage, network</text>
+<rect x="192" y="353" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="353" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="353" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="353" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="353" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="353" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="353" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="353" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<text x="30" y="399" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L10 Graphics</text>
+<rect x="192" y="383" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="383" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="362" y="383" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="383" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="532" y="383" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="617" y="383" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="383" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="787" y="383" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="429" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L11 App frameworks</text>
+<rect x="192" y="413" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="413" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="362" y="413" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="413" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="532" y="413" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="617" y="413" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="413" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="787" y="413" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="459" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L12 Apps, install</text>
+<rect x="192" y="443" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="277" y="443" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="362" y="443" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="447" y="443" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="443" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="617" y="443" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="443" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<rect x="787" y="443" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<text x="30" y="489" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L13 Spec room</text>
+<rect x="192" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="277" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="447" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="617" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="473" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="787" y="473" width="81" height="24" rx="5" fill="#f5f5f4" stroke="#cbd5e1"/>
+<text x="30" y="519" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">L14 Quality</text>
+<rect x="192" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="277" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="362" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="447" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="532" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="617" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="702" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<rect x="787" y="503" width="81" height="24" rx="5" fill="#e6f4ea" stroke="#cbd5e1"/>
+<line x1="30" y1="536" x2="870" y2="536" stroke="#444" stroke-dasharray="4,3"/>
+<text x="30" y="561" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">R1 riscv64</text>
+<rect x="362" y="545" width="506" height="24" rx="5" fill="#fdeeee" stroke="#444" stroke-dasharray="4,3"/>
+<text x="370" y="561" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">track, gates no wave</text>
+<text x="30" y="591" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">R2 Linux binaries</text>
+<rect x="532" y="575" width="336" height="24" rx="5" fill="#fdeeee" stroke="#444" stroke-dasharray="4,3"/>
+<text x="540" y="591" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">track, gates no wave</text>
+<text x="30" y="621" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">R3 Phone</text>
+<rect x="617" y="605" width="251" height="24" rx="5" fill="#fdeeee" stroke="#444" stroke-dasharray="4,3"/>
+<text x="625" y="621" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1a1a1a">track, gates no wave</text>
+<rect x="30" y="680" width="14" height="14" rx="3" fill="#e6f4ea" stroke="#cbd5e1"/><text x="50" y="692" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">lane active</text>
+<rect x="150" y="680" width="14" height="14" rx="3" fill="#fdeeee" stroke="#444" stroke-dasharray="4,3"/><text x="170" y="692" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#1a1a1a">track</text>
 </svg>

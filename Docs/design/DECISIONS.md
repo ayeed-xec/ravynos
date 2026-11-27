@@ -15,9 +15,10 @@ ships with (xnu-13432). Kernel of record until that source is published:
 xnu-12377.121.6, vendored. When Apple publishes the newer tag, it replaces the vendored
 tree and the patch series is rebased.
 
-*To confirm:* the Darwin major version that corresponds to this release. Earlier
-documents say 27; build numbers beginning with 26 normally belong to Darwin 26. Check
-against Apple's release notes and correct every document that quotes it.
+The corresponding Darwin release is 26.2 (`kern.osrelease` 26.2.0): Apple's build
+numbers carry the Darwin major version as their prefix (build 26B131), and the vendored
+xnu-12377 line is Darwin 25, shipped with macOS 26. Earlier documents that say Darwin 27
+are wrong.
 
 ### ADR-02 — The SDK targets the macOS platform
 
@@ -70,7 +71,10 @@ which applications call; no application observes the wire.
 ### ADR-08 — Order of closed-source applications
 
 **Accepted.** A small AppKit app, then a Qt app, then a SwiftUI app, then an Electron app.
-The specific applications are chosen and recorded in this entry when W6 starts.
+The set, confirmed against each application's current architecture and toolkit before W6
+starts: The Unarchiver (AppKit), TeamViewer (Qt), a SwiftUI-only application from the
+same review, and Slack (Electron). An application that no longer fits its rung is
+replaced by another that does, and this entry is amended.
 
 *Rejected:* Electron first. Chromium uses more of macOS than almost any other
 application (its sandbox, cross-process layers, Metal through ANGLE, keychain, code
@@ -107,8 +111,11 @@ does not provide.
 
 ### ADR-12 — Cryptography
 
-**Accepted.** A permissively licensed cryptography library (BoringSSL or BearSSL; the
-choice and a per-file license check are the first task of S05's `libcc_kext`) provides the
+**Accepted.** BoringSSL, chosen over BearSSL because it covers TLS 1.3, Ed25519 and the
+modern primitives applications and updaters expect. It is vendored once at
+`Foundation/boringssl/` (S29 owns it); the kernel's `libcc_kext` (S05) compiles the
+subset the kernel needs from the same tree. Its files carry ISC, OpenSSL/SSLeay or
+Apache-2.0 terms, all permissive (ADR-24); a per-file license check runs in the audit. It provides the
 primitives behind `cc_kext` in the kernel, CommonCrypto and the Security framework in
 user space, and TLS. Apple's corecrypto is not used: its license is not an open-source
 license. The choice of library is the first implementation task of S05's `cc_kext`
@@ -134,7 +141,7 @@ shipped image, or any tier.
 
 ### ADR-15 — Languages
 
-**Proposed** (owner to confirm). C, C++ and Objective-C wherever code must match Apple's
+**Accepted.** C, C++ and Objective-C wherever code must match Apple's
 binaries or is vendored. Rust for new system services with no Apple ABI to match (the
 window server, `rv`, new tools). The bootloader: the existing C loader in `Boot/loader/`
 is kept and fixed rather than rewritten in Rust; it is small, freestanding and already
@@ -185,7 +192,7 @@ not produce CTF debugging data, so `ctfconvert` and `ctfmerge` are not needed.
 
 ### ADR-22 — Older APSL and CDDL in vendored Apple code
 
-**Proposed** (owner to confirm). Apple's own releases under APSL-1.1 and APSL-1.2 (some
+**Accepted.** Apple's own releases under APSL-1.1 and APSL-1.2 (some
 IOKit families, parts of hfs) are accepted like APSL-2.0. CDDL, a file-level license that
 is not GPL, is accepted only for the DTrace files that ship inside XNU, so the kernel
 keeps DTrace. No other CDDL code enters the tree.
@@ -206,6 +213,16 @@ licensed implementation exists or can be written, the design uses it; no tier, w
 or part of the default image depends on GPL or LGPL code. GPL or LGPL software may be
 offered only as an optional extra, from a separate repository and channel, beside a
 permissive default. The accepted licenses are extended with BSL-1.0, CC0, the FreeType
-license (FTL) and the libpng license, all permissive. MPL and other file-level copyleft
+license (FTL), the libpng license, 0BSD, the X11 license, the bzip2 license, the IJG
+license, the libtiff license, the zsh license, the curl license, the Less license, the
+SCOWL license and the OpenSSL/SSLeay license, all permissive. MPL and other file-level copyleft
 licenses are not accepted, except CDDL for XNU's DTrace files (ADR-22).
+
+### ADR-25 — Patent-encumbered codecs
+
+**Accepted.** H.264, HEVC/HEIC and AAC are patent-encumbered. Until counsel approves a
+licensing route, the default image ships no decoder or encoder for them; the APIs that
+would use them return their documented unsupported-format errors, which S23 and S27
+specify. Permissively licensed, royalty-free formats (AV1, VP8, VP9, Opus, Vorbis, FLAC,
+MP3, PNG, JPEG, WebP) are supported.
 

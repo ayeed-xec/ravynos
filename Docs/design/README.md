@@ -8,6 +8,7 @@ implementations of everything Apple keeps closed and an SDK shaped like Apple's.
 | Document | Read it for |
 |---|---|
 | [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) | The design of record: rules, architecture, and every subsystem with how it works, how to build it and when it is done |
+| [ROADMAP.md](ROADMAP.md) | Waves, parallel lanes and work packages: what is built when, and by which lane |
 | [STATUS.md](STATUS.md) | Where the code stands: bugs and gaps, numbered |
 | [DECISIONS.md](DECISIONS.md) | Why each major choice was made |
 | [../spec/TEMPLATE.md](../spec/TEMPLATE.md) | The template for specifying closed behavior |
@@ -34,7 +35,7 @@ project-wide plan, kept for its reasoning.
 | 9 | [09-compat.md](09-compat.md) | Native Linux and FreeBSD compatibility for binaries and kernel drivers (NVIDIA case study), ML workloads |
 | 10 | [10-mobility.md](10-mobility.md) | The iOS-alternative face: phone stack, SoC bring-up playbook, scope honesty |
 | 11 | [11-quality.md](11-quality.md) | Implementation guidelines: code standards, anti-bloat rules, tests, performance budgets as CI gates, review checklist |
-| 12 | [12-roadmap.md](12-roadmap.md) | Earlier wave plan (superseded by SYSTEM-DESIGN.md section 6); the reasoning behind each wave's hard part |
+| 12 | [12-roadmap.md](12-roadmap.md) | Earlier wave plan, superseded by ROADMAP.md; the reasoning behind each wave's hard part |
 | 13 | [13-toolchain-sdk.md](13-toolchain-sdk.md) | Native toolchain bootstrap, the SDK as a build output, the legal boundary between Apple open source and Apple proprietary artifacts |
 
 
