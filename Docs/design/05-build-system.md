@@ -106,7 +106,7 @@ never gave PureDarwin users, and it is a design goal, not a debugging escape hat
 
 ## The harness: `rv`
 
-One entry point, a statically linked Rust binary living at `tools/rv/` (the language is
+One entry point, a statically linked Rust binary living at `Tools/rv/` (the language is
 decided on evidence in [13-toolchain-sdk.md](13-toolchain-sdk.md) §2.2: both reference
 builds — PureDarwin's Nix-driven tree and upstream ravynOS's bmake/CMake glue — keep the
 top-level driver out of the interpreted-scripting layer). Subcommands:

@@ -30,8 +30,8 @@ graph as everything else.
 
 ### G2 — The inherited SDK is a checked-in artifact, assembled by hand, built outside the harness
 
-`Developer/ravynOS.sdk/_PROVENANCE` shows a hand-curated import list
-(apple-oss-distributions/distribution-macOS, CarbonHeaders, …). `Developer/Makefile` builds
+`Legacy/Developer/ravynOS.sdk/_PROVENANCE` shows a hand-curated import list
+(apple-oss-distributions/distribution-macOS, CarbonHeaders, …). `Legacy/Developer/Makefile` builds
 it with BSD `bsd.subdir.mk` — the exact "component builds by invoking its own build system"
 pattern `05-build-system.md:151` bans for everything else. `05-build-system.md:200-203`
 says sysroots are build outputs, "not a checked-in binary blob." The SDK contradicts the
@@ -39,7 +39,7 @@ design it sits inside.
 
 ### G3 — The SDK has headers but no link surface
 
-`find Developer/ravynOS.sdk -name '*.tbd'` → 0 files. There is no `usr/lib` either. An SDK
+`find Legacy/Developer/ravynOS.sdk -name '*.tbd'` → 0 files. There is no `usr/lib` either. An SDK
 that cannot state what a dylib exports cannot link an app the way the macOS SDK does —
 linking against framework sources directly is precisely the
 `-undefined dynamic_lookup` failure mode `DESIGN.md` §1 bans. The missing piece is a TAPI
@@ -48,7 +48,7 @@ from the built dylib, and the SDK links against stubs, never sources.
 
 ### G4 — The SDK impersonates Apple's SDK, which invites exactly the confusion the owner rejects
 
-`Developer/ravynOS.sdk/SDKSettings.json` declares itself platform `macosx`, triple vendor
+`Legacy/Developer/ravynOS.sdk/SDKSettings.json` declares itself platform `macosx`, triple vendor
 `apple`, `MACOSX_DEPLOYMENT_TARGET`, and `CODE_SIGN_IDENTITY: "Apple Development"`.
 Display name: "ravynOS 0.7 (macOS 10.15 compatible)". None of this is a license problem by
 itself (the values are uncopyrightable ABI constants), but it *looks* like a counterfeit
@@ -69,7 +69,7 @@ single largest gap between the docs and the owner's rule.
 `DESIGN.md` §14 language policy: "`rv`, mig tooling, CLI tools, tests → Rust. Entirely our
 own code." `05-build-system.md:109`: "a plain executable or Python program living at the
 tree root." §4 of DESIGN.md: "Python 3 for build tooling." The implemented `rv`
-(`tools/rv/`, committed `118c8a66f8`) is Rust. The docs disagree; the code and §14 agree.
+(`Tools/rv/`, committed `118c8a66f8`) is Rust. The docs disagree; the code and §14 agree.
 The amendment fixes the stragglers.
 
 **Why Rust, decided on evidence from both reference builds:**
@@ -101,7 +101,7 @@ The amendment fixes the stragglers.
 One statically linked MIT binary, no interpreter to bootstrap, one dependency license
 surface gated by the §6 audit.
 
-### G7 — The inherited `Developer/` toolchain tree is un-manifested
+### G7 — The inherited `Legacy/Developer/` toolchain tree is un-manifested
 
 `Default.xctoolchain/` carries the raw material — swiftlang/llvm-project
 (swift-6.0-RELEASE, Apache-2.0 WITH LLVM-exception), tapi (tapi-1600.0.11.8), cctools/ld64
@@ -130,7 +130,7 @@ packaging is not.
 - **Stage 2 — the system builds itself.** Libc, Libsystem, dyld, objc4, libdispatch build
   against the rv-assembled sysroot with stage-1 tools. Later (W8, self-hosting milestone)
   the same graph builds the stage-1 toolchain *on ravynOS* — the proof that the OS is a
-  development platform, matching the two-stage pattern `Developer/` already plans
+  development platform, matching the two-stage pattern `Legacy/Developer/` already plans
   (`SourceMap.md:46`).
 - Each stage hashes its inputs and outputs; `rv bootstrap` runs and verifies the chain. A
   stage whose hash changes without a VENDORS bump fails the build.
@@ -142,12 +142,12 @@ bootstrap" out of `05-build-system.md` and into scope.
 
 ![rv pipeline](diagrams/rv-pipeline.svg)
 
-- `rv` stays **Rust** (MIT, `tools/rv/`), manifests stay **TOML**, executor stays **ninja**.
+- `rv` stays **Rust** (MIT, `Tools/rv/`), manifests stay **TOML**, executor stays **ninja**.
   Amendment text for `05-build-system.md:109`: "One entry point, a statically linked Rust
-  binary at `tools/rv/`." Python 3 remains the language of test scripts and spec tooling —
+  binary at `Tools/rv/`." Python 3 remains the language of test scripts and spec tooling —
   not the harness.
 - The toolchain components (G7) join the graph as ordinary components: manifests under
-  `Developer/`, vendored pins, `layer = build-toolchain`. xcbuild and the cmake/make glue
+  `Legacy/Developer/`, vendored pins, `layer = build-toolchain`. xcbuild and the cmake/make glue
   are dropped; `rv` owns the build steps for the SDK below.
 
 ### 2.3 The SDK is a build output, assembled by `rv` (G2, G3, G4)
@@ -175,7 +175,7 @@ bootstrap" out of `05-build-system.md` and into scope.
    compat sysroot gets a second view laid out like macOS (`/usr/include`,
    `/System/Library/Frameworks`) so Mac-built sources build unmodified against our sysroot.
 
-The checked-in `Developer/ravynOS.sdk` header snapshot is retired to test-fixture status;
+The checked-in `Legacy/Developer/ravynOS.sdk` header snapshot is retired to test-fixture status;
 `_PROVENANCE` records it as historical.
 
 ### 2.4 Wave 0 lane F amended — the macOS SDK becomes a test fixture, never a build input (G5)
@@ -211,17 +211,17 @@ All six are in force in `DESIGN.md` and `05-build-system.md` as of this revision
 2. `DESIGN.md` §4 — "Python 3 for build tooling" → "Python 3 for test and spec tooling;
    the build harness `rv` is Rust per §14".
 3. `05-build-system.md:109` — "a plain executable or Python program" → "a statically
-   linked Rust binary (`tools/rv/`)".
+   linked Rust binary (`Tools/rv/`)".
 4. `05-build-system.md` "What this does not solve" — remove the bootstrap bullet; add a
    pointer to §2.1 here.
 5. `05-build-system.md` "Open questions" — the sysroot-layout question is answered by
    §2.3 (two views); remove it.
-6. New components with manifests: `Developer/toolchain/*` (llvm, cctools, tapi, mig, …),
+6. New components with manifests: `Legacy/Developer/toolchain/*` (llvm, cctools, tapi, mig, …),
    `sdk` (assembler component).
 
 ### 2.6 Known boundary of the W1 mig smoke test (recorded from implementation)
 
-`build/mig/build.sh --smoke` proves generation: the vendored defs files drive
+`Tools/mig/build.sh --smoke` proves generation: the vendored defs files drive
 the tool and stubs come out. It deliberately does **not** compile the generated
 stubs — the vendored header set has gaps that stall that compile, e.g.
 `BSD/include/mach/notify.h` includes `<sys/mach/notify.h>`, which is not

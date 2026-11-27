@@ -117,6 +117,7 @@ ravynos/
 ├── Apps/                    Finder, Terminal, Settings, installer
 ├── Tests/                   per-layer suites + cross-layer ABI tests
 ├── Tools/                   build harness, toolchain scripts, mig, audits
+├── Legacy/                  upstream ravynOS imports, pending manifesting
 └── Docs/                    the documents in this directory
 ```
 
@@ -139,6 +140,7 @@ sides:
 | `Apps/` | Our applications | `Frameworks/`, `Foundation/`, servers via Mach ports | `Tests/` |
 | `Tests/` | Suites for every layer + ABI tests | Everything (read-only, test-only links) | Nothing |
 | `Tools/` | Build harness, toolchain bootstrap, mig, license audit | Nothing in-tree (self-contained) | Builds everything |
+| `Legacy/` | Imported upstream ravynOS trees (desktop sources, SDK snapshot) | Nothing in-tree | Nothing; nothing in the build graph references it until a tree is manifested per [05-build-system.md](05-build-system.md) |
 | `Docs/` | This design documentation | Nothing | Nothing |
 
 Two entries deserve a note. `Compat/` never links `Foundation/`: a

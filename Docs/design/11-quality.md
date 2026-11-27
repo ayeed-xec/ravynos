@@ -305,8 +305,8 @@ domain acceptable — is enforced as a build gate, not a convention.
   directory fails even when the license itself is acceptable.
 
 **Host tools are gated too.** A license audit reads files; the programs that run to produce
-them are checked by `build/ci/check-host-tools.sh`, which fails when any script under
-`build/`, `tests/` or `.github/`, or the harness source, invokes a GPL program: `gcc`,
+them are checked by `Tools/ci/check-host-tools.sh`, which fails when any script under
+`Boot/`, `Tools/`, `Tests/` or `.github/`, or the harness source, invokes a GPL program: `gcc`,
 `bison`, GNU `patch`, GNU `m4`, `make`, `objcopy`, `nm`, `readelf`, `ar`, `ld`. What
 replaces them is ours or LLVM's: `rvpatch` applies the patch series, byacc builds the
 parser, the lexer ships pregenerated, clang compiles, `ld.lld` links, `llvm-ar` archives.
