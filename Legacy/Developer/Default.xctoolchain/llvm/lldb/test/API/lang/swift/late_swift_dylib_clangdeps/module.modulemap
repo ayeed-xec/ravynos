@@ -1,3 +1,0 @@
-module ClangMod {
-  header "ClangMod.h"
-}

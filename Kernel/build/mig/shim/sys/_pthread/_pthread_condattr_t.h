@@ -1,5 +1,0 @@
-#ifndef _MIG_SHIM_PTHREAD_CONDATTR_T_H
-#define _MIG_SHIM_PTHREAD_CONDATTR_T_H
-typedef struct _opaque_pthread_condattr_t __darwin_pthread_condattr_t;
-typedef __darwin_pthread_condattr_t pthread_condattr_t;
-#endif

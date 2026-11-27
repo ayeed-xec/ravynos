@@ -1,2 +1,0 @@
-import Dylib
-f()

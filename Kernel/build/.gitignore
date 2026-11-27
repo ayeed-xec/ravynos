@@ -1,3 +1,0 @@
-# Regenerable build outputs (kernel object builds, generated export headers)
-kernel-objs/
-config-include/System/

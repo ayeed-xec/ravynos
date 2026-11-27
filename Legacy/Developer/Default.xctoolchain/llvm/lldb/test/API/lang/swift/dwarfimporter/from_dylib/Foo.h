@@ -1,4 +1,0 @@
-struct FromDylib {
-  int i;
-};
-

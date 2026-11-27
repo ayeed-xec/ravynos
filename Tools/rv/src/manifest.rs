@@ -249,7 +249,9 @@ fn collect(root: &Path, dir: &Path, found: &mut BTreeMap<String, Manifest>) {
         {
             continue;
         }
-        if dir == root && name == "Tests" {
+        if dir == root.join("Tests") && name == "rv" {
+            // Harness fixtures are separate rv roots driven with --root; their
+            // manifests never join the main graph.
             continue;
         }
         let manifest_path = path.join("manifest.toml");

@@ -1,0 +1,10 @@
+name = "hello"
+layer = "test"
+license = "BSD-2-Clause"
+state = "working"
+kind = "executable"
+sources = ["main.c"]
+exports.headers = []
+exports.libs = []
+deps.internal = []
+targets = ["x86_64-ravynos", "arm64-ravynos", "riscv64-ravynos"]

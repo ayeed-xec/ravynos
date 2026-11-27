@@ -43,9 +43,9 @@ else
 fi
 
 echo "== format gate: clang-format (our C sources)"
-mapfile -t c_files < <(tracked ':(glob)Apps/hello-cli/**/*.c' ':(glob)Foundation/**/*.c' ':(glob)Foundation/**/*.h')
+mapfile -t c_files < <(tracked ':(glob)Tests/apps/**/*.c' ':(glob)Foundation/**/*.c' ':(glob)Foundation/**/*.h')
 if [ "${#c_files[@]}" -eq 0 ]; then
-    echo "notice: no (Apps, Foundation) .c/.h files tracked yet; nothing to check"
+    echo "notice: no (Tests/apps, Foundation) .c/.h files tracked yet; nothing to check"
 else
     if ! clang-format --dry-run -Werror "${c_files[@]}" 2> >(sed 's/^/  /' >&2); then
         echo "error: clang-format found violations (shown above); run" >&2

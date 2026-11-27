@@ -1,6 +1,0 @@
-#ifndef _MIG_SHIM_TARGETCOND_H
-#define _MIG_SHIM_TARGETCOND_H
-#define TARGET_OS_OSX 1
-#define TARGET_OS_MAC 1
-#define TARGET_CPU_X86_64 1
-#endif

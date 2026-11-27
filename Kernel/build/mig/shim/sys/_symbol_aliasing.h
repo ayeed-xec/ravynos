@@ -1,8 +1,0 @@
-#ifndef _MIG_SHIM_SYMBOL_ALIASING_H
-#define _MIG_SHIM_SYMBOL_ALIASING_H
-#define __POSIX_C_DEPRECATED(x)
-#define __API_AVAILABLE(...)
-#define __API_UNAVAILABLE(...)
-#define __API_DEPRECATED(...)
-#define __API_DEPRECATED_WITH_REPLACEMENT(...)
-#endif

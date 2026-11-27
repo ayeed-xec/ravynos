@@ -1,1 +1,0 @@
-/vercel/sandbox/ravynos/Frameworks/CoreData/NSManagedObject.h

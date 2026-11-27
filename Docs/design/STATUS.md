@@ -13,26 +13,26 @@ kernel side, toolchain and repository hygiene), scored against the section 2.7 g
 
 | Area | Score | Verdict |
 |---|---|---|
-| `Tools/rv` (WP0.1–WP0.3) | 4/10 | rework; duplicate names break every command (BUG-09) |
+| `Tools/rv` (WP0.1–WP0.3) | 4/10 | rework; Mach-O output and kind handling missing (BUG-27, GAP-01–GAP-06) |
 | Stage-1 bootstrap (WP0.4) | 3/10 | rework; the build step has never run (BUG-22) |
 | `Boot/loader` (WP0.9) | 2/10 | rework; no device tree, smokes pass on a panic |
 | `Tools/mig` | 5/10 | patches and paths need fixing (GAP-11, GAP-55) |
 | CI and gates | 3/10 | partial coverage (GAP-09, GAP-10, GAP-33, GAP-56) |
-| IOACPIFamily (PureDarwin edits) | 1/10 | rewrite (BUG-14, GAP-47) |
-| IOUSBFamily reconstruction | 2/10 | delete; native stack in S10 (GAP-42, GAP-43) |
-| FreeBSDPort | 2/10 | rewrite under S11 (BUG-11, BUG-19, GAP-24) |
-| RavynXHCIPort | 3/10 | rewrite (BUG-17, GAP-48) |
-| RavynAHCIPort | 4/10 | rewrite (GAP-48) |
-| AppleAPIC | 5/10 | re-vendor, then patch (BUG-20) |
-| ApplePS2Controller | 6/10 | controller re-vendored; keyboard files rewritten (GAP-45) |
-| hfs | 7/10 | re-vendor; revert the in-place edit (GAP-44) |
+| FreeBSDPort | — | removed from the tree (WP0.0); rewrite under S11 (BUG-11, BUG-19, GAP-24) |
+| IOUSBFamily reconstruction | — | deleted (WP0.0); native stack in S10 (GAP-42, GAP-43) |
+| RavynXHCIPort | — | removed from the tree (WP0.0); rewrite when S10 starts (BUG-17, GAP-48) |
+| RavynAHCIPort | — | removed from the tree (WP0.0); rewrite when S10 starts (GAP-48) |
+| AppleAPIC | — | removed from the tree (WP0.0); re-vendor, then patch (BUG-20) |
+| ApplePS2Controller | — | removed from the tree (WP0.0); re-vendor controller, rewrite keyboard files (GAP-45) |
+| IOACPIFamily (PureDarwin edits) | — | removed from the tree (WP0.0); re-vendor, then patch (BUG-14, GAP-47) |
+| hfs | — | removed from the tree (WP0.0); re-vendor from the tagged release (GAP-44) |
 
 The W0 wave report claimed WP0.1–WP0.4 and WP0.9 as delivered. They are merged but not
 done: each is open below until it meets its "Done when" and passes review.
 
 Both arm64 and x86_64 are primary (ADR-19). The build tool, the bootloader's UEFI
 plumbing, the vendored mig and the CI gates exist but fail review. No Darwin program has run, the kernel does not
-link, and nothing above the kernel exists outside `Legacy/`. Tiers T0–T5 are all open.
+link, and nothing above the kernel exists yet. Tiers T0–T5 are all open.
 
 What exists, and whether it is a real implementation:
 
@@ -43,17 +43,10 @@ What exists, and whether it is a real implementation:
 - `Boot/mkfat/`, `Boot/elf2pe/`, `Tools/mig/rvpatch.c` — real, with unit tests.
 - `Tools/mig/` — Apple's migcom, pristine, with three patches, built with byacc.
 - `Tools/ci/` — real gates with incomplete coverage (GAP-09, GAP-10).
-- `Kernel/build/` — a separate kernel compile driver outside `rv`, with hand-written
-  configuration; compiles files in batches; does not link (GAP-12 to GAP-15).
-- `Kernel/port/arm64/` — stub functions that report success (BUG-07); obsolete under
-  ADR-11.
-- `Kernel/port/riscv64/` — real but small SBI, `satp` and trap code; built by nothing.
-- `Kernel/Extensions/FreeBSDPort/` — a partial driver shim that does not compile against
-  XNU and is not wired into any build (GAP-24).
-- `Apps/hello`, `Apps/hello-cli` — test programs that make Linux system calls; neither is
-  a Darwin program (GAP-07).
-- `Legacy/` — upstream ravynOS; it never ran as a system and is removed by WP0.0
-  (ADR-30, GAP-60). After that it is read only as the old tree (`old:` paths).
+- `Tests/apps/hello`, `Tests/apps/hello-cli` — test programs that make Linux system
+  calls; neither is a Darwin program (GAP-07). Moved from `Apps/` by WP0.0.
+- `Legacy/` — removed by WP0.0 (ADR-30, GAP-60); it is read only as the old tree
+  (`old:` paths, `git show 5112c72bc:<path>`).
 
 ## Bugs
 
@@ -84,9 +77,12 @@ What exists, and whether it is a real implementation:
   and return success — stubs, which the design forbids.
 - **BUG-08** `Kernel/build/driver/compile.sh` defines `__i386__` for x86_64, selecting
   32-bit paths in XNU headers.
-- **BUG-09** `Apps/hello` and `Apps/hello-cli` are both named `hello`. `rv` now rejects
-  duplicate names with `E-DUP-NAME`, so every `rv` command, CI included, fails on the
-  tree as committed. One of the two is renamed or removed.
+- **BUG-09** Closed. `Apps/hello` and `Apps/hello-cli` were both named `hello`;
+  `rv` rejected duplicate names with `E-DUP-NAME`, so every `rv` command failed on
+  the tree as committed. The tree now follows the section 3.2 layout: both programs
+  live in `Tests/apps/`, each manifest carries its own name, and their layer is
+  `test` per the section 3.2 layer table. `rv graph` and `rv build` pass on the
+  moved tree.
 - **BUG-10** `rv shell` prints an environment bash rejects and points at a directory with
   no `build.ninja`.
 - **BUG-11** `Kernel/Extensions/FreeBSDPort/shim` calls `ifnet_allocate_extended` with
@@ -173,27 +169,29 @@ What exists, and whether it is a real implementation:
 - GAP-11 The committed mig lexer was generated by flex, which runs GNU m4. `Tools/mig/build.sh`
   installs packages with `sudo apt-get`; `_PROVENANCE` names old paths.
 
-**S03 SDK** — GAP-29: not started. No `VENDORS` file at the root (only `Legacy/VENDORS`, no xnu
-pin).
+**S03 SDK** — GAP-29: not started. No `VENDORS` file at the root (the old
+`Legacy/VENDORS` was removed with WP0.0; no xnu pin).
 
 **S04 bootloader** — BUG-02 to BUG-06, BUG-13, BUG-24 to BUG-26. The source uses tabs
 against `.clang-format`. CI does not build the loader or run the
 boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT target.
 
 **S05 kernel build**
-- GAP-12 The kernel build is outside `rv`, with hand-written configuration in
-  `Kernel/build/config-include/`.
-- GAP-13 Two mig copies: `Kernel/build/mig` (bootstrap_cmds-99.231.1) produced the
-  committed kernel mig output; `Tools/mig` (138) is the one the design keeps.
+- GAP-12 Closed: `Kernel/build/` was removed with WP0.0; the kernel build outside
+  `rv` no longer exists in the tree. Rebuilding it inside `rv` is the W1 kernel
+  work (GAP-12's original scope moves to W1).
+- GAP-13 Closed: the `Kernel/build/mig` copy was removed with WP0.0;
+  `Tools/mig` (138) is the one the design keeps.
 - GAP-14 The vendored XNU has been edited in place: 19 files, about 9,600 lines,
   including generated system-call tables and hand edits. These become patches and build
   outputs (ADR-10).
 - GAP-15 No link: the link step resolves against a stub object; the listed undefined
   symbols cover one object only.
 - GAP-16 `libfirehose_kernel` is not built; its source is libdispatch's firehose buffer
-  (Apache-2.0), seeded in `Legacy/Libraries/libfirehose_kernel`. `libcc_kext` has no
+  (Apache-2.0), seeded in `old:Legacy/Libraries/libfirehose_kernel`. `libcc_kext` has no
   replacement; corecrypto is closed (ADR-12).
-- GAP-17 The GRUB-based rig in `Kernel/build/boot/` remains.
+- GAP-17 Closed. The GRUB-based rig in `Kernel/build/boot/` was removed with
+  `Kernel/build/` in WP0.0.
 
 **S06 x86_64 platform**
 - GAP-18 No platform expert, CPU, interrupt-controller or ACPI kexts are built.
@@ -212,11 +210,12 @@ boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT targ
 
 **S10 native drivers**
 - GAP-22 No family or driver is built.
-- GAP-43 Code that reports success it did not achieve: the IOUSBFamily reconstruction
+- GAP-43 Code that reported success it did not achieve: the IOUSBFamily reconstruction
   (transfers report the full length, device status always 0, pipe resets do nothing);
   `RavynXHCIUSBBus.cpp:64-80` (`UIMClosePipe`, `UIMAbortPipe`, `UIMClearPipeStall` empty
   and successful); `RavynXHCIMassStorageDisk.cpp:215-221` (`doSynchronize` sends no
   SYNCHRONIZE CACHE); `RavynAHCIDisk.cpp:154,167-170` (hard-coded 512-byte sectors).
+  The files were removed with WP0.0; the rule stays in force for the native S10 stack.
 - GAP-48 RavynXHCIPort and RavynAHCIPort bypass `IODMACommand`, wait with `IOSleep`
   loops, run one command at a time and have no power management. Both are rewritten to
   the S10 driver construction rules.
@@ -231,6 +230,8 @@ boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT targ
   success without acting (BUG-19, BUG-21); does not compile (BUG-11); builds against XNU private headers, so
   no stable interface is possible; no IOService class, `Info.plist` or build wiring; its
   own `mbuf` duplicates XNU's; its 95 files have no license header; no `LICENSE`.
+  The copy in the tree was removed with WP0.0; the rewrite under S11 starts from
+  history (`old:Kernel/Extensions/FreeBSDPort`), not from the tree.
 
 **S12 code signing and policy** — GAP-51: `CoreEntitlements` is a forwarder with no
 implementation. GAP-25: nothing parses or applies signatures; no
@@ -239,51 +240,56 @@ trust-cache interface are registered before `trust_cache_runtime_init`
 (`osfmk/kern/startup.c:867`, `libkern/img4/interface.c`, `bsd/kern/kern_trustcache.c`);
 `TrustCache/API.h` is not in the tree.
 
-**S13–S18 runtime and services** — GAP-50: `Kernel/IOKitUser/stubs/` holds stub
-functions, which the design forbids. GAP-26: none built. Seeds in `Legacy/`: Libsystem (macOS 12
-era), dyld-1066.8 with its cache builder, objc4, CF (about 10.11 era), launchd-842,
-NextBSD libxpc (BSD-2), an os_log reimplementation (BSD-2), configd, mDNSResponder,
+**S13–S18 runtime and services** — GAP-50: `Kernel/IOKitUser/stubs/` held stub
+functions, which the design forbids; `Kernel/IOKitUser/` was removed with WP0.0 and
+the stubs must not come back. GAP-26: none built. Seeds are read from history
+(`old:Legacy/…`): Libsystem (macOS 12 era), dyld-1066.8 with its cache builder, objc4,
+CF (about 10.11 era), launchd-842, NextBSD libxpc (BSD-2), an os_log reimplementation
+(BSD-2), configd, mDNSResponder,
 notifyd. All need updating to current tags.
 
 **S19 filesystems** — GAP-27: hfs and msdosfs vendored, unbuilt; no APFS (planned as
 the Rust `apfs-core` crate). GAP-44: hfs was edited in place (BUG-28) and neither hfs
 nor msdosfs records its Apple release tag.
 
-**S22–S25 graphics and AppKit** — GAP-28: nothing outside `Legacy/`. `Legacy/`'s
-AppKit, Foundation, CoreGraphics and QuartzCore are Cocotron-lineage (MIT), API about the
-10.6 era; its WindowServer targets FreeBSD devices and is not reusable;
-`Legacy/Frameworks/CoreGraphics/Makefile` links with `-undefined dynamic_lookup`.
+**S22–S25 graphics and AppKit** — GAP-28: nothing exists yet. The old-tree seeds
+(read from history) — AppKit, Foundation, CoreGraphics and QuartzCore — are
+Cocotron-lineage (MIT), API about the 10.6 era; the old WindowServer targets FreeBSD
+devices and is not reusable; the old `CoreGraphics/Makefile` linked with
+`-undefined dynamic_lookup`.
 
 **S20, S21, S26–S36** — GAP-29: not started. (GAP-29 is used for every subsystem that has
 no code at all.)
 
 **Repository-wide**
-- GAP-60 The tree is not the section 3.2 layout (ADR-30): `Legacy/`, `Kernel/build/`,
-  `Kernel/port/{arm64,riscv64}/`, `Kernel/kext_tools/`, `Kernel/IOKitUser/`, the
-  unbuilt kexts in `Kernel/Extensions/`, the Makefile-era files in `Tools/` and
-  `Tests/`, and test programs under `Apps/`. Removing them closes or moves GAP-17,
-  GAP-30 (old-tree part), GAP-37, GAP-49 and the old-tree parts of GAP-42 to GAP-48;
-  those items then apply to whatever is re-imported.
+- GAP-60 Closed. The tree is now the section 3.2 layout (ADR-30): `Legacy/`,
+  `Kernel/build/`, `Kernel/port/{arm64,riscv64}/`, `Kernel/kext_tools/`,
+  `Kernel/IOKitUser/`, the unbuilt kexts in `Kernel/Extensions/`, the Makefile-era
+  files in `Tools/` and `Tests/`, and test programs under `Apps/` are removed; the
+  old tree is read only from history (`old:` paths, `git show 5112c72bc:<path>`).
+  The hello programs moved to `Tests/apps/` and build there. This closes or moves
+  GAP-17, GAP-30 (old-tree part), GAP-37, GAP-49 and the old-tree parts of GAP-42
+  to GAP-48; those items apply to whatever is re-imported.
 - GAP-34 x86_64: XNU panics on non-Intel processors and needs Intel timing data; QEMU
   smokes need an Intel CPU model, and AMD support needs the ADR-20 patch.
 - GAP-35 XNU's own host tools (`SETUP/config`, `doconf`) need bison, flex and csh;
   ADR-21 replacements do not exist.
 - GAP-36 `rv` rejects dependencies within one layer and knows only seven layers —
   `build-toolchain` and `test` are missing (`Tools/rv/src/graph.rs:5-13`); it checks
-  `targets` on every manifest rather than the selected ones (`main.rs:139-148`); manifest
-  discovery does not skip `Legacy/` (`manifest.rs:52-58`); the manifest has no keys for
+  `targets` on every manifest rather than the selected ones (`main.rs:139-148`);
+  manifest discovery no longer skips the removed `Legacy/`; the manifest has no keys for
   output kind, versions, re-exports, install path, external source roots, build hooks or
   upward links (SYSTEM-DESIGN S01).
-- GAP-37 `Kernel/build/mig/bin/migcom` is a committed host binary built with GCC.
-  `Tools/mig/_PROVENANCE` names `ravynos/build/mig/patches`; the patches are in
-  `Tools/mig/patches`.
+- GAP-37 Closed. `Kernel/build/mig/bin/migcom` was removed with `Kernel/build/` in
+  WP0.0; `Tools/mig/_PROVENANCE` was removed with WP0.0 and provenance moves to
+  VENDORS (GAP-58); the patches live in `Tools/mig/patches`.
 - GAP-40 GitHub's default CI image ships bison, flex and m4; CI needs its own container
   (SYSTEM-DESIGN section 2.2).
 - GAP-45 Files with no license header beyond GAP-42: the keyboard files of
   `ApplePS2Controller` (PureDarwin), all 95 files of FreeBSDPort. Without a stated
   license they are not used; they are rewritten (ADR-27).
-- GAP-49 The `Legacy` kext build under `Kernel/Extensions` (Makefiles and scripts) is
-  dead and builds nothing in the current tree.
+- GAP-49 Closed. The `Legacy` kext build under `Kernel/Extensions` (Makefiles and
+  scripts) was dead and built nothing; removed with WP0.0.
 - GAP-57 SPDX: 173 of our source and build files have none: `RavynAHCIPort` and
   `RavynXHCIPort` (16 files, MIT text, not BSD-2-Clause), `Kernel/build` (22),
   `Tools/mig/include/mach` (5), the old `Tools/` scripts and `Tests/*.m`, every
@@ -308,44 +314,42 @@ no code at all.)
   exist.
 - GAP-38 Seeds under APSL-1.1/1.2 (`IOACPIFamily`, `AppleAPIC`, `AppleI386PCI`, much of
   `IOPCIFamily`, parts of `hfs`) and CDDL DTrace files in XNU need ADR-22 confirmed.
-- GAP-30 `Legacy/` contains GPL/LGPL/AGPL material: autotools `config.guess`/`config.sub`
-  and m4 files, GCC dump files under `Legacy/BSD/lib/ncurses/obj_s`, LGPL `dtrace_ctf`,
-  NSS-derived tri-licensed files in Security, and URW fonts whose license must be
-  checked. An `SDKSettings.json` that appears copied from Apple's SDK. The toolchain
-  `_PROVENANCE` calls `dtrace_ctf` LGPL, but its files are CDDL and APSL (ADR-22).
-  `Legacy/Libraries/_PROVENANCE` labels libdispatch APSL; it is Apache-2.0.
-  `Legacy/Developer/Default.xctoolchain/iig/iig.cpp` has no license header.
-  Vendored Bison output: `Kernel/xnu/libkern/c++/OSUnserialize.cpp` and the
-  `OSUnserializeXML` headers, `Kernel/IOKitUser/IOCFUnserialize.tab.c`,
-  `Tools/mig/upstream/migcom.tproj/parser.c` (ADR-17 requires regeneration with byacc);
-  committed flex output in both mig copies.
-- GAP-31 `Kernel/_PROVENANCE` describes the wrong source for the vendored XNU.
+- GAP-30 Closed. `Legacy/` — with its GPL/LGPL/AGPL material: autotools
+  `config.guess`/`config.sub` and m4 files, GCC dump files under
+  `Legacy/BSD/lib/ncurses/obj_s`, LGPL `dtrace_ctf`, NSS-derived tri-licensed files
+  in Security, and the URW fonts — was removed with WP0.0. The remaining open GPL
+  item is GAP-46 (`IOPCIFamily` pciutils patches). Vendored generated output still in
+  the tree: `Kernel/xnu/libkern/c++/OSUnserialize.cpp` and the
+  `OSUnserializeXML` headers, `Tools/mig/upstream/migcom.tproj/parser.c` (ADR-17
+  requires regeneration with byacc); committed flex output in the mig copy.
+- GAP-31 `Kernel/_PROVENANCE` described the wrong source for the vendored XNU;
+  the file was removed with WP0.0 and provenance moves to VENDORS (GAP-58).
 - GAP-32 Paths named in older documents that do not exist: `Docs/rfc/`,
-  `.mlai/DECISIONS.md`, `Tests/perf/`, `Tests/apps/`, `Tests/kpi/`,
-  `Tools/license-audit.py`, and top-level `Libraries/`, `CoreServices/`, `BSD/`,
-  `SysApps/` (now under `Legacy/`).
+  `.mlai/DECISIONS.md`, `Tests/perf/`, `Tests/kpi/`,
+  `Tools/license-audit.py`. `Tests/apps/` now exists (WP0.0); top-level
+  `Libraries/`, `CoreServices/`, `BSD/`, `SysApps/` were removed with `Legacy/`.
 - GAP-33 CI runs only the x86_64 user-space build: no `cargo test`, clippy, arm64 or
   riscv64 builds, loader build, mig build, boot smokes, Mach-O assertion or negative
-  tests. `Apps/.tmp_bad_manifest` is a stray file.
+  tests. `Apps/.tmp_bad_manifest` was a stray file; removed with WP0.0.
 
 ## Exit criteria for W0 and W1
 
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|
-| W0: the tree holds only the section 3.2 layout | open (GAP-60) |
-| W0: `rv` builds the tree with no duplicate names | open (BUG-09, BUG-27) |
+| W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
+| W0: `rv` builds the tree with no duplicate names | open (BUG-27) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | open (GAP-01) |
 | W0: stage-1 toolchain builds and `--verify` reproduces it | open (BUG-22, BUG-23, GAP-55) |
 | W0: every merged component scores at least 8/10 in review | open (all areas in the summary) |
 | W0: negative tests fail as designed in CI | open (GAP-33) |
 | W0: audit and host-tool gate cover the tree | open (GAP-09, GAP-10) |
-| W0: no GPL material in the repository | open (GAP-30, GAP-46) |
+| W0: no GPL material in the repository | open (GAP-46) |
 | W0: `VENDORS` at the root | open |
-| W0: correct `_PROVENANCE` everywhere | open (GAP-31, GAP-37, GAP-58) |
+| W0: correct `_PROVENANCE` everywhere | open (GAP-31, GAP-58) |
 | W0: SPDX on every file we own | open (GAP-45, GAP-57) |
 | W0: every section 5.6 gate runs in CI | open (GAP-33, GAP-40) |
 | W1: kernel links with no stubs, both arches | open (GAP-12–GAP-16, GAP-41) |
 | W1: loader boots XNU to its banner, both arches | open (BUG-02–BUG-06, BUG-24–BUG-26, GAP-39) |
 | W1: T0 passes on both arches | open (GAP-07) |
 | W1: P2, P9, P10 recorded | open |
-| W1: GRUB rig and `Kernel/build/` removed | open (GAP-17) |
+| W0: GRUB rig and `Kernel/build/` removed | closed (GAP-17) |

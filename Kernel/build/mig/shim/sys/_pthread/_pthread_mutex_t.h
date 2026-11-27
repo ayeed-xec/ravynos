@@ -1,5 +1,0 @@
-#ifndef _MIG_SHIM_PTHREAD_MUTEX_T_H
-#define _MIG_SHIM_PTHREAD_MUTEX_T_H
-typedef struct _opaque_pthread_mutex_t __darwin_pthread_mutex_t;
-typedef __darwin_pthread_mutex_t pthread_mutex_t;
-#endif

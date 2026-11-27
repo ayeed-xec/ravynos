@@ -1,3 +1,0 @@
-MACRO Bar {
-  int i;
-};

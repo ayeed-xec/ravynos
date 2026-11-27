@@ -1,4 +1,0 @@
-module ReturnsCxx {
-  header "returns-cxx.h"
-  requires cplusplus
-}

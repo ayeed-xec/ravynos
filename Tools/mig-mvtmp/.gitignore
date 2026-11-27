@@ -1,4 +1,0 @@
-# Build outputs of build/mig/build.sh (regenerable, never committed).
-bin/
-libexec/
-work/

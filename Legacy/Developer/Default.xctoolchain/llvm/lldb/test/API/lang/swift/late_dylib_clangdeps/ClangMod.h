@@ -1,3 +1,0 @@
-struct FromClang {
-  int x;
-};

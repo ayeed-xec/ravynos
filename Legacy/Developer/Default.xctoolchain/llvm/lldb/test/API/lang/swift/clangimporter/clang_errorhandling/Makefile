@@ -1,7 +1,0 @@
-SWIFT_SOURCES := main.swift
-SWIFT_BRIDGING_HEADER := bridging-header.h
-SWIFT_PRECOMPILE_BRIDGING_HEADER := NO
-
-SWIFTFLAGS_EXTRAS = -I$(SRCDIR)
-
-include Makefile.rules

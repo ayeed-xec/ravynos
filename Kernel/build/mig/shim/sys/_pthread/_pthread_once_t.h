@@ -1,5 +1,0 @@
-#ifndef _MIG_SHIM_PTHREAD_ONCE_T_H
-#define _MIG_SHIM_PTHREAD_ONCE_T_H
-typedef int __darwin_pthread_once_t;
-typedef __darwin_pthread_once_t pthread_once_t;
-#endif

@@ -1,0 +1,15 @@
+name    = "hello-cli"
+layer   = "test"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "executable"
+
+sources = ["hello.c"]
+
+deps.internal = ["libhello"]
+
+targets = ["x86_64-ravynos", "arm64-ravynos", "riscv64-ravynos"]
+
+[exports]
+headers = []
+libs    = []
