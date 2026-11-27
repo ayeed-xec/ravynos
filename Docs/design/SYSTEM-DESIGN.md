@@ -620,6 +620,7 @@ license  = "APSL-2.0"
 patches  = "Kernel/patches"
 # fetch   = true                # large trees: downloaded to build/vendor/<name>
 # subdirs = ["src/firehose"]    # partial vendor: only these upstream paths
+# prune   = ["foo/parser.c"]    # generated GPL output kept out (ADR-17)
 ```
 
 - `rv vendors check` compares `git rev-parse HEAD:<path>` with `tree`. Any difference
@@ -627,6 +628,9 @@ patches  = "Kernel/patches"
 - `fetch = true` trees (the LLVM tree `swiftlang/llvm-project` and Swift, S02) are
   downloaded to `build/vendor/<name>`, verified by `commit`, and never committed.
 - `subdirs` vendors only the listed upstream paths; `tree` then covers those paths.
+- `prune` lists paths, relative to `path`, that are deliberately absent because the
+  upstream tree ships output of a GPL tool (ADR-17). `tree` covers the pruned tree;
+  a listed path that reappears fails the check.
 
 Hook contract (frozen, version 1). `rv` runs
 `<hook> --request build/<target>/<name>/request.json`. The request holds `version`,

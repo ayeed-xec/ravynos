@@ -5,6 +5,9 @@
 # `rv vendors check` compares `git rev-parse HEAD:<path>` with `tree` and fails
 # on any difference. A vendored tree is never edited: deltas live in the
 # component's `patches` directory and are applied by rvpatch to a build copy.
+# `prune` lists paths, relative to `path`, that are deliberately absent because
+# the upstream tree ships generator output no license rule accepts (ADR-17).
+# The pin covers the pruned tree; a listed path that reappears fails the check.
 # `fetch = true` trees are downloaded to `build/vendor/<name>` and verified by
 # `commit`; they are never committed, so they carry no `tree`.
 
@@ -28,6 +31,7 @@ tree     = "7ab1533c050d5104f0ad64956a03bd640464b160"
 license  = "Apache-2.0"
 patches  = "Tools/mig/patches"
 subdirs  = ["migcom.tproj"]
+prune    = ["migcom.tproj/parser.c", "migcom.tproj/lexxer.c"]
 
 [[vendor]]
 name     = "llvm-project"

@@ -229,8 +229,18 @@ boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT targ
 - GAP-48 RavynXHCIPort and RavynAHCIPort bypass `IODMACommand`, wait with `IOSleep`
   loops, run one command at a time and have no power management. Both are rewritten to
   the S10 driver construction rules.
-- GAP-46 `IOPCIFamily` contains patch files for GPL pciutils and an `iig_shims.h` that
-  stands in for real `iig` output.
+- GAP-46 GPL-derived output is pruned, not shipped. `parser.c` and `lexxer.c`
+  were removed from `Tools/mig/upstream/migcom.tproj/`; `VENDORS` lists both
+  under `prune`, so `rv vendors check` fails if either reappears. The build
+  parses with byacc and uses the hand-written scanner at
+  `Tools/mig/generated/lexxer.c`; no flex or bison output remains in mig.
+  Partial: the pinned XNU tree still ships bison-generated
+  `Kernel/xnu/libkern/c++/OSUnserialize.cpp`,
+  `Kernel/xnu/iokit/System/OSUnserializeXMLSharedImplementation.h` and
+  `Kernel/xnu/libkern/libkern/c++/OSUnserializeXMLSharedImplementation.h`.
+  Closing that needs an xnu prune and a new pin; S01 keeps xnu byte-identical
+  for now. The `IOPCIFamily` pciutils patches and `iig_shims.h` named in older
+  text are no longer in the tree.
 - GAP-52 Several kexts use `com.ravynos.*` bundle IDs where the macOS family's bundle ID
   is required for matching.
 
@@ -328,10 +338,10 @@ no code at all.)
   `config.guess`/`config.sub` and m4 files, GCC dump files under
   `Legacy/BSD/lib/ncurses/obj_s`, LGPL `dtrace_ctf`, NSS-derived tri-licensed files
   in Security, and the URW fonts — was removed with WP0.0. The remaining open GPL
-  item is GAP-46 (`IOPCIFamily` pciutils patches). Vendored generated output still in
-  the tree: `Kernel/xnu/libkern/c++/OSUnserialize.cpp` and the
-  `OSUnserializeXML` headers, `Tools/mig/upstream/migcom.tproj/parser.c` (ADR-17
-  requires regeneration with byacc); committed flex output in the mig copy.
+  item is GAP-46. Vendored generated output still in the tree:
+  `Kernel/xnu/libkern/c++/OSUnserialize.cpp` and the `OSUnserializeXML`
+  headers; the migcom parser and scanner are pruned from the vendored tree and
+  covered by `VENDORS.prune`.
 - GAP-31 Closed for xnu: `VENDORS` records the upstream, tag, commit and tree for it
   and for migcom, and `rv vendors check` verifies both against git in CI. `_PROVENANCE`
   files for other trees still need the same treatment (GAP-58).
@@ -414,7 +424,7 @@ that backs it:
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 5/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
-| W0: no GPL material in the repository | open (GAP-46: `IOPCIFamily` removed, but bison/flex-generated output remains inside the pristine vendored trees, ADR-17) |
+| W0: no GPL material in the repository | open (GAP-46: migcom's bison/flex output pruned and enforced by `VENDORS.prune`; XNU's bison-generated `OSUnserialize*` files remain, ADR-17) |
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
 | W0: correct `_PROVENANCE` everywhere | closed (GAP-31, GAP-58; xnu and migcom in `VENDORS`, mig `_PROVENANCE` paths repaired) |
 | W0: SPDX on every file we own | closed (GAP-45, GAP-57; 15 remaining files fixed, `Tools/ci/check-spdx.sh` in CI) |

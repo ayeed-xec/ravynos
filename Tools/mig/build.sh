@@ -36,21 +36,8 @@ for tool in byacc clang; do
 done
 
 if [ "${1:-}" = "--regen-lexer" ]; then
-    for tool in flex m4; do
-        command -v "$tool" >/dev/null 2>&1 || {
-            echo "error: --regen-lexer needs $tool (opt-in only)" >&2; exit 1; }
-    done
-    lexer="$SCRIPT_DIR/generated/lexxer.c"
-    ( cd "$RAVYNOS_ROOT" &&
-        flex -o "$lexer" Tools/mig/upstream/migcom.tproj/lexxer.l )
-    # flex writes no licence header; ours must survive the regeneration (ADR-17).
-    {
-        printf '// SPDX-License-Identifier: BSD-2-Clause\n'
-        printf '// Copyright (c) 2026 The ravynOS Authors\n'
-        printf '\n'
-        cat "$lexer"
-    } > "$lexer.new" && mv "$lexer.new" "$lexer"
-    echo "== regenerated ${lexer#"$RAVYNOS_ROOT"/} from lexxer.l"
+    echo "error: the lexer is hand-written; there is nothing to regenerate" >&2
+    exit 1
 fi
 
 rm -rf "$WORK"
