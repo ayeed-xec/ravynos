@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: APSL-2.0
 /* Minimal Mach header shim for building Apple's migcom on Linux.
  * Mirrors xnu's osfmk/mach/ndr.h NDR_record_t (SPDX:APSL-2.0); the
  * struct layout must stay byte-for-byte identical (sizeof is baked

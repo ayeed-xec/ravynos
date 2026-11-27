@@ -106,12 +106,12 @@ What exists, and whether it is a real implementation:
   fires at once or never.
 - **BUG-20** `AppleAPIC` (8259 path) calls `kprintf` on every interrupt.
 - **BUG-21** FreeBSDPort calls `va_start` with its arguments reversed.
-- **BUG-22** `Tools/toolchain/llvm/build.sh:282` runs `cmake -G ninja`; generator names
-  are case-sensitive, so the stage-1 build has never run. The script also requires
-  `byacc` (`:264`) without using it, and strips with whatever `llvm-strip` is on `PATH`
-  with errors discarded (`:313-314`).
-- **BUG-23** `Tools/toolchain/stage1.sh:111`: the sed expression never matches, so the
-  stamp's `pin:` field is always empty.
+- BUG-22 Fixed: `Tools/toolchain/llvm/build.sh:62` uses `-G Ninja` (generator names are
+  case-sensitive); the `byacc` requirement is gone because the LLVM build never runs a
+  parser generator; stripping uses the `llvm-strip` the build just produced instead of
+  whatever is on `PATH`.
+- BUG-23 Fixed: the pin extraction is `sed -n 's/^\* \(Tag\|Commit\): /  \1: /p'`
+  (`Tools/toolchain/stage1.sh:111`), which now yields both lines of `_PROVENANCE`.
 - **BUG-24** `Boot/testkernel`: the stack pointer is set to the bottom of `__stack`
   instead of the top.
 - **BUG-25** `Boot/loader`: loader data the kernel reads is allocated as
@@ -121,9 +121,11 @@ What exists, and whether it is a real implementation:
 - **BUG-26** The boot smokes (`Boot/smoke/*`) pass on any panic message, so a kernel
   that panics at once is reported as a success; the ESP paths they write do not match
   where the loader looks.
-- **BUG-27** `rv`: a manifest `name` such as `../../x` resolves outside `build/`;
-  manifest discovery follows symbolic links; `kind` is read but ignored, so a dylib is
-  built as an `ar` archive; library code calls `process::exit` and `unwrap`.
+- BUG-27 Partly fixed in `rv`: a manifest `name` must be one path component (no `/`,
+  `\`, `..` or leading `.`), so it can no longer resolve outside `build/`; manifest
+  discovery skips symbolic links; duplicate names are covered by a negative fixture.
+  Still open: `kind` is read but ignored, so a dylib is built as an `ar` archive, and
+  library code calls `process::exit` and `unwrap`.
 - **BUG-28** `Kernel/Extensions/hfs/core/BTreeMiscOps.c:181-201` was edited in place to
   relax `VerifyHeader`, so corrupt B-tree headers are accepted.
 
@@ -146,8 +148,10 @@ What exists, and whether it is a real implementation:
 - GAP-07 No Darwin program exists; the test programs use Linux system calls.
 - GAP-08 No stage-1 toolchain; CI uses the distribution's clang, unpinned; no
   `rust-toolchain.toml`; `cargo` not run with `--locked`; `rv` is dynamically linked.
-- GAP-09 The license audit scans only the three manifested directories and only some file
-  types; no crate scanning; no fingerprinting.
+- GAP-09 Closed for licensing: the audit now walks the whole tree instead of only the
+  manifested directories. A file is accepted when it carries an SPDX header, sits in a
+  tree pinned by `VENDORS` (whose entry states the license), or is a generated or tool
+  build output. Still open: crate scanning and fingerprinting.
 - GAP-10 The host-tool gate scans only some directories: it skips `Tools/toolchain/`,
   `Kernel/build/` (gcc, `-lgcc`, `grub-file`), `Kernel/Extensions/**/*.sh`,
   `Tools/build.sh` and every Makefile; its deny list lacks `flex`, `grub`, `sed`, `awk`,
@@ -343,9 +347,9 @@ no code at all.)
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | open (BUG-27) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | open (GAP-01) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (BUG-22, BUG-23, GAP-55) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55) |
 | W0: every merged component scores at least 8/10 in review | open (all areas in the summary) |
-| W0: negative tests fail as designed in CI | open (GAP-33) |
+| W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | open (GAP-09, GAP-10) |
 | W0: no GPL material in the repository | open (GAP-46) |
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |

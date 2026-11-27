@@ -108,7 +108,7 @@ fi
     echo "stage1 $HASH"
     echo "commit: $(git -C "$TREE" rev-parse HEAD 2>/dev/null || echo none)"
     echo "date:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    echo "pin:    $(sed -n 's/^\\* \(Tag\|Commit\): /  \1: /p' "$SCRIPT_DIR/llvm/_PROVENANCE")"
+    echo "pin:    $(sed -n 's/^\* \(Tag\|Commit\): /  \1: /p' "$SCRIPT_DIR/llvm/_PROVENANCE")"
 } >"$STAMP"
 
 verify

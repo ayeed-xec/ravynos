@@ -53,6 +53,13 @@ jobs:
       - name: rv audit license
         run: cargo run --manifest-path Tools/rv/Cargo.toml -- audit license
 
+      - name: Negative fixtures fail as designed
+        run: |
+          RV="$PWD/Tools/rv/target/debug/rv" bash Tests/rv/negative/run.sh
+
+      - name: mig builds from the pinned tree plus its patches
+        run: Tools/mig/build.sh
+
   format:
     name: clang-format / rustfmt gate
     runs-on: ubuntu-latest

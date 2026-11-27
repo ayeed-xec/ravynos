@@ -40,9 +40,13 @@ pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) {
                 m.name, m.license
             ));
         }
-        let full = tree.join(&m.dir);
-        walk(&full, &full, &mut failures);
     }
+    let mut vendored = crate::vendors::paths(tree).unwrap_or_else(|e| {
+        eprintln!("error: license audit: {e}");
+        std::process::exit(1);
+    });
+    vendored.extend(BUILD_OUTPUTS.iter().map(|p| p.to_string()));
+    walk(tree, tree, &vendored, &mut failures);
     if !failures.is_empty() {
         for f in &failures {
             eprintln!("error: license audit: {f}");
@@ -55,24 +59,30 @@ pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) {
     }
 }
 
-fn walk(dir: &Path, root: &Path, failures: &mut Vec<String>) {
+/// Walks the whole tree, not only component directories: every file is either in a
+/// tree pinned by `VENDORS` (its license comes from that entry) or carries its own
+/// SPDX header (GAP-09, GAP-10).
+fn walk(dir: &Path, root: &Path, vendored: &[String], failures: &mut Vec<String>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
         let name = path.file_name().unwrap().to_string_lossy().to_string();
-        if name.starts_with('.') || name == "build" {
+        if name.starts_with('.') || name == "build" || name == "target" {
+            continue;
+        }
+        let rel = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
+        if is_vendored(&rel, vendored) {
             continue;
         }
         if path.is_dir() {
-            walk(&path, root, failures);
-        } else if is_source(&name) {
-            let rel = path
-                .strip_prefix(root)
-                .unwrap_or(&path)
-                .display()
-                .to_string();
+            walk(&path, root, vendored, failures);
+        } else if is_source(&name) && !is_generated(&rel) {
             let Ok(text) = std::fs::read_to_string(&path) else {
                 failures.push(format!("{rel}: unreadable as UTF-8"));
                 continue;
@@ -80,6 +90,26 @@ fn walk(dir: &Path, root: &Path, failures: &mut Vec<String>) {
             check(&rel, &text, failures);
         }
     }
+}
+
+fn is_vendored(rel: &str, vendored: &[String]) -> bool {
+    vendored
+        .iter()
+        .any(|v| rel == v || rel.starts_with(&format!("{v}/")))
+}
+
+/// Trees that are inputs to a tool's own tests: Apple-derived fixture headers the
+/// mig harness compiles. They are never linked into a product, so their licence comes
+/// from upstream, not from an SPDX line we would be inventing (GAP-11 tracks moving
+/// them under `upstream/`).
+const FIXTURES: &[&str] = &["Tools/mig/tests"];
+
+/// Working copies and install prefixes the tool builds create; they are derived from
+/// the vendored tree and never shipped.
+const BUILD_OUTPUTS: &[&str] = &["Tools/mig/work", "Tools/mig/bin", "Tools/mig/libexec"];
+
+fn is_generated(rel: &str) -> bool {
+    rel.split('/').any(|c| c == "generated") || FIXTURES.iter().any(|f| rel.starts_with(f))
 }
 
 fn is_source(name: &str) -> bool {

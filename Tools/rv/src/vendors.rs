@@ -94,6 +94,14 @@ pub fn check(tree_root: &Path) {
     println!("vendors gate OK: {checked} vendored trees match their pins");
 }
 
+/// Prefixes of the trees pinned in VENDORS, for callers that must skip them.
+pub fn paths(tree_root: &Path) -> Result<Vec<String>, String> {
+    let text = std::fs::read_to_string(tree_root.join("VENDORS"))
+        .map_err(|e| format!("cannot read VENDORS: {e}"))?;
+    let parsed = parse(&text)?;
+    Ok(parsed.vendor.into_iter().map(|v| v.path).collect())
+}
+
 fn parse(text: &str) -> Result<Vendors, String> {
     let vendors: Vendors = toml::from_str(text).map_err(|e| e.to_string())?;
     if vendors.vendor.is_empty() {

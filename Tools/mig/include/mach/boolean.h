@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: APSL-2.0
 /* Minimal Mach header shim for building Apple's migcom on Linux.
  * Mirrors the definitions migcom actually uses from xnu's
  * osfmk/mach/boolean.h (SPDX:APSL-2.0). */

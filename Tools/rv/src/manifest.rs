@@ -159,9 +159,24 @@ fn schema_error(detail: &str) -> String {
     }
 }
 
+fn is_safe_component(name: &str) -> bool {
+    name != "."
+        && name != ".."
+        && !name.starts_with('.')
+        && !name.contains('/')
+        && !name.contains('\\')
+        && !name.contains('\0')
+}
+
 pub fn validate(m: &Manifest) -> Result<(), String> {
     if m.name.is_empty() {
         return Err(String::from("E-SCHEMA: name must not be empty"));
+    }
+    if !is_safe_component(&m.name) {
+        return Err(format!(
+            "E-SCHEMA: name '{}' must be a single path component (no '/', '\\', '..' or leading '.')",
+            m.name
+        ));
     }
     if !crate::graph::is_layer(&m.layer) {
         return Err(format!(
@@ -237,7 +252,12 @@ fn collect(root: &Path, dir: &Path, found: &mut BTreeMap<String, Manifest>) {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if !path.is_dir() {
+        // Discovery never follows a symbolic link: a link could point outside the
+        // tree and pull a foreign manifest into the graph (BUG-27).
+        let Ok(meta) = std::fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if meta.file_type().is_symlink() || !meta.is_dir() {
             continue;
         }
         let name = path.file_name().unwrap().to_string_lossy();
@@ -408,6 +428,25 @@ sources = []
             "[flags.x86_64-ravynos]\nasflags = []\n",
         );
         assert!(parse(&text).unwrap_err().starts_with("E-UNKNOWN-KEY"));
+    }
+
+    #[test]
+    fn name_with_a_separator_is_rejected() {
+        let text = GOOD.replace("name = \"libdispatch\"", "name = \"../../x\"");
+        let err = parse(&text).unwrap_err();
+        assert!(err.contains("single path component"), "got: {err}");
+    }
+
+    #[test]
+    fn name_that_is_a_parent_is_rejected() {
+        let text = GOOD.replace("name = \"libdispatch\"", "name = \"..\"");
+        assert!(parse(&text).unwrap_err().contains("single path component"));
+    }
+
+    #[test]
+    fn name_with_a_leading_dot_is_rejected() {
+        let text = GOOD.replace("name = \"libdispatch\"", "name = \".hidden\"");
+        assert!(parse(&text).unwrap_err().contains("single path component"));
     }
 
     #[test]

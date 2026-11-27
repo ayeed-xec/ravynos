@@ -41,7 +41,7 @@ for tool in cmake ninja clang clang++; do
         exit 1
     fi
 done
-for tool in git byacc; do
+for tool in git; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "error: $tool is required for the toolchain work but was not found on PATH" >&2
         exit 1
@@ -59,7 +59,7 @@ mkdir -p "$OBJ"
 
 echo "llvm build: configuring (clang $(clang -dumpversion), ninja, $JOBS jobs)"
 {
-    cmake -G ninja -S "$SRC/llvm" -B "$OBJ" \
+    cmake -G Ninja -S "$SRC/llvm" -B "$OBJ" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_C_COMPILER=clang \
         -DCMAKE_CXX_COMPILER=clang++ \
@@ -91,7 +91,7 @@ cmake --build "$OBJ" --target install-distribution >>"$LOG" 2>&1
 
 # Strip with the llvm-strip we just built, never binutils strip.
 if [ -x "$INSTALL_DIR/bin/llvm-strip" ]; then
-    llvm-strip "$INSTALL_DIR"/bin/clang "$INSTALL_DIR"/bin/clang++ 2>/dev/null || true
+    "$INSTALL_DIR/bin/llvm-strip" "$INSTALL_DIR"/bin/clang "$INSTALL_DIR"/bin/clang++
 fi
 
 echo "llvm build: hashing installed tools"
