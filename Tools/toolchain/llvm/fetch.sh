@@ -13,7 +13,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TREE="$(cd "$SCRIPT_DIR/../.." && pwd)"
+TREE="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PIN="$SCRIPT_DIR/_PROVENANCE"
 DEST="$TREE/build/vendor/llvm-project"
 
