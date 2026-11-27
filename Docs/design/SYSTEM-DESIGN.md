@@ -2073,7 +2073,7 @@ SystemExtensions.framework, launched by the kernel through the IOKit daemon.
 | IOAHCIFamily | APSL-2.0 (verify) | W3 |
 | IONVMeFamily | APSL-2.0 (verify) | W3 |
 | IOSCSIArchitectureModelFamily | APSL-2.0 | W3 |
-| IOUSBFamily (seed for host stack) | APSL-2.0 | W3 |
+| IOUSBHostFamily (ours; see *USB host stack*) | BSD-2-Clause | W3 |
 | IOHIDFamily | APSL-2.0 | W3 |
 | IONetworkingFamily | APSL-2.0 | W3 |
 | IOGraphics (incl. IOGOPFramebuffer) | APSL-1.1/2.0 | W3 |
@@ -2081,10 +2081,11 @@ SystemExtensions.framework, launched by the kernel through the IOKit daemon.
 | IOSerialFamily | APSL-2.0 (verify) | W5 |
 | RVGPUFamily (ours, with S28) | BSD-2-Clause | W6 |
 
-- USB: Apple's `IOUSBHostFamily` is not published (verify). Our host family seeds from
-  `IOUSBFamily` and publishes macOS class names (`IOUSBHostDevice`,
-  `IOUSBHostInterface`) so `IOServiceMatching` in apps and libusb works (verify names
-  via the ABI census).
+- USB: Apple's `IOUSBHostFamily` is not published. Ours is written new (*USB host
+  stack* below) and publishes the macOS class names and properties so
+  `IOServiceMatching` in apps, IOUSBLib and libusb work (names checked against the ABI
+  census). Apple's open `IOUSBFamily` releases are read for behavior only; the
+  reconstruction now in `Kernel/Extensions/IOUSBFamily` is not used (GAP-42, GAP-43).
 - Every family keeps Apple's bundle ID and exported symbol names so third-party kexts
   and user clients match.
 - S10 owns IOPCIFamily for both architectures; S06 and S07 supply the host bridges that
@@ -2141,6 +2142,65 @@ SystemExtensions.framework, launched by the kernel through the IOKit daemon.
   toolchain, from the public `.iig` files and the generated-code shape XNU consumes
   (`IORPC.h`, `IOUserServer.h:56` method IDs).
 
+*USB host stack.* Bundle `com.apple.iokit.IOUSBHostFamily`, in
+`Kernel/Extensions/IOUSBHostFamily/`. It follows the structure of Apple's family, not
+the older `IOUSBFamily` reconstruction.
+
+- **Controller.** `AppleUSBHostController` is abstract. It owns one `IOWorkLoop`, one
+  `IOCommandGate` and one `IOFilterInterruptEventSource` (MSI-X where the device offers
+  it). Every state change of the controller, its rings and its pipes happens on that
+  work loop; no driver code takes its own locks around controller state.
+- **xHCI.** `AppleUSBXHCI` subclasses it. Every ring, context and transfer buffer is
+  memory from `IOBufferMemoryDescriptor` mapped through an `IODMACommand` with the
+  controller's addressing limit (64-bit or 32-bit per `HCCPARAMS1.AC64`); no
+  `getPhysicalAddress`. Command and transfer completions arrive as event-ring
+  interrupts and are delivered with `commandWakeup` or the request's completion; there
+  are no polling loops and no `IOSleep` waits on hardware. Port change, host system
+  error and controller halt are handled as events.
+- **Root hub and hubs.** `AppleUSBHostPort` is a per-port state machine (disconnected,
+  connected, resetting, enabled, suspended, over-current) driven by port-status-change
+  events and the hub's interrupt endpoint. `AppleUSBHub` reuses it for external hubs,
+  including USB 3 hub depth and route strings.
+- **Device objects.** `IOUSBHostDevice` (one per address, owns the default pipe and the
+  configuration), `IOUSBHostInterface` (one per interface and alternate setting, the
+  match point for class drivers), `IOUSBHostPipe` (one per endpoint) and
+  `IOUSBHostStream` (bulk streams). Properties follow macOS: `idVendor`, `idProduct`,
+  `bcdDevice`, `locationID`, `USB Product Name`, `kUSBSerialNumberString` and the rest
+  from the census.
+- **I/O.** `IOUSBHostPipe::io` is asynchronous and takes an `IOMemoryDescriptor` and an
+  `IOUSBHostCompletion`; the synchronous form is built on it with `commandSleep`.
+  Requests come from a per-controller `IOUSBHostIORequest` pool sized at start, so
+  interrupt-time completion never allocates. Isochronous transfers take frame lists
+  with per-frame status and timestamps. A completion reports the bytes really moved and
+  the real status; a short packet, a stall or a babble is reported as such.
+- **Lifetime.** Every object handed across an asynchronous boundary is retained until its
+  completion runs. `willTerminate` aborts outstanding I/O, whose completions run with
+  `kIOReturnAborted`; `didTerminate` returns only after the controller has stopped DMA
+  on that device's endpoints. A controller's `stop` halts the controller and waits for
+  `USBSTS.HCH` before any DMA memory is released.
+- **Power.** The controller registers with `PMinit` and `registerPowerDriver` with three
+  states (off, sleep, on). Ports and devices use USB suspend and resume and
+  remote wakeup; idle devices are suspended through `changePowerStateTo`.
+- **Class drivers.** Outside the controller, matched on `IOUSBHostInterface`:
+  `IOUSBHostHIDDevice` (HID, feeding IOHIDFamily) and `IOUSBMassStorageDriver`
+  (bulk-only and UAS, feeding IOSCSIArchitectureModelFamily). Hub, HID boot protocol
+  and mass storage stay in the kernel for booting; other class drivers are dexts.
+- **User space.** `IOUSBHostDeviceUserClient` and `IOUSBHostInterfaceUserClient` serve
+  IOUSBLib (`IOUSBDeviceInterface`, `IOUSBInterfaceInterface` plug-ins) with the method
+  tables from the census; `USBDriverKit` `.iig` classes (`IOUSBHostDevice`,
+  `IOUSBHostInterface`, `IOUSBHostPipe`) are served through `IOUserServer`.
+- **Tests.** `drivers-xhci` runs QEMU `qemu-xhci` with `usb-kbd`, `usb-tablet`,
+  `usb-storage` and `usb-hub`: enumeration, hot unplug during bulk I/O (no leak, no
+  panic, completions report `kIOReturnAborted`), controller unload under load, and a
+  suspend/resume cycle.
+
+*Driver construction.* Every driver in S10 follows section 2.7: `probe`/`start`/`stop`
+and `willTerminate`/`didTerminate` handled; DMA only through `IODMACommand`; interrupts
+through an event source on the driver's work loop; power through the PM tree; logging
+through `os_log` with no per-interrupt messages; no operation reports success it did
+not perform. `RavynAHCIPort` (audited 4/10) and `RavynXHCIPort` (3/10) are references
+for hardware programming only and are rewritten to this standard (GAP-48).
+
 *Which classes run in user space.* HID event drivers, USB peripheral class drivers
 (other than HID boot and mass storage needed for boot), audio devices, serial adapters,
 and foreign Wi-Fi control (S11). Storage, display scanout, PCI, and network data paths
@@ -2159,7 +2219,10 @@ PureDarwin seeds (virtio, AHCI, xHCI, Realtek drivers): see [PUREDARWIN-SEEDS.md
 - Families: vendored Apple releases (APSL), pristine plus patches (ADR-10).
 - `Kernel/Extensions/{IOPCIFamily,IOStorageFamily,IOHIDFamily,IONetworkingFamily,
   IOGraphics,IOUSBFamily}`: seeds (APSL); re-vendor from tagged Apple releases.
-- `RavynAHCIPort`, `RavynXHCIPort`: seeds, MIT (ravynOS).
+- `RavynAHCIPort`, `RavynXHCIPort`: references for register programming only, MIT
+  (ravynOS); the drivers are rewritten (GAP-48).
+- IOUSBHostFamily: ours (BSD-2-Clause), from the xHCI and USB specifications and the
+  behavior of macOS.
 - virtio, NVMe, xHCI, HD Audio drivers, `RVGPUFamily`: ours (BSD-2-Clause), from public
   specifications.
 - FreeBSD `ng_bluetooth` and USB HCI transport: vendored pristine (BSD-2-Clause).
