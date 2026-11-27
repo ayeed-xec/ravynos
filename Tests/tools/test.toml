@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+
+name = "host-tools"
+kind = "script"
+run = "bash run.sh"
+expect = "0 failed"

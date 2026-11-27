@@ -38,7 +38,7 @@ pub const TARGETS: &[&str] = &[
 const SIGNS: &[&str] = &["adhoc", "none"];
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
     pub name: String,
@@ -104,7 +104,7 @@ pub struct Deps {
     pub system: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Exports {
     #[serde(default)]
@@ -116,7 +116,7 @@ pub struct Exports {
 // Schema-first: rv validates these tables today; rv build consumes the
 // values in W1 (target compile/link flags, vendored provenance).
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Flags {
     #[serde(default)]
@@ -126,7 +126,7 @@ pub struct Flags {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Vendored {
     #[serde(default)]

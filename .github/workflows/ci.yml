@@ -50,6 +50,20 @@ jobs:
       - name: rv lints
         run: cargo clippy --manifest-path Tools/rv/Cargo.toml --all-targets -- -D warnings
 
+      - name: rv test (runs every Tests/**/test.toml)
+        run: cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- test
+
+      - name: Commands whose tool is not built yet exit 3
+        run: |
+          for cmd in kernelcache codesign symbolicate; do
+            code=0
+            Tools/rv/target/debug/rv "$cmd" || code=$?
+            if [ "$code" -ne 3 ]; then
+              echo "$cmd exited $code, expected 3 (E-NOT-BUILT)"
+              exit 1
+            fi
+          done
+
       - name: Vendored trees match their pins
         run: cargo run --manifest-path Tools/rv/Cargo.toml -- vendors check
 

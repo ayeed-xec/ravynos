@@ -1,17 +1,29 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
+use crate::manifest::Manifest;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-pub fn emit(
-    manifests: &BTreeMap<String, crate::manifest::Manifest>,
-    order: &[String],
-    target: &str,
-) -> String {
+/// Bundle kinds: `kind`, its extension and the linker rule that produces it
+/// (S01, S03). A kext links with Apple `ld64 -kext`; `ld64.lld` has no such mode.
+const BUNDLES: &[(&str, &str, &str)] = &[
+    ("app", ".app", "app"),
+    ("xpc-service", ".xpc", "bundle"),
+    ("dext", ".dext", "bundle"),
+    ("plugin", ".plugin", "bundle"),
+    ("bundle", ".bundle", "bundle"),
+    ("kext", ".kext", "kext"),
+];
+
+pub fn emit(manifests: &BTreeMap<String, Manifest>, order: &[String], target: &str) -> String {
+    let sysroot = format!("../sysroot/{target}");
     let mut out = String::new();
     out.push_str(&format!("target = {target}\n"));
+    if is_macho_target(target) {
+        out.push_str(&format!("arch = {}\n", macho_arch(target)));
+    }
     out.push_str("rule lib\n  command = llvm-ar rcs $out $in\n");
-    let (cc_flags, link_rules) = compile_and_link_rules(target);
+    let (cc_flags, rules) = compile_and_link_rules(target, &sysroot);
     for (rule, dialect) in [
         ("cc", ""),
         ("cxx", "-x c++ "),
@@ -19,13 +31,13 @@ pub fn emit(
         ("objcxx", "-x objective-c++ "),
     ] {
         out.push_str(&format!(
-            "rule {rule}\n  command = clang {cc_flags}{dialect}-I../sysroot/{target}/usr/include -MMD -MF $out.d -c $in -o $out $includes\n  depfile = $out.d\n  deps = gcc\n"
+            "rule {rule}\n  command = clang {cc_flags}{dialect}-I{sysroot}/usr/include -MMD -MF $out.d -c $in -o $out $includes\n  depfile = $out.d\n  deps = gcc\n"
         ));
     }
     out.push_str(&format!(
         "rule as\n  command = clang {cc_flags}-c $in -o $out $includes\n"
     ));
-    out.push_str(&link_rules);
+    out.push_str(&rules);
     out.push('\n');
     for name in order {
         let m = &manifests[name];
@@ -55,53 +67,174 @@ pub fn emit(
         if objs.is_empty() {
             continue;
         }
-        let kind = m.kind.as_str();
-        if kind == "static-lib" || kind == "data" {
-            if let Some(lib) = m.exports.libs.first() {
-                out.push_str(&format!("build {comp_dir}/{lib}: lib {}\n", objs.join(" ")));
-                continue;
-            }
-        }
-        if kind == "dylib" {
-            let lib = m
-                .exports
-                .libs
-                .first()
-                .cloned()
-                .unwrap_or_else(|| format!("lib{}.dylib", m.name));
-            out.push_str(&format!(
-                "build {comp_dir}/{lib}: dylib {}\n",
-                objs.join(" ")
-            ));
+        let Some(artifact) = artifact(m, target) else {
             continue;
-        }
+        };
         let libs: Vec<String> = m
             .deps
             .internal
             .iter()
-            .map(|d| lib_output(&manifests[d]))
+            .map(|d| link_input(&manifests[d]))
             .collect();
-        out.push_str(&format!(
-            "build {comp_dir}/{}: link {} {}\n",
-            m.name,
-            objs.join(" "),
-            libs.join(" ")
-        ));
+        out.push_str(&artifact.build(&objs, &libs));
     }
     out
 }
 
-fn lib_output(m: &crate::manifest::Manifest) -> String {
+/// One component's link: which rule runs, where the output lands and what else
+/// has to exist beside it (framework symlinks, `Info.plist`).
+struct Artifact {
+    rule: &'static str,
+    path: String,
+    install_name: Option<String>,
+    extras: String,
+    implicit: Vec<String>,
+}
+
+impl Artifact {
+    fn plain(rule: &'static str, path: String) -> Self {
+        Artifact {
+            rule,
+            path,
+            install_name: None,
+            extras: String::new(),
+            implicit: Vec::new(),
+        }
+    }
+
+    fn build(&self, objs: &[String], libs: &[String]) -> String {
+        let mut line = if self.rule == "lib" {
+            format!("build {}: lib {}\n", self.path, objs.join(" "))
+        } else {
+            format!(
+                "build {}: {} {} {}\n",
+                self.path,
+                self.rule,
+                objs.join(" "),
+                libs.join(" ")
+            )
+        };
+        if let Some(install_name) = &self.install_name {
+            line.push_str(&format!("  install_name = {install_name}\n"));
+        }
+        if !self.implicit.is_empty() {
+            let note = format!("  | {}\n", self.implicit.join(" "));
+            line.push_str(&note);
+        }
+        line.push_str(&self.extras);
+        line
+    }
+}
+
+/// Where a component's output lands (S01 output kinds, S03 bundle layout), or
+/// None for a component that produces no file of its own.
+fn artifact(m: &Manifest, target: &str) -> Option<Artifact> {
+    let kind = m.kind.as_str();
+    let exported = || m.exports.libs.first().cloned();
+    match kind {
+        "static-lib" | "data" => {
+            exported().map(|lib| Artifact::plain("lib", format!("{}/{lib}", m.name)))
+        }
+        "dylib" => {
+            let lib = exported().unwrap_or_else(|| format!("lib{}.dylib", m.name));
+            let mut a = Artifact::plain("dylib", format!("{}/{lib}", m.name));
+            a.install_name = Some(install_name(m, &lib));
+            Some(a)
+        }
+        "framework" => Some(framework(m, target)),
+        _ => BUNDLES
+            .iter()
+            .find(|(k, _, _)| *k == kind)
+            .and_then(|(_, ext, rule)| bundle(m, ext, rule, target)),
+    }
+    .or_else(|| {
+        // executable, test-kernel, host-tool and anything without a bundle layout
+        // link to a plain file beside the component's build directory.
+        let plain = matches!(
+            kind,
+            "executable" | "test-kernel" | "host-tool" | "uefi-app"
+        );
+        plain.then(|| Artifact::plain("link", format!("{}/{}", m.name, m.name)))
+    })
+}
+
+fn framework(m: &Manifest, target: &str) -> Artifact {
+    let version = if m.framework_version.is_empty() {
+        "A"
+    } else {
+        m.framework_version.as_str()
+    };
+    if !is_macho_target(target) {
+        return Artifact::plain("link", format!("{}/{}", m.name, m.name));
+    }
+    let base = format!("{}/{}.framework", m.name, m.name);
+    let path = format!("{base}/Versions/{version}/{}", m.name);
+    let mut a = Artifact::plain("dylib", path);
+    a.install_name = Some(install_name(
+        m,
+        &format!("{}.framework/Versions/{version}/{}", m.name, m.name),
+    ));
+    a.extras = format!(
+        "build {base}/Versions/Current: symlink {base}/Versions/{version}/{}\n  link = {version}\n\
+         build {base}/{}: symlink {base}/Versions/Current\n  link = Versions/Current/{}\n",
+        m.name, m.name, m.name
+    );
+    a
+}
+
+/// An app, xpc-service, dext, plugin, bundle or kext: the binary goes to
+/// `Contents/MacOS/` and the plist template is copied beside it.
+fn bundle(m: &Manifest, ext: &str, rule: &'static str, target: &str) -> Option<Artifact> {
+    if !is_macho_target(target) {
+        return Some(Artifact::plain("link", format!("{}/{}", m.name, m.name)));
+    }
+    let base = format!("{}/{}{ext}", m.name, m.name);
+    let mut a = Artifact::plain(rule, format!("{base}/Contents/MacOS/{}", m.name));
+    if rule == "kext" {
+        a.install_name = None;
+    }
+    if !m.info_plist.is_empty() {
+        let plist = format!("{base}/Contents/Info.plist");
+        a.extras = format!(
+            "build {plist}: plist ../../{}/{}\n",
+            m.dir.display(),
+            m.info_plist
+        );
+        a.implicit.push(plist);
+    }
+    Some(a)
+}
+
+/// The `-install_name` a dylib or framework carries (S03): the manifest's value
+/// when it has one, otherwise an `@rpath` path the dyld search finds.
+fn install_name(m: &Manifest, fallback: &str) -> String {
+    if m.install_name.is_empty() {
+        format!("@rpath/{fallback}")
+    } else {
+        m.install_name.clone()
+    }
+}
+
+/// A dependent links a producer's exported `.tbd` stub by name (import-only
+/// linking, S03); without a stub it links the artifact the build produced.
+fn link_input(m: &Manifest) -> String {
+    match m.exports.libs.iter().find(|l| l.ends_with(".tbd")) {
+        Some(stub) => format!(
+            "-l{}",
+            stub.trim_end_matches(".tbd").trim_start_matches("lib")
+        ),
+        None => lib_output(m),
+    }
+}
+
+fn lib_output(m: &Manifest) -> String {
     match m.exports.libs.first() {
         Some(lib) => format!("{}/{lib}", m.name),
         None => format!("{}/{}.a", m.name, m.name),
     }
 }
 
-fn include_flags(
-    manifests: &BTreeMap<String, crate::manifest::Manifest>,
-    m: &crate::manifest::Manifest,
-) -> String {
+fn include_flags(manifests: &BTreeMap<String, Manifest>, m: &Manifest) -> String {
     let mut flags = Vec::new();
     for pattern in &m.exports.headers {
         let dir = include_dir(pattern);
@@ -207,27 +340,39 @@ fn wildcard(pat: &str, s: &str) -> bool {
     pi == p.len()
 }
 
-fn compile_and_link_rules(target: &str) -> (String, String) {
+fn compile_and_link_rules(target: &str, sysroot: &str) -> (String, String) {
     if target.ends_with("-linux-gnu") {
         return (
             String::new(),
-            String::from("rule link\n  command = clang -fuse-ld=lld $in -o $out\n"),
+            format!(
+                "rule link\n  command = clang -fuse-ld=lld -L {sysroot}/usr/lib $in -o $out\n\
+                 rule plist\n  command = cp $in $out\n"
+            ),
         );
     }
     if is_macho_target(target) {
-        let arch = macho_arch(target);
+        let platform = "-arch $arch -platform_version macos 11.0 11.0";
         return (
-            format!("--target={arch}-apple-macos11 -ffreestanding -fno-builtin -nostdinc "),
             format!(
-                "rule link\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -e __start $in -o $out\n\
-                 rule dylib\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -dylib $in -o $out\n"
+                "--target={}-apple-macos11 -ffreestanding -fno-builtin -nostdinc -isysroot {sysroot} ",
+                macho_arch(target)
+            ),
+            format!(
+                "rule link\n  command = ld64.lld {platform} -e __start -L {sysroot}/usr/lib $in -o $out\n\
+                 rule dylib\n  command = ld64.lld {platform} -dylib -install_name $install_name -L {sysroot}/usr/lib $in -o $out\n\
+                 rule app\n  command = ld64.lld {platform} -L {sysroot}/usr/lib $in -o $out\n\
+                 rule bundle\n  command = ld64.lld {platform} -bundle -L {sysroot}/usr/lib $in -o $out\n\
+                 rule kext\n  command = ld64 -arch $arch -kext $in -o $out\n\
+                 rule plist\n  command = cp $in $out\n\
+                 rule symlink\n  command = ln -sfn $link $out\n"
             ),
         );
     }
     (
-        format!("--target={target} -ffreestanding -fno-builtin -nostdinc "),
+        format!("--target={target} -ffreestanding -fno-builtin -nostdinc -isysroot {sysroot} "),
         format!(
-            "rule link\n  command = ld.lld {} -static $in -o $out\n",
+            "rule link\n  command = ld.lld {} -static -L {sysroot}/usr/lib $in -o $out\n\
+             rule plist\n  command = cp $in $out\n",
             ld_emulation(target)
         ),
     )
@@ -270,5 +415,246 @@ fn macho_arch(target: &str) -> &'static str {
         "arm64"
     } else {
         "x86_64"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    /// Parse a manifest and give it a real source tree, because `emit` lists the
+    /// component directory to expand `sources`.
+    fn manifest(text: &str) -> Manifest {
+        let mut m = crate::manifest::parse(text).expect("manifest parses");
+        let dir = std::env::temp_dir()
+            .join("rv-ninja-fixtures")
+            .join(&m.layer)
+            .join(&m.name);
+        fs::create_dir_all(dir.join("src")).expect("fixture src dir");
+        fs::write(dir.join("src/main.c"), "int main(void) { return 0; }\n")
+            .expect("fixture source");
+        m.dir = dir;
+        m
+    }
+
+    fn build_ninja(components: &[Manifest], target: &str) -> String {
+        let mut manifests = BTreeMap::new();
+        for m in components {
+            manifests.insert(m.name.clone(), m.clone());
+        }
+        let order: Vec<String> = manifests.keys().cloned().collect();
+        emit(&manifests, &order, target)
+    }
+
+    const DYLIB: &str = "name = \"libhello\"\nlayer = \"foundation\"\nlicense = \"BSD-2-Clause\"\n\
+                         state = \"working\"\nkind = \"dylib\"\nsources = [\"src/*.c\"]\n\
+                         [exports]\nlibs = [\"libhello.dylib\"]\nheaders = [\"include/*.h\"]\n";
+
+    /// Replace the fixture's `kind` and add keys above the first table header,
+    /// so the added keys stay top-level instead of landing inside `[exports]`.
+    fn with(text: &str, extra: &str) -> String {
+        let mut out = String::new();
+        let mut inserted = false;
+        for line in text.lines() {
+            if !inserted && line.starts_with('[') {
+                out.push_str(extra);
+                inserted = true;
+            }
+            if !line.trim_start().starts_with("kind =") {
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+        if !inserted {
+            out.push_str(extra);
+        }
+        out
+    }
+
+    #[test]
+    fn dylib_gets_a_bundle_install_name_by_default() {
+        let ninja = build_ninja(&[manifest(DYLIB)], "x86_64-ravynos");
+        assert!(
+            ninja.contains("install_name = @rpath/libhello.dylib"),
+            "{ninja}"
+        );
+        assert!(
+            ninja.contains("-dylib -install_name $install_name"),
+            "{ninja}"
+        );
+    }
+
+    #[test]
+    fn framework_lands_at_its_apple_path_with_symlinks() {
+        let m = manifest(&with(
+            &DYLIB.replace("libhello", "Example"),
+            "kind = \"framework\"\nframework_version = \"A\"\n",
+        ));
+        let ninja = build_ninja(&[m], "x86_64-ravynos");
+        assert!(
+            ninja.contains("build Example/Example.framework/Versions/A/Example: dylib"),
+            "{ninja}"
+        );
+        assert!(
+            ninja.contains("build Example/Example.framework/Versions/Current: symlink"),
+            "{ninja}"
+        );
+        assert!(
+            ninja.contains("install_name = @rpath/Example.framework/Versions/A/Example"),
+            "{ninja}"
+        );
+    }
+
+    #[test]
+    fn framework_version_defaults_to_a() {
+        let text = with(
+            &DYLIB.replace("libhello", "Example"),
+            "kind = \"framework\"\n",
+        );
+        let ninja = build_ninja(&[manifest(&text)], "arm64-ravynos");
+        assert!(ninja.contains("Versions/A/Example: dylib"), "{ninja}");
+    }
+
+    #[test]
+    fn app_and_kext_get_their_bundle_layouts() {
+        let app = manifest(&with(
+            &DYLIB.replace("libhello", "prefs"),
+            "kind = \"app\"\nbundle_id = \"org.ravynos.prefs\"\n",
+        ));
+        let kext = manifest(&with(
+            &DYLIB.replace("libhello", "hfs"),
+            "kind = \"kext\"\nbundle_id = \"org.ravynos.hfs\"\n",
+        ));
+        let ninja = build_ninja(&[app, kext], "x86_64-ravynos");
+        assert!(
+            ninja.contains("build prefs/prefs.app/Contents/MacOS/prefs: app"),
+            "{ninja}"
+        );
+        assert!(
+            ninja.contains("build hfs/hfs.kext/Contents/MacOS/hfs: kext"),
+            "{ninja}"
+        );
+        assert!(ninja.contains("ld64 -arch $arch -kext"), "{ninja}");
+    }
+
+    #[test]
+    fn info_plist_is_copied_into_the_bundle() {
+        let app = manifest(&with(
+            &DYLIB.replace("libhello", "prefs"),
+            "kind = \"app\"\ninfo_plist = \"Info.plist\"\n",
+        ));
+        let ninja = build_ninja(&[app], "x86_64-ravynos");
+        assert!(
+            ninja.contains("build prefs/prefs.app/Contents/Info.plist: plist ../../"),
+            "{ninja}"
+        );
+        assert!(ninja.contains("/Info.plist\n"), "{ninja}");
+        assert!(
+            ninja.contains("| prefs/prefs.app/Contents/Info.plist"),
+            "{ninja}"
+        );
+    }
+
+    #[test]
+    fn every_compile_and_link_sees_the_sysroot() {
+        let ninja = build_ninja(&[manifest(DYLIB)], "arm64-ravynos");
+        assert!(
+            ninja.contains("-isysroot ../sysroot/arm64-ravynos"),
+            "{ninja}"
+        );
+        assert!(
+            ninja.contains("-I../sysroot/arm64-ravynos/usr/include"),
+            "{ninja}"
+        );
+        assert!(
+            ninja.contains("-L ../sysroot/arm64-ravynos/usr/lib"),
+            "{ninja}"
+        );
+    }
+
+    #[test]
+    fn a_stub_is_linked_by_name_and_an_artifact_by_path() {
+        let stub = manifest(DYLIB);
+        let mut with_stub = stub.clone();
+        with_stub.exports.libs = vec![String::from("libhello.tbd")];
+        assert_eq!(link_input(&with_stub), "-lhello");
+        assert_eq!(link_input(&stub), "libhello/libhello.dylib");
+    }
+
+    #[test]
+    fn dependents_link_the_exported_stub() {
+        let producer = manifest(DYLIB);
+        let user = manifest(
+            "name = \"hello\"\nlayer = \"apps\"\nlicense = \"BSD-2-Clause\"\nstate = \"working\"\n\
+             kind = \"executable\"\nsources = [\"src/*.c\"]\n[deps]\ninternal = [\"libhello\"]\n",
+        );
+        let mut manifests = BTreeMap::new();
+        manifests.insert(producer.name.clone(), producer);
+        manifests.insert(user.name.clone(), user);
+        let mut stub = crate::manifest::parse(DYLIB).unwrap();
+        stub.dir = PathBuf::from("Foundation/libhello");
+        stub.exports.libs = vec![String::from("libhello.tbd")];
+        manifests.insert(String::from("libhello"), stub);
+        let ninja = emit(
+            &manifests,
+            &[String::from("libhello"), String::from("hello")],
+            "x86_64-ravynos",
+        );
+        assert!(
+            ninja.contains("build hello/hello: link hello/src_main.c.o -lhello"),
+            "{ninja}"
+        );
+    }
+
+    #[test]
+    fn kext_needs_apple_ld64_and_says_so() {
+        let kext = manifest(&with(
+            &DYLIB.replace("libhello", "hfs"),
+            "kind = \"kext\"\n",
+        ));
+        let ninja = build_ninja(&[kext], "x86_64-ravynos");
+        assert!(!ninja.contains("ld64.lld -arch $arch -kext"), "{ninja}");
+    }
+
+    #[test]
+    fn elf_targets_still_link_plain_files() {
+        let m = manifest(&DYLIB.replace("libhello", "prefs"));
+        let mut tool = m.clone();
+        tool.kind = String::from("host-tool");
+        tool.name = String::from("prefs");
+        let ninja = build_ninja(&[tool], "x86_64-linux-gnu");
+        assert!(ninja.contains("build prefs/prefs: link"), "{ninja}");
+    }
+
+    #[test]
+    fn source_files_pick_the_clang_dialect() {
+        let dir = std::env::temp_dir().join(format!("rv-ninja-{}", std::process::id()));
+        let _ = fs::create_dir_all(dir.join("src"));
+        for (file, body) in [
+            ("src/main.c", "int main(void){return 0;}\n"),
+            ("src/view.m", "int view;\n"),
+            ("src/glue.mm", "int glue;\n"),
+            ("src/entry.S", "nop\n"),
+        ] {
+            fs::write(dir.join(file), body).unwrap();
+        }
+        let mut m = crate::manifest::parse(
+            "name = \"hello\"\nlayer = \"apps\"\nlicense = \"BSD-2-Clause\"\nstate = \"working\"\n\
+             kind = \"executable\"\nsources = [\"src/*\"]\n",
+        )
+        .unwrap();
+        m.dir = dir.clone();
+        let ninja = build_ninja(&[m], "x86_64-ravynos");
+        for rule in [
+            "src_main.c.o: cc",
+            "src_view.m.o: objc",
+            "src_glue.mm.o: objcxx",
+            "src_entry.S.o: as",
+        ] {
+            assert!(ninja.contains(rule), "missing {rule} in {ninja}");
+        }
+        fs::remove_dir_all(&dir).ok();
     }
 }

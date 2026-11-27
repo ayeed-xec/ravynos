@@ -3,8 +3,10 @@
 mod audit;
 mod bootstrap;
 mod graph;
+mod image;
 mod manifest;
 mod ninja;
+mod testrun;
 mod vendors;
 
 use std::collections::BTreeMap;
@@ -19,6 +21,11 @@ enum Cmd {
     Audit,
     AuditSize,
     Sdk,
+    Test,
+    Image,
+    KernelCache,
+    Codesign,
+    Symbolicate,
 }
 
 fn usage() -> ! {
@@ -29,10 +36,20 @@ fn usage() -> ! {
          usage: rv graph [--reverse] [--forbid]\n\
          usage: rv shell [<component>]\n\
          usage: rv sdk [-t <target>]\n\
+         usage: rv test [<name>...]\n\
+         usage: rv image [-t <target>] <name>\n\
          usage: rv vendors check\n\
          usage: rv audit [license|size] [-t <target>]"
     );
     exit(2);
+}
+
+/// A command whose tool is not written yet (S01): the exit status tells CI and
+/// scripts "not built here" apart from "failed here".
+fn not_built(stage: &str, what: &str) -> Result<(), String> {
+    Err(format!(
+        "error: E-NOT-BUILT {stage}: {what} is not built yet"
+    ))
 }
 
 fn main() {
@@ -110,6 +127,29 @@ fn main() {
                 _ => usage(),
             }
         }
+        "test" => {
+            names = args.clone();
+            Cmd::Test
+        }
+        "image" => {
+            let mut rest = args.iter().peekable();
+            while let Some(arg) = rest.peek() {
+                if arg.as_str() == "-t" {
+                    rest.next();
+                    target = rest.next().cloned().unwrap_or_else(|| usage());
+                } else {
+                    break;
+                }
+            }
+            names = rest.cloned().collect();
+            if names.len() != 1 {
+                usage();
+            }
+            Cmd::Image
+        }
+        "kernelcache" => Cmd::KernelCache,
+        "codesign" => Cmd::Codesign,
+        "symbolicate" => Cmd::Symbolicate,
         _ => usage(),
     };
 
@@ -143,13 +183,37 @@ fn run(
         Cmd::Audit => audit::license(tree, &manifests),
         Cmd::AuditSize => audit_size(tree, target),
         Cmd::Sdk => sdk(tree, &manifests, target),
+        Cmd::Test => testrun::run(tree, names),
+        Cmd::Image => {
+            let name = names.first().map(String::as_str).unwrap_or("");
+            let (path, spec) = image::load(tree, name)?;
+            println!(
+                "image: {name} -> {target}: kernel {}, {} kexts, {} byte cmdline, from {}",
+                spec.kernel,
+                spec.kexts.len(),
+                spec.cmdline.len(),
+                path.display()
+            );
+            not_built("S09", "the boot collection and kernelcache")
+        }
+        Cmd::KernelCache => not_built("S09", "kernelcache"),
+        Cmd::Codesign => not_built("S12", "codesign"),
+        Cmd::Symbolicate => not_built("S34", "symbolicate"),
     }
 }
 
+const EXIT_FAIL: i32 = 1;
+const EXIT_NOT_BUILT: i32 = 3;
+
 fn report(result: Result<(), String>) {
     if let Err(message) = result {
+        let code = if message.contains("E-NOT-BUILT ") {
+            EXIT_NOT_BUILT
+        } else {
+            EXIT_FAIL
+        };
         eprintln!("{message}");
-        exit(1);
+        exit(code);
     }
 }
 
@@ -280,7 +344,7 @@ fn shell(
         return Err(format!("error: no component named '{comp}'"));
     }
     let _ = deps;
-    let sysroot = tree.join("build").join("sysroots").join(target);
+    let sysroot = tree.join("build").join("sysroot").join(target);
     println!(
         "export CC=clang\nexport CFLAGS=--target={target} --sysroot={}\nexport RV_BUILD_DIR={}\n[{} {target}] $ ninja -C $RV_BUILD_DIR",
         sysroot.display(),

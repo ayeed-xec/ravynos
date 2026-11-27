@@ -388,13 +388,21 @@ that backs it:
 
 - GAP-02 **closed**: compile rules carry `-MMD -MF $out.d` with `depfile`/`deps = gcc`;
   touching `Foundation/libhello/include/hello.h` recompiles and relinks.
-- GAP-03 **partial**: `.c`, `.m`, `.mm`, `.cpp`/`.cc`/`.cxx` and `.S`/`.s` have rules;
-  framework, kext and bundle outputs still do not exist.
-- GAP-04 **partial**: `rv sdk` assembles `build/sysroot/<target>` with public headers
-  and libraries and the compile rules point `-I` at it; `-isysroot` and import-only
-  linking are still missing.
-- GAP-06 **partial**: `rv sdk` and `rv audit size` exist; `image`, `test` and
-  `kernelcache` do not.
+- GAP-03 **closed**: `.c`, `.m`, `.mm`, `.cpp`/`.cc`/`.cxx` and `.S`/`.s` have rules,
+  and each kind links where its layout puts it: `X.framework/Versions/<v>/X` with
+  `Versions/Current` symlinks and an `@rpath` install name; `<b>.app`, `<b>.xpc`,
+  `<b>.dext`, `<b>.plugin`, `<b>.bundle` and `<b>.kext` under `Contents/MacOS/`, with
+  `Info.plist` copied in. A kext links with Apple `ld64 -kext` because `ld64.lld` has no
+  kext mode. Eleven unit tests in `Tools/rv/src/ninja.rs`.
+- GAP-04 **closed**: compile and link carry `-isysroot ../sysroot/<target>`, links add
+  `-L ../sysroot/<target>/usr/lib`, and a dependent links a producer's exported `.tbd`
+  stub as `-l<name>`, or the built artifact by path when there is no stub (unit-tested).
+  `rv build` succeeds for x86_64, arm64 and riscv64.
+- GAP-06 **closed**: `rv test` runs every `Tests/**/test.toml` (`script`/`host` kinds;
+  `qemu` skipped until S09; a file without `kind` is a schema fixture), and `rv image`
+  validates `Tests/images/<name>` or `Images/<name>` before reporting E-NOT-BUILT S09.
+  `kernelcache` (S09), `codesign` (S12) and `symbolicate` (S34) report E-NOT-BUILT and
+  exit 3, which CI asserts.
 - GAP-36 **partial**: nine layer fences and same-layer dependencies are in place;
   manifest keys beyond `kind`/`deps` (versions, re-exports, install paths) are not.
 - GAP-54 **closed**: `rv --root <tree>` works from any directory and the failures carry
@@ -403,10 +411,17 @@ that backs it:
   accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
 - GAP-40 **partial**: `Tools/ci/Containerfile` pins the toolchain but has not been
   built yet, so CI still runs on the runner image.
+- BUG-28 **fixed** (verify pending): the stage-1 toolchain was built from
+  `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`, whose lld refuses every Mach-O input
+  (`This version of lld does not support linking for platform macOS`, reproduced by
+  linking one object with that `ld64.lld`), so stage 1 could not link a ravynOS target.
+  The pin is now upstream `llvm/llvm-project` at `llvmorg-21.1.6` and the tree builds
+  `X86;AArch64;RISCV` (ADR-31); the rebuild that proves it is running.
 - GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, and
   it passed on 2026-11-27 (`stage1 verify OK: ece9693de…b5c6378`, clang 21.1.6), but
   stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
-  elf2pe, and its cache key omits the host cmake and ninja versions.
+  elf2pe, and its cache key omits the host cmake and ninja versions. BUG-28 was the
+  reason that pass proved nothing about linking; ADR-31 changes the source tree.
 - GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
   every commit since the restructure has a subject of 64 characters or fewer, and
   ROADMAP.md 1.4 now requires a merge commit to name its score. History before the
