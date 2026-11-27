@@ -117,7 +117,8 @@ static efi_status rv_alloc_copy(struct rv_kernel_image *image, const uint8_t *da
 	return EFI_SUCCESS;
 }
 
-static efi_status rv_build_boot_args(struct rv_kernel_image *image, uint64_t *bootargs_out)
+static efi_status rv_build_boot_args(struct rv_kernel_image *image, uint64_t *bootargs_out,
+	uint64_t *map_buf_out, efi_uintn *map_cap_out)
 {
 	efi_uintn map_key = 0;
 	efi_uintn descriptor_size = 0;
@@ -171,6 +172,8 @@ static efi_status rv_build_boot_args(struct rv_kernel_image *image, uint64_t *bo
 	ba->kslide = 0;
 
 	*bootargs_out = ba_addr;
+	*map_buf_out = map_addr;
+	*map_cap_out = full_size;
 	return EFI_SUCCESS;
 }
 
@@ -249,7 +252,9 @@ efi_status efi_main(efi_handle image_handle, struct efi_system_table *system_tab
 	}
 
 	uint64_t bootargs = 0;
-	status = rv_build_boot_args(&image, &bootargs);
+	uint64_t map_buf = 0;
+	efi_uintn map_cap = 0;
+	status = rv_build_boot_args(&image, &bootargs, &map_buf, &map_cap);
 	if (status != EFI_SUCCESS) {
 		rv_fail("boot-args", status);
 		return status;
@@ -275,6 +280,18 @@ efi_status efi_main(efi_handle image_handle, struct efi_system_table *system_tab
 			continue;
 		}
 		if (gBS->exit_boot_services(image_handle, key) == EFI_SUCCESS) {
+			/* stack_map is boot-services memory that dies with the
+			 * call; the kernel only sees the reserved runtime copy. */
+			if (map_size > map_cap) {
+				rv_fail("memory map outgrew reserved copy", 0);
+				return EFI_LOAD_ERROR;
+			}
+			rv_memcpy((void *)map_buf, stack_map, map_size);
+			struct rv_boot_args *ba = (struct rv_boot_args *)bootargs;
+			ba->MemoryMapSize = (uint32_t)map_size;
+			ba->MemoryMapDescriptorSize = (uint32_t)descriptor_size;
+			ba->MemoryMapDescriptorVersion = descriptor_version;
+			ba->MemoryMap = (uint32_t)map_buf;
 			exited = 1;
 			break;
 		}

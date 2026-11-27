@@ -13,7 +13,7 @@ rv_macho_handoff:
 	movq	%rcx, %r9
 	movq	%rdx, %rbx
 	lgdt	rv_gdt_desc(%rip)
-	movabsq	$.Lrv_compat32, %rcx
+	leaq	.Lrv_compat32(%rip), %rcx
 	pushq	$0x18
 	pushq	%rcx
 	lretq
@@ -27,6 +27,12 @@ rv_macho_handoff:
 	movl	%ecx, %cr0
 	ljmp	$0x18, $.Lrv_go
 .Lrv_go:
+	xorl	%ecx, %ecx
+	movl	%ecx, %ds
+	movl	%ecx, %es
+	movl	%ecx, %ss
+	movl	%ecx, %fs
+	movl	%ecx, %gs
 	jmp	*%eax
 
 	.align	8
