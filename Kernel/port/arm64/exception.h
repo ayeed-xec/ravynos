@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
 
 #ifndef _RVOS_ARM64_EXCEPTION_H_

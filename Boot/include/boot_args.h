@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
 #ifndef RV_BOOT_ARGS_H
 #define RV_BOOT_ARGS_H

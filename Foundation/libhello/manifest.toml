@@ -1,6 +1,6 @@
 name    = "libhello"
 layer   = "foundation"
-license = "BSD-3-Clause"
+license = "BSD-2-Clause"
 
 sources = [
     "src/**.c",

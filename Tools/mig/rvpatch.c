@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
 #include <stdint.h>
 #include <stdio.h>

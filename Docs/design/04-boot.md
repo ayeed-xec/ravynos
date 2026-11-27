@@ -10,7 +10,7 @@ not boot on real metal.
 
 ## Where boot stands today
 
-`Boot/loader/` is our own UEFI loader, in freestanding C (BSD-3-Clause): it loads Mach-O
+`Boot/loader/` is our own UEFI loader, in freestanding C (BSD-2-Clause): it loads Mach-O
 and ELF images, and the boot smokes in `Tests/boot/` run it to a test kernel's
 panic-with-output on x86_64 (OVMF), arm64 (AAVMF) and riscv64 (edk2) under QEMU. It is
 kite's starting point. Two things are unsettled. DESIGN.md's language policy says kite is
@@ -34,7 +34,7 @@ So the project writes its own bootloader, from scratch, and gives it a plain nam
 **kite**. It is a native UEFI application (plus a firmware story for riscv64, below),
 written as a freestanding UEFI application — C today in `Boot/loader/`, Rust with
 `no_std` per DESIGN.md §10's language policy if that policy holds for the loader —
-BSD-3-Clause licensed, and free of GNU code and GNU build tooling. If the name bothers anyone, it is a rename across a handful of files,
+BSD-2-Clause licensed, and free of GNU code and GNU build tooling. If the name bothers anyone, it is a rename across a handful of files,
 not a design decision — but this document uses kite consistently, and so should the
 tree.
 

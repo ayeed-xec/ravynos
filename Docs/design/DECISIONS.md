@@ -130,7 +130,7 @@ stubs are generated from our libraries.
 ### ADR-14 — Foreign drivers and GPL code
 
 **Accepted.** FreeBSD and Linux drivers run natively in our kernel or in a user-space
-driver host, behind interfaces we write (BSD-3-Clause). Permissively licensed drivers
+driver host, behind interfaces we write (BSD-2-Clause). Permissively licensed drivers
 live in this repository. Sourcing order: native IOKit drivers; BSD- and ISC-licensed
 drivers from FreeBSD, OpenBSD and NetBSD; Linux drivers available under a permissive
 license or a permissive option of a dual license. The supported hardware list must be
@@ -226,4 +226,18 @@ licensing route, the default image ships no decoder or encoder for them; the API
 would use them return their documented unsupported-format errors, which S23 and S27
 specify. Permissively licensed, royalty-free formats (AV1, VP8, VP9, Opus, Vorbis, FLAC,
 MP3, PNG, JPEG, WebP) are supported.
+
+### ADR-26 — License for our own code
+
+**Accepted.** Everything written for this project is BSD-2-Clause: every file carries
+`SPDX-License-Identifier: BSD-2-Clause`, and the license text is the root `LICENSE`
+file. Patches to vendored files keep the license of the file they change (APSL-2.0 for
+XNU, BSD for FreeBSD and OpenBSD drivers).
+
+*Considered:* BSD-3-Clause, used until now — the third clause (no endorsement) adds
+nothing the project needs. Apache-2.0 and BSD-2-Clause-Patent — both add an explicit
+patent grant from contributors. BSD-2-Clause has none; if contributions from companies
+make an explicit patent grant necessary, moving to BSD-2-Clause-Patent is a one-line
+change per file that keeps the same terms otherwise and stays compatible with GPLv2 for
+the driver kit (S11).
 

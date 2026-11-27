@@ -316,11 +316,11 @@ later:
 Apple's APSL 2.0 is OSI-approved and is the license Apple itself ships Darwin under;
 the kernel staying APSL is both unavoidable and correct. **Our** original code — kernel
 additions, drivers, shims, build tools, `rv`, scripts, test harnesses — is released under
-**BSD-3-Clause**, which matches the BSD heritage and keeps the whole OS redistributable
+**BSD-2-Clause**, which matches the BSD heritage and keeps the whole OS redistributable
 under one license for everything ours. This mirrors
 ravynOS community practice (their FAQ: clean-room originals "released under the FreeBSD
 license or the MIT license") and yields an OS whose combined license story is: APSL
-kernel + BSD-3-Clause everything ours. A final `LICENSES.md` at W8 states the whole picture
+kernel + BSD-2-Clause everything ours. A final `LICENSES.md` at W8 states the whole picture
 for distribution.
 
 ### 6.2 Provenance discipline
@@ -328,7 +328,7 @@ for distribution.
 - Every vendored component gets a `Kernel/_PROVENANCE/`-style record: upstream URL, exact
   tag/commit, license, local modifications. The pattern already exists for xnu
   (`Kernel/_PROVENANCE/`); W0 extends it to all of `Libraries/`, `Frameworks/`, `BSD/`.
-- Every original file carries an SPDX header (`SPDX-License-Identifier: BSD-3-Clause`).
+- Every original file carries an SPDX header (`SPDX-License-Identifier: BSD-2-Clause`).
 - CI license gate (`Tools/license-audit.py`): scans SPDX tags + a filename/blocklist
   heuristic; a new file without an SPDX tag or matching a forbidden-license fingerprint
   fails the build. Content-level fingerprinting (n-gram match against known GPL sources)

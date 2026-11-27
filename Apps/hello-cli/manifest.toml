@@ -1,6 +1,6 @@
 name    = "hello"
 layer   = "apps"
-license = "BSD-3-Clause"
+license = "BSD-2-Clause"
 
 sources = ["hello.c"]
 

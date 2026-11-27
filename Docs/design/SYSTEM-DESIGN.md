@@ -91,9 +91,10 @@ application. The SDK says ravynOS only in its name.
   MPL, LGPL, GPL, AGPL and CC BY-SA are not accepted. Apple's own releases under APSL-1.x are accepted
   (ADR-22). CDDL is accepted only for XNU's DTrace files (ADR-22). Fonts may also use
   the SIL Open Font License (ADR-16). Anything else needs a new ADR.
-- Our code is BSD-3-Clause. Every file carries `SPDX-License-Identifier`. Vendored files
-  keep their upstream headers. Every vendored tree has a `_PROVENANCE` file: upstream
-  URL, tag or commit, license, local patches.
+- Our code is BSD-2-Clause (ADR-26); the license text is the root `LICENSE` file. Every
+  file carries `SPDX-License-Identifier`. Patches to a vendored file carry that file's
+  license. Vendored files keep their upstream headers. Every vendored tree has a
+  `_PROVENANCE` file: upstream URL, tag or commit, license, local patches.
 - **Permissive first** (ADR-24). Wherever a permissively licensed implementation exists
   or can be written, the design uses it, and nothing the system needs — no tier, no wave
   exit, nothing in the default image — depends on GPL or LGPL software.
@@ -587,7 +588,7 @@ writes `<out>/plan.json` with `version`, `inputs` (files that trigger a re-run),
 `flags`), `link` (`output`, `inputs`, `argv`), `install` (`from`, `to`). The hook does
 not compile or link; it only plans. It is deterministic: same request, same bytes.
 
-**Sources.** Ours, BSD-3-Clause. Rust crates from crates.io, versions locked in
+**Sources.** Ours, BSD-2-Clause. Rust crates from crates.io, versions locked in
 `Tools/rv/Cargo.lock`; each crate license must be on the allowlist (MIT, Apache-2.0,
 BSD, ISC, Unicode-3.0, Zlib).
 
@@ -745,9 +746,9 @@ bison, flex or m4; a CI step asserts their absence before the build.
 - ld64, cctools: vendored, APSL-2.0. Build files ours (no autotools).
 - migcom: vendored in `Tools/mig/upstream/`, APSL; patches in `Tools/mig/patches/`.
 - byacc: vendored, public domain. unifdef: vendored, BSD-2-Clause.
-- XNU host tools: from `Kernel/xnu/SETUP` (APSL-2.0); scanner ours (BSD-3-Clause).
+- XNU host tools: from `Kernel/xnu/SETUP` (APSL-2.0); scanner ours (BSD-2-Clause).
 - `rvpatch` (seed `Tools/mig/rvpatch.c`; component in `Tools/rvpatch/`), `mkfat`,
-  `elf2pe`, the Rust generators in `Tools/xnuhook`: ours, BSD-3-Clause.
+  `elf2pe`, the Rust generators in `Tools/xnuhook`: ours, BSD-2-Clause.
 - CMake and CPython: stage-0 build tooling only, never vendored, never shipped.
 
 **Location.** `Tools/toolchain/<tool>/manifest.toml` for vendored and fetched tools
@@ -904,7 +905,7 @@ and versions must equal Apple's for the same library (ADR-02).
 **Sources.** Generated from components; licenses are theirs. Availability headers:
 vendored from apple-oss-distributions/AvailabilityVersions (APSL-2.0, verify the
 generator script license) or clean-room. The SDK assembler and the CMake toolchain file
-are ours, BSD-3-Clause. `Legacy/Developer/ravynOS.sdk` is a seed for nothing; it
+are ours, BSD-2-Clause. `Legacy/Developer/ravynOS.sdk` is a seed for nothing; it
 declares macOS 10.15–13.1.
 
 **Location.** Assembler in `Tools/rv/src/sdk.rs`. Availability headers in
@@ -1074,7 +1075,7 @@ bits 0x2, 0x4, 0x8, 0x40 (`osfmk/kern/debug.h:579-586`; 0x100 is obsolete); `-v`
 verbose (verify how x86 XNU reads it). Ramdisk boots add `rd=md0`
 (`iokit/bsddev/IOKitBSDInit.cpp:730`).
 
-**Sources.** Ours, BSD-3-Clause. EFI definitions written from the UEFI specification.
+**Sources.** Ours, BSD-2-Clause. EFI definitions written from the UEFI specification.
 No GNU-EFI, no Clover, no OpenCore code.
 
 **Location.** `Boot/loader/` (`loader`, kind `uefi-app`, targets `*-uefi`),
@@ -1143,7 +1144,7 @@ generated files, into a linked kernel for x86_64 and arm64, inside `rv`.
 from a kernelcache. Apps see only its system calls and Mach traps (S13).
 
 **Design.** The kernel is component `xnu` (ADR-09; `kernel` is only its layer) with
-`hook = "Tools/xnuhook"`. The hook (Rust, BSD-3-Clause, kind `host-tool` with
+`hook = "Tools/xnuhook"`. The hook (Rust, BSD-2-Clause, kind `host-tool` with
 `cargo = "Cargo.toml"`) is built for target `host` before it runs and follows the S01
 contract.
 
@@ -1275,7 +1276,7 @@ Pristine tree (ADR-10):
 
 **Sources.** XNU, APSL-2.0, vendored. `SETUP/` APSL-2.0. Hook (including the Rust
 replacements for `makesyscalls.sh`, `create-syscalls.pl`, `compile-syscalls.pl`),
-`cc_kext` glue, board library: ours, BSD-3-Clause. libdispatch firehose: Apache-2.0,
+`cc_kext` glue, board library: ours, BSD-2-Clause. libdispatch firehose: Apache-2.0,
 vendored. BoringSSL: vendored, license checked per file (ADR-12). DTrace files in
 XNU: CDDL, ADR-22.
 
@@ -1467,7 +1468,7 @@ SMBIOS identity, ACPI battery and AC nubs, ACPI S5 shutdown, and the x86_64 T3 r
 - IOPCIFamily — vendored by S10; used here, not vendored twice.
 - AML interpreter — vendored ACPICA, taken under its BSD-3-Clause option (verify every
   file header offers it).
-- Patches to XNU — ours, BSD-3-Clause.
+- Patches to XNU — APSL-2.0, the license of the files they change.
 
 **Location.** `Kernel/port/x86_64-pc/` (kernel-linked code and the patch sources);
 `Kernel/patches/x86-cpu-vendor/`; kexts
@@ -1676,7 +1677,7 @@ and is not used in this repository.
   header (`why:`, `fate: permanent`).
 
 **Sources.** XNU (APSL-2.0, vendored pristine, ADR-10); patches,
-`Kernel/port/arm64-virt/` and the kexts ours (BSD-3-Clause). `Kernel/port/arm64/`
+`Kernel/port/arm64-virt/` and the kexts ours (BSD-2-Clause). `Kernel/port/arm64/`
 (BUG-07) is deleted: its pmap and exception stubs duplicate XNU code and are not seeds.
 
 **Location.** `Kernel/patches/arm64-rvvirt/`; `Kernel/port/arm64-virt/` (`rorgn.c`,
@@ -1791,7 +1792,7 @@ architecture allows (Mach-O, `LC_BUILD_VERSION` platform 1, Apple install names)
   S08 writes and tests them.
 
 `Kernel/port/riscv64-virt/` holds the board code linked into the kernel. The existing
-`Kernel/port/riscv64/` (`sbi.c`, `pmap.c`, `trap.S`, BSD-3-Clause) is the seed: SBI call
+`Kernel/port/riscv64/` (`sbi.c`, `pmap.c`, `trap.S`, BSD-2-Clause) is the seed: SBI call
 wrappers move to `pexpert/riscv64`; `pmap.c` (Sv39 `satp` setup) seeds the early boot
 page tables; `trap.S` seeds `locore.s`. `sbi.c` uses the legacy console extension
 (`0x01`); replace it with DBCN or the UART.
@@ -1800,7 +1801,7 @@ page tables; `trap.S` seeds `locore.s`. `sbi.c` uses the legacy console extensio
 `CPU_TYPE_RISCV` value; triple `riscv64-apple-macosx<min>`; rv target
 `riscv64-ravynos`.
 
-**Sources.** Ours (BSD-3-Clause), from the RISC-V privileged, SBI and PLIC
+**Sources.** Ours (BSD-2-Clause), from the RISC-V privileged, SBI and PLIC
 specifications (public). LLVM patches under Apache-2.0 with LLVM exception. OpenSBI
 (BSD-2-Clause) is a QEMU-supplied binary, not vendored. riscv64 code added to dyld and
 objc4 follows those components' licenses (APSL, S14, S15); compiler-rt and libunwind
@@ -1956,7 +1957,7 @@ preferred for new drivers (S10).
   (`kmutil create` or `rv kernelcache`), with the unresolved-symbol error above; there
   is no load-time stubbing.
 
-**Sources.** Ours (Rust, BSD-3-Clause). Format from XNU headers (APSL-2.0, read only).
+**Sources.** Ours (Rust, BSD-2-Clause). Format from XNU headers (APSL-2.0, read only).
 `Kernel/kext_tools` (APSL-2.0) is a reference only and leaves the tree once the tool
 and `kmutil` replace it.
 
@@ -2030,7 +2031,7 @@ SystemExtensions.framework, launched by the kernel through the IOKit daemon.
 | IOGraphics (incl. IOGOPFramebuffer) | APSL-1.1/2.0 | W3 |
 | IOAudioFamily | APSL-2.0 (verify) | W5 |
 | IOSerialFamily | APSL-2.0 (verify) | W5 |
-| RVGPUFamily (ours, with S28) | BSD-3-Clause | W6 |
+| RVGPUFamily (ours, with S28) | BSD-2-Clause | W6 |
 
 - USB: Apple's `IOUSBHostFamily` is not published (verify). Our host family seeds from
   `IOUSBFamily` and publishes macOS class names (`IOUSBHostDevice`,
@@ -2110,10 +2111,10 @@ implementation. Kexts link with Apple ld64 `-kext` and declare
 - `Kernel/Extensions/{IOPCIFamily,IOStorageFamily,IOHIDFamily,IONetworkingFamily,
   IOGraphics,IOUSBFamily}`: seeds (APSL); re-vendor from tagged Apple releases.
 - `RavynAHCIPort`, `RavynXHCIPort`: seeds, MIT (ravynOS).
-- virtio, NVMe, xHCI, HD Audio drivers, `RVGPUFamily`: ours (BSD-3-Clause), from public
+- virtio, NVMe, xHCI, HD Audio drivers, `RVGPUFamily`: ours (BSD-2-Clause), from public
   specifications.
 - FreeBSD `ng_bluetooth` and USB HCI transport: vendored pristine (BSD-2-Clause).
-- DriverKit runtime, `driverkitd`, `Tools/iig`: ours (BSD-3-Clause).
+- DriverKit runtime, `driverkitd`, `Tools/iig`: ours (BSD-2-Clause).
 
 **Location.** `Kernel/Extensions/<Family>/`, `Kernel/Extensions/<Driver>/` (e.g.
 `VirtioBlock`, `VirtioNet`, `VirtioGPU`, `NVMe`, `AHCI`, `XHCI`, `RVGPUFamily`,
@@ -2164,7 +2165,7 @@ S31 (Bluetooth frameworks).
 
 **Open questions.**
 
-- Whether the author of `Legacy/.../iig/iig.cpp` licenses it as BSD-3-Clause.
+- Whether the author of `Legacy/.../iig/iig.cpp` licenses it as BSD-2-Clause.
 - How iig derives 64-bit method IDs (`IOService_Start_ID` style); third-party dexts
   carry them, so ours must match (verify against compiled dexts).
 
@@ -2266,7 +2267,7 @@ the process.
 
 *Repository split.*
 
-In this repository (BSD-3-Clause unless noted):
+In this repository (BSD-2-Clause unless noted):
 
 - `kpi-core`, the FreeBSD, OpenBSD and Linux environments, all bridges,
   `RV80211Family`.
@@ -2304,7 +2305,7 @@ repository's waves.
 - `RV80211Family` user-client methods and notifications: specified in
   `Docs/spec/S11/rv80211.md` before implementation.
 
-**Sources.** Ours (BSD-3-Clause). FreeBSD drivers (BSD-2-Clause), OpenBSD drivers and
+**Sources.** Ours (BSD-2-Clause). FreeBSD drivers (BSD-2-Clause), OpenBSD drivers and
 `net80211` (ISC, BSD), NetBSD drivers (BSD-2-Clause) vendored pristine. FreeBSD's
 LinuxKPI (BSD-2-Clause) is a reference and per-file seed, excluding any GPL file.
 `Kernel/Extensions/FreeBSDPort/` (shim ours; `vtnet/` FreeBSD 11.4, BSD-2-Clause) is a
@@ -2515,9 +2516,9 @@ XML and DER entitlements (`0xfade7171`, `0xfade7172`), resource directory
 - `Legacy/Frameworks/Security/OSX/libsecurity_codesigning` (APSL-2.0): reference for
   blob layout and requirement grammar; not compiled into the tool.
 - `TrustCache/API.h`, the trust-cache library, the `img4_interface_t` implementation
-  and the CoreEntitlements parser: clean-room, ours (BSD-3-Clause), from the XNU uses
+  and the CoreEntitlements parser: clean-room, ours (BSD-2-Clause), from the XNU uses
   and headers cited above.
-- Everything else ours (BSD-3-Clause), from TN3126, TN3127, XNU headers and observed
+- Everything else ours (BSD-2-Clause), from TN3126, TN3127, XNU headers and observed
   behavior (section 2.3).
 
 **Location.** `Kernel/port/common/` (`rvpolicy_early.c`, `trustcache/`, the
@@ -2649,12 +2650,12 @@ the W2 set.
 | `libsystem_notify` | `Libnotify` | APSL-2.0 | yes |
 | `libsystem_darwin` | `Libc` (`libdarwin`) (verify) | APSL-2.0 | yes |
 | `libsystem_asl` | `syslog` | APSL-2.0 | yes |
-| `libsystem_coreservices` | ours | BSD-3-Clause | yes |
-| `libsystem_trace` | ours, minimal in W2 | BSD-3-Clause | yes |
-| `libxpc` | ours, minimal in W2 | BSD-3-Clause | yes |
+| `libsystem_coreservices` | ours | BSD-2-Clause | yes |
+| `libsystem_trace` | ours, minimal in W2 | BSD-2-Clause | yes |
+| `libxpc` | ours, minimal in W2 | BSD-2-Clause | yes |
 | `liblaunch` | launchd-842 `liblaunch` | Apache-2.0 | yes |
-| `libsystem_secinit` | ours, minimal in W2 | BSD-3-Clause | yes |
-| `libsystem_containermanager` | ours, minimal in W2 | BSD-3-Clause | yes |
+| `libsystem_secinit` | ours, minimal in W2 | BSD-2-Clause | yes |
+| `libsystem_containermanager` | ours, minimal in W2 | BSD-2-Clause | yes |
 | `libdyld` | `dyld` (S14) | APSL-2.0 | yes |
 | `libmacho` | `cctools` | APSL-2.0 | yes |
 | `libkeymgr` | `keymgr` (verify published) | APSL-2.0 | yes |
@@ -2666,15 +2667,15 @@ the W2 set.
 | `libcommonCrypto` | `CommonCrypto` over BoringSSL | APSL-2.0 | no |
 | `libcorecrypto` | not shipped (ADR-12) | — | no |
 | `libsystem_configuration` | `configd` | APSL-2.0 | no |
-| `libsystem_sandbox` | ours (S12) | BSD-3-Clause | no |
-| `libquarantine` | ours (S12, S33) | BSD-3-Clause | no |
-| `libcache` | ours (verify not published) | BSD-3-Clause | no |
-| `libsystem_symptoms` | ours | BSD-3-Clause | no |
-| `libsystem_networkextension` | ours (verify present) | BSD-3-Clause | no |
-| `libsystem_featureflags` | ours (verify) | BSD-3-Clause | no |
-| `libsystem_collections` | ours (verify present) | BSD-3-Clause | no |
-| `libsystem_eligibility` | ours (verify present) | BSD-3-Clause | no |
-| `libsystem_sanitizers` | ours (verify present) | BSD-3-Clause | no |
+| `libsystem_sandbox` | ours (S12) | BSD-2-Clause | no |
+| `libquarantine` | ours (S12, S33) | BSD-2-Clause | no |
+| `libcache` | ours (verify not published) | BSD-2-Clause | no |
+| `libsystem_symptoms` | ours | BSD-2-Clause | no |
+| `libsystem_networkextension` | ours (verify present) | BSD-2-Clause | no |
+| `libsystem_featureflags` | ours (verify) | BSD-2-Clause | no |
+| `libsystem_collections` | ours (verify present) | BSD-2-Clause | no |
+| `libsystem_eligibility` | ours (verify present) | BSD-2-Clause | no |
+| `libsystem_sanitizers` | ours (verify present) | BSD-2-Clause | no |
 
 - `libcorecrypto`: ADR-12 forbids corecrypto. `libcommonCrypto` links BoringSSL
   (ADR-12), vendored once at `Foundation/boringssl/` and owned by S29. If the census
@@ -2710,7 +2711,7 @@ W2 set: CoreFoundation and the T1 program need `libc++`, `libc++abi`, `libobjc` 
 | `/usr/lib/libncurses.5.4.dylib` | ncurses | X11 | no |
 | `/usr/lib/libbsm.0.dylib` | OpenBSM | BSD-3-Clause | no |
 | `/usr/lib/libpam.2.dylib` | OpenPAM | BSD-3-Clause | no |
-| `/usr/lib/libcompression.dylib` | ours + LZFSE + zlib + xz | BSD-3-Clause | no |
+| `/usr/lib/libcompression.dylib` | ours + LZFSE + zlib + xz | BSD-2/3, Zlib, 0BSD | no |
 | `/System/Library/Frameworks/Kerberos.framework` | Heimdal | BSD-3-Clause | no |
 | `/usr/lib/libgssapi_krb5.2.2.dylib` (verify) | Heimdal | BSD-3-Clause | no |
 
@@ -2771,7 +2772,7 @@ W2 set: CoreFoundation and the T1 program need `libc++`, `libc++abi`, `libobjc` 
   `libxpc`. `Legacy/Libraries/Libsystem/libsystem_trace` (BSD-2-Clause) seeds
   `libsystem_trace`. `Legacy/Libraries/Libsystem/libsystem_coreservices` seeds
   `libsystem_coreservices` after a per-file license check.
-- Clean-room, BSD-3-Clause: the "ours" rows above.
+- Clean-room, BSD-2-Clause: the "ours" rows above.
 - `Legacy/Libraries/Libsystem/Makefile` re-exports `libCrashReporterClient`; macOS
   links it statically into each library (verify), so it is not re-exported.
 
@@ -3072,7 +3073,7 @@ read-write (S19 stage b).
 `swift-corelibs-foundation` CoreFoundation (Apache-2.0). Seed:
 `Legacy/Frameworks/Foundation` (MIT, audit above). Reference only:
 `Legacy/Frameworks/CoreFoundation` (APSL, CF 855.x, OS X 10.9 era per
-`CFBase.h:376-378`), `swift-foundation`. Clean-room: Foundation, BSD-3-Clause.
+`CFBase.h:376-378`), `swift-foundation`. Clean-room: Foundation, BSD-2-Clause.
 
 **Location.** `Foundation/objc4/` (name `objc4`, layer `foundation`);
 `Frameworks/CoreFoundation/` (name `CoreFoundation`); `Frameworks/Foundation/` (name
@@ -3153,7 +3154,7 @@ S02's.
   writes them, clean-room, as `.swiftinterface` files and Swift sources from public
   documentation, never from Apple's SDK (ADR-13). Each overlay builds over the
   Objective-C framework its subsystem owns (S23 CoreGraphics, S25 AppKit, …).
-- **Combine** is S16's: clean-room, BSD-3-Clause, `Frameworks/Combine`, with the
+- **Combine** is S16's: clean-room, BSD-2-Clause, `Frameworks/Combine`, with the
   publisher, subscriber, scheduler and operator API by census. SwiftUI uses it.
 - **SwiftUI** is S25's framework. S16 supplies the runtime features it needs
   (property wrappers, result builders, `Observation`, metadata access). W5 records a
@@ -3175,7 +3176,7 @@ S02's.
 **Sources.** Vendored with `fetch = true` (downloaded to `build/vendor/<name>`,
 verified by commit, not committed): `swiftlang/swift`, `swiftlang/swift-foundation`,
 `swiftlang/swift-experimental-string-processing`, `swiftlang/llvm-project` (shared with
-S02); all Apache-2.0 with Runtime Library Exception. Clean-room, BSD-3-Clause: closed
+S02); all Apache-2.0 with Runtime Library Exception. Clean-room, BSD-2-Clause: closed
 overlays, Combine.
 
 **Location.** `Foundation/swift/` (name `swift-runtime`, layer `foundation`);
@@ -3293,7 +3294,7 @@ way every process finds and talks to services.
 
 **Sources.** Seed: `Legacy/BSD/old-launchd` (Apache-2.0; launchd, launchctl,
 liblaunch). Seed: `Legacy/Libraries/Libsystem/libxpc` (BSD-2-Clause; MIT mpack).
-Clean-room, BSD-3-Clause: domain model, `xpcproxy`, ServiceManagement, wire format.
+Clean-room, BSD-2-Clause: domain model, `xpcproxy`, ServiceManagement, wire format.
 
 **Location.** `Server/launchd/` (name `launchd`, layer `server`; also `launchctl`,
 `xpcproxy`); `Foundation/Libsystem/libxpc/` (name `libxpc`) and
@@ -3473,7 +3474,7 @@ reporting and OS version reporting.
 `Legacy/BSD/usr.sbin/{configd,mDNSResponder,notifyd,syslogd}` (replace with current
 tags); `Legacy/Libraries/CrashReporterClient` (license check);
 `Legacy/Frameworks/OpenDirectory`, `Legacy/Frameworks/DirectoryService` (license check
-per file; reference only until audited). Clean-room, BSD-3-Clause: logd, `log`,
+per file; reference only until audited). Clean-room, BSD-2-Clause: logd, `log`,
 cfprefsd, `defaults`, distnoted, opendirectoryd, `dscl`, loginwindow, fseventsd,
 timed, ReportCrash, version files.
 
@@ -3621,7 +3622,7 @@ mode per tier above.
 **Sources.** Vendored: `hfs` (APSL-1.2/2.0, kext and tools, in `upstream/`),
 `msdosfs` (APSL), `DiskArbitration` (APSL-2.0), FreeBSD `ext2fs` (BSD-2-Clause). Seeds:
 `Legacy/BSD/sbin/{newfs_hfs,fsck_hfs,mount_hfs}` (APSL; reference only, replaced by
-the current `hfs` tag). Clean-room, BSD-3-Clause: APFS, UDIF, vnode disk driver,
+the current `hfs` tag). Clean-room, BSD-2-Clause: APFS, UDIF, vnode disk driver,
 `hdiutil`, `diskutil`, `Tools/hfsimage`.
 
 **Location.** Layer `kernel`: `Kernel/Extensions/{hfs,msdosfs,apfs,vndisk}/`. Layer
@@ -3745,7 +3746,7 @@ and `/etc/pf.conf`; cookie and cache semantics as documented; the interim behavi
 above for HTTP/3, NTLM and NetworkExtension.
 
 **Sources.** Vendored: XNU stack (APSL-2.0), QuickJS (MIT). Used from S29: BoringSSL,
-the `security_certificates` root store. Clean-room, BSD-3-Clause: CFNetwork,
+the `security_certificates` root store. Clean-room, BSD-2-Clause: CFNetwork,
 NSURLSession, Network.framework, NetworkExtension stubs, CoreWLAN, `wifid`, TLS layer.
 Reference: `Legacy/Frameworks/CFNetwork` (APSL headers), swift-corelibs-foundation.
 
@@ -3873,7 +3874,7 @@ architecture refusal message and `EBADARCH`.
 
 **Sources.** Vendored: `IOKitUser` (APSL-2.0, from `Kernel/IOKitUser`),
 `PowerManagement` (APSL-2.0, verify). Patch: `sysctl.proc_translated`. Clean-room,
-BSD-3-Clause: power source and thermal drivers for non-Mac hardware, identity policy,
+BSD-2-Clause: power source and thermal drivers for non-Mac hardware, identity policy,
 missing powerd pieces. Reference: `Legacy/Frameworks/IOKit`.
 
 **Location.** Layer `frameworks`: `Frameworks/IOKit/` (name `IOKit`). Layer `server`:
@@ -4040,9 +4041,9 @@ subsystem provides the process (WindowServer), the client framework every GUI ap
 
 **Sources.**
 
-- IOSurface kext and framework: clean-room, ours, BSD-3-Clause; API from public
+- IOSurface kext and framework: clean-room, ours, BSD-2-Clause; API from public
   headers and documentation.
-- WindowServer, SkyLight: clean-room, ours, BSD-3-Clause.
+- WindowServer, SkyLight: clean-room, ours, BSD-2-Clause.
 - Not reused: `Legacy/CoreServices/WindowServer` (MIT, Objective-C) drives FreeBSD
   devices through bundled libinput (MIT), libxkbcommon and mtdev; none of that exists on
   XNU. Its `LoginWindow` and `SystemUIServer` subdirectories are UI references only.
@@ -4209,7 +4210,7 @@ through these frameworks.
   | OpenEXR | OpenEXR | BSD-3-Clause |
   | AVIF | libavif + dav1d | BSD-2-Clause |
   | zlib/deflate | zlib | Zlib |
-  | ICNS, BMP, ICO | ours | BSD-3-Clause |
+  | ICNS, BMP, ICO | ours | BSD-2-Clause |
 
   Only permissive codecs are used; FFmpeg, libde265 and libheif (LGPL) are not.
   HEIF/HEIC: the HEIF container parser is ours. HEVC is patent-encumbered and ships no
@@ -4391,7 +4392,7 @@ server's render server.
   OpenGL (`CAWindowOpenGLContext`, `CALayerContext`), which is replaced. Usable for
   API shape: `CATransaction`, `CAMediaTimingFunction`, `CATransform3D` math.
 - Render server: clean-room, ours (Rust).
-- Everything else: clean-room, ours, BSD-3-Clause.
+- Everything else: clean-room, ours, BSD-2-Clause.
 
 **Location.** Layer frameworks: `Frameworks/QuartzCore/` (`QuartzCore`),
 `Frameworks/CoreImage/` (`CoreImage`). Layer server: the render server is a module of
@@ -4643,7 +4644,7 @@ software read and drive the interface.
   `NSTextView` implements both modes with the documented fallback. Behavior (glyph
   ranges, line fragment rects, selection affinity) specified from probes.
 - **Spell checking.** Hunspell (MPL-1.1/GPL-2.0+/LGPL-2.1+) and nuspell (LGPL-3.0)
-  are not used. Our own engine (`Frameworks/SpellCheckKit`, private, BSD-3-Clause)
+  are not used. Our own engine (`Frameworks/SpellCheckKit`, private, BSD-2-Clause)
   reads Hunspell-format dictionaries: it implements affix stripping, compounding and
   `REP`/`MAP`/`KEY` suggestion rules from the published `.aff`/`.dic` format
   documentation, plus edit-distance suggestions (SymSpell approach, MIT, as
@@ -4704,7 +4705,7 @@ software read and drive the interface.
 
 **Sources.**
 
-- All frameworks: clean-room, ours, BSD-3-Clause.
+- All frameworks: clean-room, ours, BSD-2-Clause.
 - CLDR keyboard data: vendored, Unicode-3.0.
 - Mozc: vendored in `Apps/InputMethods/vendor/mozc/`, BSD-3-Clause (verify, with its
   dictionary data checked per file).
@@ -4864,7 +4865,7 @@ decode, encode and capture audio and video.
 **Sources.**
 
 - coreaudiod, HAL, AudioToolbox, CoreMIDI, CoreMedia, VideoToolbox, AVFoundation:
-  clean-room, ours, BSD-3-Clause.
+  clean-room, ours, BSD-2-Clause.
 - Codec libraries: vendored as in the tables, each with `_PROVENANCE`.
 - No Legacy seed (Legacy has no audio framework).
 
@@ -5286,7 +5287,7 @@ an optional package from a separate repository.
 
 **Sources.**
 
-- JavaScriptCore and WebKit frameworks: clean-room, ours, BSD-3-Clause.
+- JavaScriptCore and WebKit frameworks: clean-room, ours, BSD-2-Clause.
 - QuickJS-ng: vendored, MIT.
 - Ladybird (LibWeb, LibJS, LibGfx, AK and the libraries they need): vendored,
   BSD-2-Clause; Skia BSD-3-Clause; other dependencies checked per library, FFmpeg
@@ -5441,7 +5442,7 @@ census demands that no other subsystem owns belongs here.
 - Core Data: clean-room, ours. Seed `Legacy/Frameworks/CoreData` (Cocotron lineage,
   MIT, XML and in-memory stores) for API shape after audit.
 - CUPS: vendored, Apache-2.0 (verify exceptions text).
-- All other frameworks and daemons: clean-room, ours, BSD-3-Clause. The Bluetooth
+- All other frameworks and daemons: clean-room, ours, BSD-2-Clause. The Bluetooth
   stack's kernel side comes from S10 (FreeBSD ng_bluetooth, BSD).
 
 **Location.** Layer frameworks: `Frameworks/<Name>/` per framework above (manifest name
@@ -5804,7 +5805,7 @@ other hosts, with tools shaped like Apple's command-line tools.
 - LLVM tools (lipo, dsymutil, lldb, debugserver, symbolizer): from S02, Apache-2.0
   with LLVM exception.
 - codesign, actool, ibtool, xcrun, atos, abi-census, plutil, iconutil, rv subcommands:
-  clean-room, ours, BSD-3-Clause.
+  clean-room, ours, BSD-2-Clause.
 - `Legacy/Developer/Default.xctoolchain/cctools` (APSL, has `lipo`, `otool`): reference
   only; LLVM equivalents preferred.
 - CMake (BSD-3-Clause) runs on ravynOS as a user-installed package; SwiftPM

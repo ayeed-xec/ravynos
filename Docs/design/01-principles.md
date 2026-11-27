@@ -159,7 +159,7 @@ Acceptable licenses for code in the tree:
 | --- | --- |
 | APSL 2.0 | Apple's own open-source releases |
 | BSD (2/3/4-clause) | XNU-derived and BSD userland code |
-| BSD-3-Clause | Our own original code: kernel additions, drivers, shims, tools, `rv`, tests (every file carries `SPDX-License-Identifier: BSD-3-Clause`) |
+| BSD-2-Clause | Our own original code: kernel additions, drivers, shims, tools, `rv`, tests (every file carries `SPDX-License-Identifier: BSD-2-Clause`) |
 | MIT | MLX (https://opensource.apple.com/projects/mlx), other permissive imports |
 | Apache-2.0 | metal-cpp, other Apple-adjacent projects |
 | Zlib, ISC | Small vendored utilities |
