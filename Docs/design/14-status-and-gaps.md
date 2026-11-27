@@ -57,6 +57,12 @@ foreign layer underneath.
 | FreeBSD driver shim | `Kernel/Extensions/FreeBSDPort/` | ~13k lines, mostly imported vtnet | partly | Shim headers map onto XNU KPIs; FreeBSD 11.4 drivers imported verbatim; not built into a kext yet |
 | Other kexts | `Kernel/Extensions/` | upstream | unaudited | `AppleAPIC`, `AppleI386PCI`, `IOACPIFamily`, `RavynAHCIPort`, `RavynXHCIPort` and others came from upstream ravynOS. None has passed the DESIGN.md §6.3 audit |
 
+Code quality, where code exists, is good. The loader handles firmware errors and retries
+`ExitBootServices` correctly; `rv` is small, readable Rust with unit tests on its layer
+rules; the host tools have their own test runner; every file carries an SPDX header.
+What is missing is breadth and checks: `rv` has about 30 functions and 3 tests, the boot smokes
+are not in CI, and one real bug sits in the loader (gap 23).
+
 The pattern is clear. Work that was scoped tightly — the loader, the image tools, mig,
 the gates — was done natively and well. Work that was scoped as "start the port early"
 produced skeletons, and one of them is a stub.
@@ -130,6 +136,38 @@ Numbered so other documents and commits can cite them.
     (138, patch series). One must go.
 22. **`Kernel/port/` is not built.** Code that no build compiles is not tested by
     anything except the formatter.
+
+23. **The loader hands the kernel a stale memory map.** `rv_build_boot_args` in
+    `Boot/loader/main.c` records a memory map, and later the exit loop fetches a fresh
+    map to call `ExitBootServices` — but the fresh map never replaces the one in
+    `boot_args`. The kernel sees memory as it was before the final allocations. Test
+    kernels do not notice; XNU's allocator will. Fix: fetch the final map into the
+    `boot_args` buffer itself (sized with slack in advance) and exit boot services with
+    that map's key.
+24. **CI does not run the boot smokes.** `Tests/boot/smoke*.sh` run only when someone runs
+    them; the workflow installs no QEMU. A boot regression can merge green.
+
+## Not covered by any document
+
+Things a Mac application depends on that no design document mentions. Each needs at
+least a paragraph in the owning document before its wave starts.
+
+| Topic | Why an application cares | Owning document |
+|---|---|---|
+| Installing apps from `.dmg` and `.pkg` | Most Mac software ships as a disk image or an installer package. DiskImages is closed; the UDIF format must be specified from observation. `.pkg` is a xar archive, and xar is open | 08, 15 §15 |
+| Fonts | Apps ask for the system font by name (`.AppleSystemUIFont`, Helvetica, Menlo). Apple's fonts cannot ship; we need metric-compatible, permissively licensed replacements and a name-mapping table | 08 |
+| Preferences | `NSUserDefaults` goes through `cfprefsd`, a closed daemon | 08, 15 §11 |
+| LaunchServices and UTIs | Opening documents, `open(1)`, app registration, the Dock and Finder all go through it; closed | 08 |
+| Keychain and Security | Many apps touch the keychain at launch, Electron apps among them; `securityd` is closed, parts of Security are open | 08, 15 §8 |
+| Networking above sockets | `NSURLSession`/CFNetwork and Network.framework are closed; TLS needs a permissive library and a certificate trust store | 08 |
+| Pasteboard, drag and drop, Services | Every text field uses the pasteboard; it is a daemon plus a framework API | 07, 08 |
+| Text input and keyboards | Keyboard layouts and input methods live in HIToolbox's Text Input Sources; closed | 07, 08 |
+| Accessibility | The AX API is used by automation tools and many utilities | 08 |
+| Privacy prompts (TCC) and quarantine | Apps call TCC for camera, microphone and files; downloaded apps carry `com.apple.quarantine` | security design (F5) |
+| Distributed notifications | `distnoted` is closed; `notifyd` (Libnotify) is open | 08 |
+| x86_64 apps on arm64 | Rosetta is closed and is translation, which 01-principles.md rules out as architecture. Say plainly that arm64 ravynOS runs arm64 and universal apps only | 01, 12 |
+| Developer tools on ravynOS | lldb and debugserver are open in LLVM; a developer platform needs them | 08, 13 |
+| The spec-room Mac | macOS's license allows it to run only on Apple hardware, virtualized or not. The spec room needs real Apple machines | 15 §13 |
 
 ## Design flaws: where the design is wrong or silent
 
