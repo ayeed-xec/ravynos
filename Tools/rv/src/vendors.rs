@@ -28,15 +28,10 @@ pub struct Vendor {
     fetch: bool,
 }
 
-pub fn check(tree_root: &Path) {
-    let text = std::fs::read_to_string(tree_root.join("VENDORS")).unwrap_or_else(|e| {
-        eprintln!("error: cannot read VENDORS: {e}");
-        std::process::exit(1);
-    });
-    let parsed = parse(&text).unwrap_or_else(|e| {
-        eprintln!("error: VENDORS: {e}");
-        std::process::exit(1);
-    });
+pub fn check(tree_root: &Path) -> Result<(), String> {
+    let text = std::fs::read_to_string(tree_root.join("VENDORS"))
+        .map_err(|e| format!("error: cannot read VENDORS: {e}"))?;
+    let parsed = parse(&text).map_err(|e| format!("error: VENDORS: {e}"))?;
 
     let mut failures = Vec::new();
     let mut checked = 0;
@@ -84,14 +79,16 @@ pub fn check(tree_root: &Path) {
         }
     }
 
-    if !failures.is_empty() {
-        for f in &failures {
-            eprintln!("error: vendors check: {f}");
-        }
-        eprintln!("       (SYSTEM-DESIGN.md S01 / ADR-10: vendored trees stay pristine)");
-        std::process::exit(1);
+    if failures.is_empty() {
+        println!("vendors gate OK: {checked} vendored trees match their pins");
+        return Ok(());
     }
-    println!("vendors gate OK: {checked} vendored trees match their pins");
+    let mut lines: Vec<String> = failures
+        .iter()
+        .map(|f| format!("error: vendors check: {f}"))
+        .collect();
+    lines.push("       (SYSTEM-DESIGN.md S01 / ADR-10: vendored trees stay pristine)".to_string());
+    Err(lines.join("\n"))
 }
 
 /// Prefixes of the trees pinned in VENDORS, for callers that must skip them.

@@ -44,68 +44,68 @@ fn may_depend(from: &str, to: &str) -> bool {
 
 pub fn resolve(
     manifests: &BTreeMap<String, crate::manifest::Manifest>,
-) -> BTreeMap<String, Vec<String>> {
+) -> Result<BTreeMap<String, Vec<String>>, String> {
     let mut graph = BTreeMap::new();
     for m in manifests.values() {
         for dep in &m.deps.internal {
             let Some(dep_m) = manifests.get(dep) else {
-                eprintln!(
+                return Err(format!(
                     "error: {} declares dependency '{}' but no manifest defines it",
                     m.name, dep
-                );
-                std::process::exit(1);
+                ));
             };
             if !may_depend(&m.layer, &dep_m.layer) {
-                eprintln!(
+                return Err(format!(
                     "error: {} -> {} (private) violates layer rules\n       {} may not depend on {} layer\n       (02-architecture.md, layer table)",
                     m.name, dep, m.layer, dep_m.layer
-                );
-                std::process::exit(1);
+                ));
             }
         }
         for dep in &m.deps.upward {
             if !manifests.contains_key(dep) {
-                eprintln!(
+                return Err(format!(
                     "error: {} declares upward dependency '{}' but no manifest defines it",
                     m.name, dep
-                );
-                std::process::exit(1);
+                ));
             }
         }
         graph.insert(m.name.clone(), m.deps.internal.clone());
     }
     let mut state = BTreeMap::new();
     for comp in graph.keys() {
-        visit(comp, &graph, &mut state);
+        visit(comp, &graph, &mut state)?;
     }
-    graph
+    Ok(graph)
 }
 
-fn visit(comp: &str, graph: &BTreeMap<String, Vec<String>>, state: &mut BTreeMap<String, u8>) {
+fn visit(
+    comp: &str,
+    graph: &BTreeMap<String, Vec<String>>,
+    state: &mut BTreeMap<String, u8>,
+) -> Result<(), String> {
     match state.get(comp) {
-        Some(2) => return,
-        Some(1) => {
-            eprintln!("error: dependency cycle through '{comp}'");
-            std::process::exit(1);
-        }
+        Some(2) => return Ok(()),
+        Some(1) => return Err(format!("error: dependency cycle through '{comp}'")),
         _ => {}
     }
     state.insert(comp.to_string(), 1);
     for dep in &graph[comp] {
-        visit(dep, graph, state);
+        visit(dep, graph, state)?;
     }
     state.insert(comp.to_string(), 2);
+    Ok(())
 }
 
 pub fn closure(
     graph: &BTreeMap<String, Vec<String>>,
     selected: &std::collections::BTreeSet<String>,
     order: &mut Vec<String>,
-) {
+) -> Result<(), String> {
     let mut state = BTreeMap::new();
     for comp in selected {
-        emit(comp, graph, &mut state, order);
+        emit(comp, graph, &mut state, order)?;
     }
+    Ok(())
 }
 
 fn emit(
@@ -113,21 +113,19 @@ fn emit(
     graph: &BTreeMap<String, Vec<String>>,
     state: &mut BTreeMap<String, u8>,
     order: &mut Vec<String>,
-) {
+) -> Result<(), String> {
     match state.get(comp).copied().unwrap_or(0) {
-        2 => return,
-        1 => {
-            eprintln!("error: dependency cycle through '{comp}'");
-            std::process::exit(1);
-        }
+        2 => return Ok(()),
+        1 => return Err(format!("error: dependency cycle through '{comp}'")),
         _ => {}
     }
     state.insert(comp.to_string(), 1);
     for dep in &graph[comp] {
-        emit(dep, graph, state, order);
+        emit(dep, graph, state, order)?;
     }
     state.insert(comp.to_string(), 2);
     order.push(comp.to_string());
+    Ok(())
 }
 
 #[cfg(test)]

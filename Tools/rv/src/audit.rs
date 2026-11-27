@@ -20,7 +20,7 @@ const ACCEPT: &[&str] = &[
 
 const FAIL: &[&str] = &["GPL", "LGPL", "AGPL"];
 
-pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) {
+pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) -> Result<(), String> {
     let mut failures = Vec::new();
     for m in manifests.values() {
         let expr: String = m
@@ -41,22 +41,22 @@ pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) {
             ));
         }
     }
-    let mut vendored = crate::vendors::paths(tree).unwrap_or_else(|e| {
-        eprintln!("error: license audit: {e}");
-        std::process::exit(1);
-    });
+    let mut vendored =
+        crate::vendors::paths(tree).map_err(|e| format!("error: license audit: {e}"))?;
     vendored.extend(BUILD_OUTPUTS.iter().map(|p| p.to_string()));
     walk(tree, tree, &vendored, &mut failures);
-    if !failures.is_empty() {
-        for f in &failures {
-            eprintln!("error: license audit: {f}");
-        }
-        eprintln!(
-            "       (Docs/design/05-build-system.md license audit gate; accepted: {})",
-            ACCEPT.join(", ")
-        );
-        std::process::exit(1);
+    if failures.is_empty() {
+        return Ok(());
     }
+    let mut lines: Vec<String> = failures
+        .iter()
+        .map(|f| format!("error: license audit: {f}"))
+        .collect();
+    lines.push(format!(
+        "       (Docs/design/05-build-system.md license audit gate; accepted: {})",
+        ACCEPT.join(", ")
+    ));
+    Err(lines.join("\n"))
 }
 
 /// Walks the whole tree, not only component directories: every file is either in a
@@ -68,7 +68,9 @@ fn walk(dir: &Path, root: &Path, vendored: &[String], failures: &mut Vec<String>
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        let Some(name) = path.file_name().map(|n| n.to_string_lossy().to_string()) else {
+            continue;
+        };
         if name.starts_with('.') || name == "build" || name == "target" {
             continue;
         }

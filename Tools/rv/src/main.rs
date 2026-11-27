@@ -38,10 +38,9 @@ fn main() {
     };
 
     if cmd_arg == "vendors" {
+        let tree = std::env::current_dir().expect("rv must run from the tree root");
         match args.first().map(String::as_str) {
-            None | Some("check") => {
-                vendors::check(&std::env::current_dir().expect("rv must run from the tree root"))
-            }
+            None | Some("check") => report(vendors::check(&tree)),
             _ => usage(),
         }
         return;
@@ -88,15 +87,38 @@ fn main() {
     };
 
     let tree = std::env::current_dir().expect("rv must run from the tree root");
-    let manifests = manifest::load_all(&tree);
-    let deps = graph::resolve(&manifests);
+    report(run(cmd, &tree, &args, &target, &names, reverse));
+}
 
+fn run(
+    cmd: Cmd,
+    tree: &std::path::Path,
+    args: &[String],
+    target: &str,
+    names: &[String],
+    reverse: bool,
+) -> Result<(), String> {
+    let manifests = manifest::load_all(tree)?;
+    let deps = graph::resolve(&manifests)?;
     match cmd {
-        Cmd::Build => build(&tree, &manifests, &deps, &target, &names),
-        Cmd::Bootstrap => bootstrap::run(&tree, &args),
-        Cmd::Graph => print_graph(&manifests, &deps, reverse),
-        Cmd::Shell => shell(&tree, &manifests, &deps, &target, names.first()),
-        Cmd::Audit => audit::license(&tree, &manifests),
+        Cmd::Build => build(tree, &manifests, &deps, target, names),
+        Cmd::Bootstrap => {
+            bootstrap::run(tree, args);
+            Ok(())
+        }
+        Cmd::Graph => {
+            print_graph(&manifests, &deps, reverse);
+            Ok(())
+        }
+        Cmd::Shell => shell(tree, &manifests, &deps, target, names.first()),
+        Cmd::Audit => audit::license(tree, &manifests),
+    }
+}
+
+fn report(result: Result<(), String>) {
+    if let Err(message) = result {
+        eprintln!("{message}");
+        exit(1);
     }
 }
 
@@ -104,14 +126,14 @@ fn select(
     manifests: &BTreeMap<String, manifest::Manifest>,
     deps: &BTreeMap<String, Vec<String>>,
     names: &[String],
-) -> Vec<String> {
+) -> Result<Vec<String>, String> {
     let names: Vec<String> = if names.iter().any(|n| n.as_str() == "all") {
         manifests.keys().cloned().collect()
     } else {
         names.to_vec()
     };
     if names.is_empty() {
-        return manifests.keys().cloned().collect();
+        return Ok(manifests.keys().cloned().collect());
     }
     let mut selected = std::collections::BTreeSet::new();
     for name in &names {
@@ -127,17 +149,16 @@ fn select(
             let known: Vec<&String> = manifests.keys().collect();
             let mut layers: Vec<&str> = Vec::new();
             graph::each_layer(|l| layers.push(l));
-            eprintln!(
+            return Err(format!(
                 "error: no component or layer named '{name}'\n       components: {}\n       layers: {}",
                 known.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "),
                 layers.join(", ")
-            );
-            exit(1);
+            ));
         }
     }
     let mut order = Vec::new();
-    graph::closure(deps, &selected, &mut order);
-    order
+    graph::closure(deps, &selected, &mut order)?;
+    Ok(order)
 }
 
 fn build(
@@ -146,46 +167,47 @@ fn build(
     deps: &BTreeMap<String, Vec<String>>,
     target: &str,
     names: &[String],
-) {
-    audit::license(tree, manifests);
+) -> Result<(), String> {
+    audit::license(tree, manifests)?;
     for m in manifests.values() {
         if !m.targets.is_empty() && !m.targets.iter().any(|t| t == target) {
-            eprintln!(
+            return Err(format!(
                 "error: {} does not support target {target}\n       targets: {}",
                 m.name,
                 m.targets.join(", ")
-            );
-            exit(1);
+            ));
         }
     }
-    let order = select(manifests, deps, names);
+    let order = select(manifests, deps, names)?;
     let build_dir = tree.join("build").join(target);
-    std::fs::create_dir_all(&build_dir).expect("create build dir");
+    std::fs::create_dir_all(&build_dir).map_err(|e| format!("error: create build dir: {e}"))?;
     let ninja_file = build_dir.join("build.ninja");
-    std::fs::write(&ninja_file, ninja::emit(manifests, &order, target)).expect("write build.ninja");
+    std::fs::write(&ninja_file, ninja::emit(manifests, &order, target))
+        .map_err(|e| format!("error: write build.ninja: {e}"))?;
     for tool in ["ninja", "clang", "llvm-ar", "ld.lld"] {
         if std::process::Command::new(tool)
             .arg("--version")
             .output()
             .is_err()
         {
-            eprintln!(
+            return Err(format!(
                 "error: {tool} not found on PATH (the build uses clang, lld and llvm-ar only)"
-            );
-            exit(1);
+            ));
         }
     }
     let status = std::process::Command::new("ninja")
         .arg("-C")
         .arg(&build_dir)
         .status()
-        .unwrap_or_else(|e| {
-            eprintln!("error: cannot run ninja: {e}");
-            exit(1);
-        });
+        .map_err(|e| format!("error: cannot run ninja: {e}"))?;
     if !status.success() {
-        exit(status.code().unwrap_or(1));
+        return Err(format!(
+            "error: ninja failed in {} with {}",
+            build_dir.display(),
+            status
+        ));
     }
+    Ok(())
 }
 
 fn print_graph(
@@ -221,11 +243,10 @@ fn shell(
     deps: &BTreeMap<String, Vec<String>>,
     target: &str,
     name: Option<&String>,
-) {
+) -> Result<(), String> {
     let comp = name.cloned().unwrap_or_else(|| "hello".to_string());
     if !manifests.contains_key(&comp) {
-        eprintln!("error: no component named '{comp}'");
-        exit(1);
+        return Err(format!("error: no component named '{comp}'"));
     }
     let _ = deps;
     let sysroot = tree.join("build").join("sysroots").join(target);
@@ -235,4 +256,5 @@ fn shell(
         tree.join("build").join(target).join(&comp).display(),
         comp
     );
+    Ok(())
 }

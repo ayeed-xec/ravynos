@@ -139,17 +139,15 @@ pub struct Vendored {
     pub patches: String,
 }
 
-pub fn load_all(tree: &Path) -> BTreeMap<String, Manifest> {
+pub fn load_all(tree: &Path) -> Result<BTreeMap<String, Manifest>, String> {
     let mut found = BTreeMap::new();
     let mut failures = Vec::new();
     collect(tree, tree, &mut found, &mut failures);
-    if !failures.is_empty() {
-        for f in &failures {
-            eprintln!("error: {f}");
-        }
-        std::process::exit(1);
+    if failures.is_empty() {
+        return Ok(found);
     }
-    found
+    let lines: Vec<String> = failures.iter().map(|f| format!("error: {f}")).collect();
+    Err(lines.join("\n"))
 }
 
 pub fn parse(text: &str) -> Result<Manifest, String> {
