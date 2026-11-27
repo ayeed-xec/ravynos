@@ -113,7 +113,7 @@ shared pieces in `kpi-core`, so the code is restructured as it comes in.
 Notes:
 
 - PureDarwin's AppKit descends from the same Cocotron and ravynOS code as our
-  `Legacy/Frameworks/AppKit`, with several hundred lines of fixes per core class
+  `old:Legacy/Frameworks/AppKit`, with several hundred lines of fixes per core class
   driven by Firefox. Its MIT files are a better seed than ours for those classes.
 - Several of PureDarwin's frameworks return fake success, for example an empty window
   list from `CGWindowListCopyWindowInfo` and requirement checks in Security that always
@@ -134,14 +134,15 @@ Notes:
 - `cmake/circular.cmake` (GPL-3).
 - Trenta icons under `src/Userspace/*/Resources` (CC-BY-SA-4.0).
 
-## 6. Already in the ravynOS tree
+## 6. Taken by ravynOS before this survey
 
 Upstream ravynOS took several PureDarwin pieces before this survey: the IOUSBFamily
 reconstruction (no license header, GAP-42), PureDarwin's changes to Apple's IOACPIFamily,
 AppleAPIC, ApplePS2Controller and IOPCIFamily (APSL), the CMake scripts and libkmod
 recorded in `Kernel/_PROVENANCE`, the toolchain import in
-`Legacy/Developer/Default.xctoolchain` (cctools, mig, xar, unifdef, dtrace_ctf), and the
-ISO tooling in `Legacy/ISO`. The rules in section 1 apply to them as to new imports.
+`old:Legacy/Developer/Default.xctoolchain` (cctools, mig, xar, unifdef, dtrace_ctf), and the
+ISO tooling in `old:Legacy/ISO`. These were removed from the tree with the old tree
+(ADR-30); anything brought back follows section 1 as a new import.
 
 ## 7. Questions for PureDarwin's authors
 

@@ -71,6 +71,9 @@ as its wave starts.
   wave — headers, manifest names, file formats, IPC messages — are written and merged
   before implementation starts. SYSTEM-DESIGN.md's **Contracts** fields are the source.
   A change to a frozen contract mid-wave needs the owner of every lane that uses it.
+- **Start from the latest code.** Before any work, and again before opening a merge, an
+  agent fetches `origin` and brings its branch up to date with `origin/darwin-clean`
+  (merge, never rebase a pushed branch). Work on a stale tree is redone.
 - **One lane per directory**, as in section 1.2.
 - **Green main.** Every merge passes CI. A lane that breaks main reverts first and fixes
   second.
@@ -125,9 +128,21 @@ Everything else runs beside this chain. Work that is not on it should never bloc
 ## 3. W0 — Build system and gates
 
 **At the end of W0** the tree builds Mach-O for x86_64 and arm64 with pinned tools,
-every gate in SYSTEM-DESIGN section 5.6 runs in CI, and the repository contains no GPL
-material.
+every gate in SYSTEM-DESIGN section 5.6 runs in CI, the repository contains no GPL
+material, and the tree holds only the SYSTEM-DESIGN section 3.2 layout (ADR-30).
 
+- **WP0.0** (L14, first, alone) Tree to the design layout (ADR-30). Remove `Legacy/`;
+  `Kernel/build/`, `Kernel/port/arm64/`, `Kernel/port/riscv64/`, `Kernel/kext_tools/`,
+  `Kernel/IOKitUser/`, `Kernel/Makefile`, `Kernel/_PROVENANCE` and every directory in
+  `Kernel/Extensions/` (each is re-vendored from its Apple tag or written new when its
+  subsystem starts); `Tools/{Makefile,build.sh,make.conf,xcparse.pl,symbolicate.py,
+  crash-analyzer.py,clrBuilder.m,copyClr.m,ravynOS_install.sh,SYMBOLICATION.md,
+  mig-mvtmp}`; `Tests/{build.sh,*.m}`; `Apps/.tmp_bad_manifest`. Move `Apps/hello` and
+  `Apps/hello-cli` to `Tests/apps/hello` and `Tests/apps/hello-cli`, the second renamed
+  `hello-cli` (BUG-09). Remove references to the deleted paths from scripts, gates and
+  CI. Kept: `Kernel/xnu`, `Boot/`, `Foundation/libhello`, `Tools/{rv,mig,toolchain,ci}`,
+  `Tests/{rv,boot,tools,apps}`, `Docs/`. Done: every top-level directory is in the
+  section 3.2 layout; `rv graph` and CI pass; STATUS.md records it.
 - **WP0.1** (L1, S01) Manifest schema: kinds, versions, re-exports, install path,
   external source roots, hook; unknown keys and duplicate names rejected; same-layer
   edges allowed. Done: `Tests/rv/` schema tests pass.
@@ -145,8 +160,8 @@ material.
 - **WP0.5** (L14) License audit over the whole tree, every file type; crate scanning;
   host-tool gate over every script with the full deny list. Done: planted cases in
   `Tests/rv/` fail as designed.
-- **WP0.6** (L14) Remove GPL material from `Legacy/` and the vendored trees' build
-  paths: autotools files, GCC dump files, URW fonts, GCC-built `migcom` binary; record
+- **WP0.6** (L14) Remove GPL material from the vendored trees' build paths (the old
+  tree's files leave with WP0.0); record
   regeneration rules for Bison outputs (ADR-17). Needs WP0.5. Done: the audit is green.
 - **WP0.7** (L1, L14) `VENDORS` at the root with every pin; correct `_PROVENANCE` for
   every vendored tree. Done: `rv vendors check` passes.

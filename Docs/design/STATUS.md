@@ -52,8 +52,8 @@ What exists, and whether it is a real implementation:
   XNU and is not wired into any build (GAP-24).
 - `Apps/hello`, `Apps/hello-cli` — test programs that make Linux system calls; neither is
   a Darwin program (GAP-07).
-- `Legacy/` — upstream ravynOS; useful seeds listed per subsystem below; contains files
-  that violate the license rule (GAP-30).
+- `Legacy/` — upstream ravynOS; it never ran as a system and is removed by WP0.0
+  (ADR-30, GAP-60). After that it is read only as the old tree (`old:` paths).
 
 ## Bugs
 
@@ -258,6 +258,12 @@ AppKit, Foundation, CoreGraphics and QuartzCore are Cocotron-lineage (MIT), API 
 no code at all.)
 
 **Repository-wide**
+- GAP-60 The tree is not the section 3.2 layout (ADR-30): `Legacy/`, `Kernel/build/`,
+  `Kernel/port/{arm64,riscv64}/`, `Kernel/kext_tools/`, `Kernel/IOKitUser/`, the
+  unbuilt kexts in `Kernel/Extensions/`, the Makefile-era files in `Tools/` and
+  `Tests/`, and test programs under `Apps/`. Removing them closes or moves GAP-17,
+  GAP-30 (old-tree part), GAP-37, GAP-49 and the old-tree parts of GAP-42 to GAP-48;
+  those items then apply to whatever is re-imported.
 - GAP-34 x86_64: XNU panics on non-Intel processors and needs Intel timing data; QEMU
   smokes need an Intel CPU model, and AMD support needs the ADR-20 patch.
 - GAP-35 XNU's own host tools (`SETUP/config`, `doconf`) need bison, flex and csh;
@@ -326,6 +332,7 @@ no code at all.)
 
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|
+| W0: the tree holds only the section 3.2 layout | open (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | open (BUG-09, BUG-27) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | open (GAP-01) |
 | W0: stage-1 toolchain builds and `--verify` reproduces it | open (BUG-22, BUG-23, GAP-55) |
