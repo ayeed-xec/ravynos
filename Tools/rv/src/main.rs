@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
 mod audit;
+mod bootstrap;
 mod graph;
 mod manifest;
 mod ninja;
@@ -11,6 +12,7 @@ use std::process::exit;
 #[derive(Clone, Copy, PartialEq)]
 enum Cmd {
     Build,
+    Bootstrap,
     Graph,
     Shell,
     Audit,
@@ -19,6 +21,7 @@ enum Cmd {
 fn usage() -> ! {
     eprintln!(
         "usage: rv build [-t <target>] [<component>|<layer>...]\n\
+         usage: rv bootstrap [--verify] [--refetch] [-j <jobs>]\n\
          usage: rv graph [--reverse] [--forbid]\n\
          usage: rv shell [<component>]\n\
          usage: rv audit [license]"
@@ -60,8 +63,9 @@ fn main() {
             }
             Cmd::Graph
         }
+        "bootstrap" => Cmd::Bootstrap,
         "shell" => {
-            names = args;
+            names = args.clone();
             Cmd::Shell
         }
         "audit" => match args.first().map(String::as_str) {
@@ -77,6 +81,7 @@ fn main() {
 
     match cmd {
         Cmd::Build => build(&tree, &manifests, &deps, &target, &names),
+        Cmd::Bootstrap => bootstrap::run(&tree, &args),
         Cmd::Graph => print_graph(&manifests, &deps, reverse),
         Cmd::Shell => shell(&tree, &manifests, &deps, &target, names.first()),
         Cmd::Audit => audit::license(&tree, &manifests),
