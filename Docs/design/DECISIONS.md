@@ -147,6 +147,14 @@ window server, `rv`, new tools). The bootloader: the existing C loader in `Boot/
 is kept and fixed rather than rewritten in Rust; it is small, freestanding and already
 runs on three architectures.
 
+APFS (S19) is written in Rust: one `no_std` crate, `apfs-core`, holds the on-disk format
+and is used by the user-space tools, by the kernel file system (a kext whose thin C layer
+implements XNU's VFS and vnode callbacks and calls the crate), and by the bootloader's
+read-only reader (the crate built as a static library for the UEFI targets, linked into
+the C loader). Parsing untrusted on-disk structures is where Rust's bounds and lifetime
+checks pay most.
+
+
 ### ADR-16 — Fonts
 
 **Accepted.** Fonts may be under the SIL Open Font License or another permissive
@@ -240,4 +248,15 @@ patent grant from contributors. BSD-2-Clause has none; if contributions from com
 make an explicit patent grant necessary, moving to BSD-2-Clause-Patent is a one-line
 change per file that keeps the same terms otherwise and stays compatible with GPLv2 for
 the driver kit (S11).
+
+### ADR-27 — PureDarwin as a seed source
+
+**Accepted.** PureDarwin's code may seed ravynOS components under the rules in
+[PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md): each file is taken only under its own stated
+license, with "MPL-2.0 OR BSD-2-Clause" files taken as BSD-2-Clause; MPL-2.0-only,
+GPL, LGPL, CDDL and unlicensed files are not taken; taken code is vendored with
+`_PROVENANCE` and patches like any upstream; PureDarwin's in-place XNU edits are re-cut
+as reviewed patch series; and its architecture (Nix build, Wayland display path,
+stubbed services) is not adopted. The kernel, driver and audio work it provides
+shortens S06, S09, S10, S11 and S27 the most.
 
