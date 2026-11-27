@@ -30,6 +30,11 @@ jobs:
           bash -n build/ci/check-format.sh
           shellcheck build/ci/check-format.sh
 
+      - name: Host tool unit tests (rvpatch, mkfat, elf2pe)
+        run: |
+          shellcheck tests/tools/run.sh
+          tests/tools/run.sh
+
       - name: Build the rv harness
         run: cargo build --manifest-path tools/rv/Cargo.toml
 

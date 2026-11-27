@@ -17,22 +17,33 @@ static void rv_fail(const char *where, efi_status status)
 	rv_serial_puts("\n");
 }
 
-static void rv_to_utf16(efi_char16 *dst, const char *src)
+#define RV_MAX_PATH 128
+#define RV_BELOW_4G 0xffffffffull
+#define RV_MEMORY_MAP_SLACK 8
+#define RV_EXIT_BOOT_ATTEMPTS 8
+
+static int rv_to_utf16(efi_char16 *dst, efi_uintn cap, const char *src)
 {
-	while (*src)
-		*dst++ = (efi_char16)(uint8_t)*src++;
-	*dst = 0;
+	efi_uintn i = 0;
+	for (; src[i] != '\0'; i++) {
+		if (i + 1 >= cap)
+			return -1;
+		dst[i] = (efi_char16)(uint8_t)src[i];
+	}
+	dst[i] = 0;
+	return 0;
 }
 
 static int rv_open_file(struct efi_simple_file_system_protocol *sfs, const char *path, void **file_out)
 {
+	efi_char16 wpath[RV_MAX_PATH];
+	if (rv_to_utf16(wpath, RV_MAX_PATH, path) != 0)
+		return -1;
 	void *root = 0;
 	if (sfs->open_volume(sfs, &root) != EFI_SUCCESS)
 		return -1;
 	struct efi_file_protocol *rootf = root;
-	efi_char16 wpath[128];
-	rv_to_utf16(wpath, path);
-	if (rootf->open(root, file_out, wpath, 1, 0) != EFI_SUCCESS) {
+	if (rootf->open(root, file_out, wpath, EFI_FILE_MODE_READ, 0) != EFI_SUCCESS) {
 		rootf->close(root);
 		return -1;
 	}
@@ -52,7 +63,7 @@ static int rv_read_all(void *file, uint8_t **data_out, uint64_t *size_out)
 	if (end == 0)
 		return -1;
 	uint8_t *buf = 0;
-	if (gBS->allocate_pool(4, end, (void **)&buf) != EFI_SUCCESS)
+	if (gBS->allocate_pool(EfiBootServicesData, end, (void **)&buf) != EFI_SUCCESS)
 		return -1;
 	efi_uintn remaining = (efi_uintn)end;
 	uint8_t *cursor = buf;
@@ -120,16 +131,16 @@ static efi_status rv_build_boot_args(struct rv_kernel_image *image, uint64_t *bo
 	}
 	if (descriptor_size == 0)
 		return EFI_LOAD_ERROR;
-	full_size += descriptor_size * 8;
+	full_size += descriptor_size * RV_MEMORY_MAP_SLACK;
 
 	uint64_t map_pages = EFI_SIZE_TO_PAGES(full_size);
-	uint64_t map_addr = 0xffffffff;
+	uint64_t map_addr = RV_BELOW_4G;
 	efi_status status = gBS->allocate_pages(EFI_ALLOCATE_MAX_ADDRESS, EfiRuntimeServicesData, map_pages, &map_addr);
 	if (status != EFI_SUCCESS)
 		return status;
 	rv_memset((void *)map_addr, 0, map_pages * EFI_PAGE_SIZE);
 
-	uint64_t ba_addr = 0xffffffff;
+	uint64_t ba_addr = RV_BELOW_4G;
 	status = gBS->allocate_pages(EFI_ALLOCATE_MAX_ADDRESS, EfiRuntimeServicesData, 1, &ba_addr);
 	if (status != EFI_SUCCESS)
 		return status;
@@ -249,13 +260,13 @@ efi_status efi_main(efi_handle image_handle, struct efi_system_table *system_tab
 	uint32_t descriptor_version = 0;
 	int exited = 0;
 	efi_uintn map_size = 0;
-	for (int attempt = 0; attempt < 8; attempt++) {
+	for (int attempt = 0; attempt < RV_EXIT_BOOT_ATTEMPTS; attempt++) {
 		map_size = 0;
 		if (gBS->get_memory_map(&map_size, 0, &map_key, &descriptor_size, &descriptor_version) != EFI_BUFFER_TOO_SMALL)
 			break;
-		map_size += descriptor_size * 8;
+		map_size += descriptor_size * RV_MEMORY_MAP_SLACK;
 		uint8_t *stack_map = 0;
-		if (gBS->allocate_pool(4, map_size, (void **)&stack_map) != EFI_SUCCESS)
+		if (gBS->allocate_pool(EfiBootServicesData, map_size, (void **)&stack_map) != EFI_SUCCESS)
 			break;
 		efi_uintn key = 0;
 		if (gBS->get_memory_map(&map_size, (struct efi_memory_descriptor *)stack_map, &key,

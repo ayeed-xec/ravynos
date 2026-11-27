@@ -67,6 +67,7 @@ enum efi_memory_type {
 #define EFI_ALLOCATE_ANY_PAGES 0
 #define EFI_ALLOCATE_MAX_ADDRESS 1
 #define EFI_ALLOCATE_ADDRESS 2
+#define EFI_FILE_MODE_READ 0x1ull
 
 struct efi_boot_services {
 	struct efi_table_header hdr;

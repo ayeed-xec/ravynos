@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_STRIP 64
+
 struct line {
     const char *p;
     size_t n;
@@ -61,10 +63,10 @@ static char *read_file(const char *path, size_t *len)
     FILE *f = fopen(path, "rb");
     if (f == NULL)
         die("cannot open", path);
-    fseek(f, 0, SEEK_END);
+    if (fseek(f, 0, SEEK_END) != 0)
+        die("cannot seek", path);
     long sz = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (sz < 0)
+    if (sz < 0 || fseek(f, 0, SEEK_SET) != 0)
         die("cannot size", path);
     char *p = xmalloc((size_t)sz + 1);
     if (sz > 0 && fread(p, 1, (size_t)sz, f) != (size_t)sz)
@@ -107,31 +109,59 @@ static int starts(const struct line *l, const char *prefix, size_t plen)
     return l->n >= plen && memcmp(l->p, prefix, plen) == 0;
 }
 
-static const char *strip_timestamp(const struct line *l, size_t skip)
+static char *header_path(const struct line *l, size_t skip)
 {
-    static char out[4096];
     size_t len = l->n - skip;
     const char *s = l->p + skip;
-    for (size_t i = 0; i < len; i++)
-        if (s[i] == '\t')
-            len = i;
-    if (len >= sizeof(out))
-        die("path too long", NULL);
+    const char *tab = memchr(s, '\t', len);
+    if (tab != NULL)
+        len = (size_t)(tab - s);
+    if (len == 0)
+        die("empty file name in patch header", patch_path);
+    if (memchr(s, '\0', len) != NULL)
+        die("NUL byte in patch header", patch_path);
+    char *out = xmalloc(len + 1);
     memcpy(out, s, len);
     out[len] = '\0';
     return out;
 }
 
-static char *strip_components(const char *path, int p)
+static const char *strip_components(const char *path, long p)
 {
     const char *s = path;
-    for (int i = 0; i < p; i++) {
+    for (long i = 0; i < p; i++) {
         const char *slash = strchr(s, '/');
         if (slash == NULL)
             die("too few path components", path);
         s = slash + 1;
     }
-    return (char *)s;
+    return s;
+}
+
+static int is_safe_relative_path(const char *path)
+{
+    if (path[0] == '\0' || path[0] == '/')
+        return 0;
+    const char *s = path;
+    while (*s != '\0') {
+        const char *slash = strchr(s, '/');
+        size_t n = slash ? (size_t)(slash - s) : strlen(s);
+        if (n == 0 || (n == 2 && s[0] == '.' && s[1] == '.'))
+            return 0;
+        if (slash == NULL)
+            break;
+        s = slash + 1;
+    }
+    return 1;
+}
+
+static long parse_strip(const char *s)
+{
+    char *end = NULL;
+    long v = strtol(s, &end, 10);
+    if (*s == '\0' || *end != '\0' || v < 0 || v > MAX_STRIP)
+        die("bad -p value", s);
+    return v;
 }
 
 static size_t parse_range(const char *s, size_t *value, size_t *count)
@@ -153,10 +183,13 @@ static size_t parse_range(const char *s, size_t *value, size_t *count)
     return venue;
 }
 
-static void apply_file(struct line *pl, size_t plines, size_t *idx, int pcomps)
+static void apply_file(struct line *pl, size_t plines, size_t *idx, long pcomps)
 {
     size_t i = *idx;
-    char *target = strip_components(strip_timestamp(&pl[i + 1], 4), pcomps);
+    char *header = header_path(&pl[i + 1], 4);
+    const char *target = strip_components(header, pcomps);
+    if (!is_safe_relative_path(target))
+        die("refusing path outside the tree", target);
     i += 2;
 
     size_t flen = 0;
@@ -252,22 +285,23 @@ static void apply_file(struct line *pl, size_t plines, size_t *idx, int pcomps)
     free(out.p);
     free(file);
     free(fbuf);
+    free(header);
     *idx = i > 0 ? i - 1 : 0;
 }
 
 int main(int argc, char **argv)
 {
-    int pcomps = 1;
+    long pcomps = 1;
     const char *file = NULL;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-p") == 0) {
             if (i + 1 >= argc)
                 die("-p needs a number", NULL);
-            pcomps = atoi(argv[++i]);
+            pcomps = parse_strip(argv[++i]);
         }
         else if (strncmp(argv[i], "-p", 2) == 0) {
-            pcomps = atoi(argv[i] + 2);
+            pcomps = parse_strip(argv[i] + 2);
         }
         else if (argv[i][0] == '-' && argv[i][1] != '\0') {
             fprintf(stderr, "usage: rvpatch [-p components] patch-file\n");
