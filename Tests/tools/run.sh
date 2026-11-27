@@ -8,9 +8,9 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
 CFLAGS=(-O2 -std=gnu11 -Wall -Wextra -Wshadow -Wconversion -Werror -fuse-ld=lld)
-clang "${CFLAGS[@]}" -o "$WORK/rvpatch" "$ROOT/build/mig/rvpatch.c" || exit 1
-clang "${CFLAGS[@]}" -o "$WORK/mkfat" "$ROOT/build/boot/mkfat/mkfat.c" || exit 1
-clang "${CFLAGS[@]}" -o "$WORK/elf2pe" "$ROOT/build/boot/elf2pe/elf2pe.c" || exit 1
+clang "${CFLAGS[@]}" -o "$WORK/rvpatch" "$ROOT/Tools/mig/rvpatch.c" || exit 1
+clang "${CFLAGS[@]}" -o "$WORK/mkfat" "$ROOT/Boot/mkfat/mkfat.c" || exit 1
+clang "${CFLAGS[@]}" -o "$WORK/elf2pe" "$ROOT/Boot/elf2pe/elf2pe.c" || exit 1
 
 passed=0
 failed=0

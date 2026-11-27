@@ -3,7 +3,7 @@
 # Copyright (c) 2026 The ravynOS Authors
 set -euo pipefail
 
-BOOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../build/boot" && pwd)
+BOOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../Boot" && pwd)
 BUILD="$BOOT/build"
 
 command -v qemu-system-riscv64 >/dev/null || {

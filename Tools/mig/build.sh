@@ -5,7 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RAVYNOS_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VENDORED="$RAVYNOS_ROOT/tools/mig/upstream/migcom.tproj"
+VENDORED="$RAVYNOS_ROOT/Tools/mig/upstream/migcom.tproj"
 PATCHES="$SCRIPT_DIR/patches"
 SHIM="$SCRIPT_DIR/include"
 WORK="$SCRIPT_DIR/work"
@@ -17,9 +17,9 @@ while IFS= read -r line; do
     case "$line" in
         "* Tag: "*) TAG="${line#\* Tag: }" ;;
     esac
-done < "$RAVYNOS_ROOT/tools/mig/_PROVENANCE"
+done < "$RAVYNOS_ROOT/Tools/mig/_PROVENANCE"
 if [ -z "$TAG" ]; then
-    echo "error: no 'Tag:' line in tools/mig/_PROVENANCE" >&2
+    echo "error: no 'Tag:' line in Tools/mig/_PROVENANCE" >&2
     exit 1
 fi
 

@@ -18,7 +18,7 @@ need rustfmt rustfmt
 need clang-format clang-format
 need git git
 
-echo "== format gate: rustfmt (tools/rv/src)"
+echo "== format gate: rustfmt (Tools/rv/src)"
 tracked() {
     local out
     if ! out=$(git -C "$root" ls-files -- "$@"); then
@@ -31,9 +31,9 @@ tracked() {
 
 cd "$root" || exit 1
 
-mapfile -t rs_files < <(tracked ':(glob)tools/rv/src/**/*.rs')
+mapfile -t rs_files < <(tracked ':(glob)Tools/rv/src/**/*.rs')
 if [ "${#rs_files[@]}" -eq 0 ]; then
-    echo "notice: no rust sources under tools/rv/src; nothing to check"
+    echo "notice: no rust sources under Tools/rv/src; nothing to check"
 else
     if ! rustfmt --check --edition 2021 "${rs_files[@]}"; then
         echo "error: rustfmt found formatting diffs (shown above); run" >&2
@@ -42,10 +42,10 @@ else
     fi
 fi
 
-echo "== format gate: clang-format (components)"
-mapfile -t c_files < <(tracked ':(glob)components/**/*.c' ':(glob)components/**/*.h')
+echo "== format gate: clang-format (our C sources)"
+mapfile -t c_files < <(tracked ':(glob)Apps/hello-cli/**/*.c' ':(glob)Foundation/**/*.c' ':(glob)Foundation/**/*.h')
 if [ "${#c_files[@]}" -eq 0 ]; then
-    echo "notice: no components/** .c/.h files tracked yet; nothing to check"
+    echo "notice: no (Apps, Foundation) .c/.h files tracked yet; nothing to check"
 else
     if ! clang-format --dry-run -Werror "${c_files[@]}" 2> >(sed 's/^/  /' >&2); then
         echo "error: clang-format found violations (shown above); run" >&2
@@ -55,9 +55,9 @@ else
 fi
 
 echo "== format gate: clang-format (build tooling)"
-mapfile -t tool_c_files < <(tracked ':(glob)build/mig/*.c' ':(glob)Kernel/RVOS/**/*.c' ':(glob)Kernel/RVOS/**/*.h')
+mapfile -t tool_c_files < <(tracked ':(glob)Tools/mig/*.c' ':(glob)Kernel/port/**/*.c' ':(glob)Kernel/port/**/*.h')
 if [ "${#tool_c_files[@]}" -eq 0 ]; then
-    echo "notice: no build/** .c/.h files tracked yet; nothing to check"
+    echo "notice: no Boot, Tools or Kernel/port .c/.h files tracked yet; nothing to check"
 else
     if ! clang-format --dry-run -Werror "${tool_c_files[@]}" 2> >(sed 's/^/  /' >&2); then
         echo "error: clang-format found violations (shown above); run" >&2

@@ -8,8 +8,8 @@ cd "$root" || exit 1
 
 deny='gcc|g\+\+|cc|c\+\+|cpp|bison|yacc|make|m4|patch|objcopy|objdump|readelf|ranlib|nm|ld|ar|gdb|autoconf|automake|libtool|gperf'
 
-files=$(git ls-files -- ':(glob)build/**/*.sh' ':(glob)tests/**/*.sh' ':(glob).github/**/*.yml' ':(glob).github/**/*.yaml' 2>/dev/null)
-rs=$(git ls-files -- ':(glob)tools/rv/src/**/*.rs' 2>/dev/null)
+files=$(git ls-files -- ':(glob)Boot/**/*.sh' ':(glob)Tools/ci/*.sh' ':(glob)Tools/mig/*.sh' ':(glob)Tests/**/*.sh' ':(glob).github/**/*.yml' ':(glob).github/**/*.yaml' 2>/dev/null)
+rs=$(git ls-files -- ':(glob)Tools/rv/src/**/*.rs' 2>/dev/null)
 if [ -z "$files" ] || [ -z "$rs" ]; then
     echo "error: git ls-files found no scripts to scan" >&2
     exit 1
@@ -34,8 +34,8 @@ if [ -n "$hits" ]; then
     status=1
 fi
 
-if [ ! -s build/mig/generated/lexxer.c ]; then
-    echo "error: build/mig/generated/lexxer.c is missing; the mig build would need flex and m4" >&2
+if [ ! -s Tools/mig/generated/lexxer.c ]; then
+    echo "error: Tools/mig/generated/lexxer.c is missing; the mig build would need flex and m4" >&2
     status=1
 fi
 

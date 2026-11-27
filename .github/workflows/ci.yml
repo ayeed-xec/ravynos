@@ -21,28 +21,28 @@ jobs:
 
       - name: Host tool gate (no GPL program in the build)
         run: |
-          bash -n build/ci/check-host-tools.sh
-          shellcheck build/ci/check-host-tools.sh
-          build/ci/check-host-tools.sh
+          bash -n Tools/ci/check-host-tools.sh
+          shellcheck Tools/ci/check-host-tools.sh
+          Tools/ci/check-host-tools.sh
 
       - name: Lint the CI scripts
         run: |
-          bash -n build/ci/check-format.sh
-          shellcheck build/ci/check-format.sh
+          bash -n Tools/ci/check-format.sh
+          shellcheck Tools/ci/check-format.sh
 
       - name: Host tool unit tests (rvpatch, mkfat, elf2pe)
         run: |
-          shellcheck tests/tools/run.sh
-          tests/tools/run.sh
+          shellcheck Tests/tools/run.sh
+          Tests/tools/run.sh
 
       - name: Build the rv harness
-        run: cargo build --manifest-path tools/rv/Cargo.toml
+        run: cargo build --manifest-path Tools/rv/Cargo.toml
 
       - name: rv build (discovers components from their manifests)
-        run: cargo run --manifest-path tools/rv/Cargo.toml -- build -t x86_64-ravynos
+        run: cargo run --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
 
       - name: rv audit license
-        run: cargo run --manifest-path tools/rv/Cargo.toml -- audit license
+        run: cargo run --manifest-path Tools/rv/Cargo.toml -- audit license
 
   format:
     name: clang-format / rustfmt gate
@@ -57,4 +57,4 @@ jobs:
           rustup component add rustfmt
 
       - name: Check formatting
-        run: build/ci/check-format.sh
+        run: Tools/ci/check-format.sh
