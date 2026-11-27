@@ -7,8 +7,8 @@ on:
     branches: [main, darwin-clean]
 
 jobs:
-  build:
-    name: rv build + audit
+  gates:
+    name: rv gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
