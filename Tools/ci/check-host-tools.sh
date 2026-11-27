@@ -8,9 +8,9 @@ cd "$root" || exit 1
 
 deny='gcc|g\+\+|cc|c\+\+|cpp|bison|yacc|make|m4|patch|objcopy|objdump|readelf|ranlib|nm|ld|ar|gdb|autoconf|automake|libtool|gperf'
 
-files=$(git ls-files -- ':(glob)Boot/**/*.sh' ':(glob)Tools/ci/*.sh' ':(glob)Tools/mig/*.sh' ':(glob)Tests/**/*.sh' ':(glob).github/**/*.yml' ':(glob).github/**/*.yaml' 2>/dev/null)
-rs=$(git ls-files -- ':(glob)Tools/rv/src/**/*.rs' 2>/dev/null)
-if [ -z "$files" ] || [ -z "$rs" ]; then
+files=$(git ls-files -- '*.sh' '*.bash' '*.yml' '*.yaml' ':!Kernel/xnu/**' ':!Tools/mig/upstream/**' ':!build/**' 2>/dev/null)
+rs=$(git ls-files -- '*.rs' ':!Kernel/xnu/**' ':!Tools/mig/upstream/**' ':!build/**' 2>/dev/null)
+if [ -z "$files" ] && [ -z "$rs" ]; then
     echo "error: git ls-files found no scripts to scan" >&2
     exit 1
 fi
