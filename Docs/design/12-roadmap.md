@@ -9,13 +9,11 @@ to build next, what blocks what, and what is deliberately not scheduled.
 
 ## Authority
 
-The wave numbers are those of [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) section 6. That
-document owns the subsystems, the tiers T0–T5 and the budgets P1–P10; this one expands
-each wave into checkable exit criteria. Where the two disagree, SYSTEM-DESIGN.md is
-right. Where the project stands against these criteria is recorded only in
-[STATUS.md](STATUS.md).
-
-There are no dates. What we control is order and parallelism.
+Superseded. The waves, their exit criteria and the parallel tracks are now defined in
+[SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) section 6, which makes arm64 and x86_64 both
+primary (ADR-19) and renumbers the waves accordingly. This document is kept for the
+reasoning behind each wave's hard part; its wave numbers and exit criteria are not
+current.
 
 ## The waves
 

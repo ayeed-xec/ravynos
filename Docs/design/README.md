@@ -34,7 +34,7 @@ project-wide plan, kept for its reasoning.
 | 9 | [09-compat.md](09-compat.md) | Native Linux and FreeBSD compatibility for binaries and kernel drivers (NVIDIA case study), ML workloads |
 | 10 | [10-mobility.md](10-mobility.md) | The iOS-alternative face: phone stack, SoC bring-up playbook, scope honesty |
 | 11 | [11-quality.md](11-quality.md) | Implementation guidelines: code standards, anti-bloat rules, tests, performance budgets as CI gates, review checklist |
-| 12 | [12-roadmap.md](12-roadmap.md) | Exit criteria for each wave W0–W8, and the parallel tracks |
+| 12 | [12-roadmap.md](12-roadmap.md) | Earlier wave plan (superseded by SYSTEM-DESIGN.md section 6); the reasoning behind each wave's hard part |
 | 13 | [13-toolchain-sdk.md](13-toolchain-sdk.md) | Native toolchain bootstrap, the SDK as a build output, the legal boundary between Apple open source and Apple proprietary artifacts |
 
 
