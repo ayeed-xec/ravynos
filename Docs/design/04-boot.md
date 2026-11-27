@@ -1,14 +1,12 @@
 # 04 — Boot: `kite`, the ravynOS bootloader
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document covers everything between power-on and the first user process: the
 bootloader we write, the hand-off into XNU, and the per-architecture paths that get a
 kernel running on x86_64, arm64 and riscv64. Read it if you are working on the loader
 itself, bringing up new hardware, or debugging why a kernel that runs under QEMU will
 not boot on real metal.
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), sections 4 (XNU on x86_64) and 5 (XNU on arm64); current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## Where boot stands today
 

@@ -1,5 +1,7 @@
 # 10 — Mobility: one OS, two faces
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document covers the phone and tablet face of ravynOS: how the same
 kernel and core userland that drive the desktop drive a touch-first,
 arm64-first device, what the ios-sweet project proves about the

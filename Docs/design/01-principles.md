@@ -1,5 +1,7 @@
 # 01 — Design principles
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document states what ravynOS is, the three engineering pillars every
 subsystem is held against, and the rules that follow from them: the no-stubs
 doctrine and the licensing rules that gate every import. It also draws the

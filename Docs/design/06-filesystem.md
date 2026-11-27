@@ -1,5 +1,7 @@
 # 06 · Filesystem
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document specifies ravynOS's filesystem stack: APFS as the root filesystem, the
 clean-room implementation plan that gets us there, the secondary filesystems for migration
 and interoperability, and what we have to measure. It is for anyone working on the VFS

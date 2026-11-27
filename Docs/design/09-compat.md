@@ -1,5 +1,7 @@
 # 09 — Compatibility: Linux and FreeBSD as native subsystems
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document covers running unmodified Linux and FreeBSD *binaries* on
 ravynOS: the ELF loader, the Linux ABI environment (name space, syscalls,
 synchronization primitives), the NVIDIA userspace case study, the ML

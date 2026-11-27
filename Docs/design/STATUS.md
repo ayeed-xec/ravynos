@@ -1,0 +1,167 @@
+# Status
+
+Where the code stands against [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md), subsystem by
+subsystem. This is the only document that records status; update it in the same commit
+as the code it describes. Gaps are numbered GAP-01 onward and bugs BUG-01 onward; the
+numbers are permanent, and a closed item is marked closed, not deleted.
+
+## Summary
+
+The build tool, the bootloader's UEFI plumbing, the vendored mig and the CI license
+gates exist and are reasonably built. No Darwin program has run, the kernel does not
+link, and nothing above the kernel exists outside `Legacy/`. Tiers T0–T5 are all open.
+
+What exists, and whether it is a real implementation:
+
+- `Tools/rv/` — real, small, well-structured Rust; three unit tests; several documented
+  behaviors not yet implemented (GAP-01 to GAP-06).
+- `Boot/loader/` — real UEFI code that boots ELF test kernels on three architectures;
+  its Mach-O and x86 hand-off paths are broken (BUG-01 to BUG-04).
+- `Boot/mkfat/`, `Boot/elf2pe/`, `Tools/mig/rvpatch.c` — real, with unit tests.
+- `Tools/mig/` — Apple's migcom, pristine, with three patches, built with byacc.
+- `Tools/ci/` — real gates with incomplete coverage (GAP-09, GAP-10).
+- `Kernel/build/` — a separate kernel compile driver outside `rv`, with hand-written
+  configuration; compiles files in batches; does not link (GAP-12 to GAP-15).
+- `Kernel/port/arm64/` — stub functions that report success (BUG-07); obsolete under
+  ADR-11.
+- `Kernel/port/riscv64/` — real but small SBI, `satp` and trap code; built by nothing.
+- `Kernel/Extensions/FreeBSDPort/` — a partial driver shim that does not compile against
+  XNU and is not wired into any build (GAP-24).
+- `Apps/hello`, `Apps/hello-cli` — test programs that make Linux system calls; neither is
+  a Darwin program (GAP-07).
+- `Legacy/` — upstream ravynOS; useful seeds listed per subsystem below; contains files
+  that violate the license rule (GAP-30).
+
+## Bugs
+
+- **BUG-01** `Boot/loader/macho.c` reads `LC_SEGMENT_64` fields at wrong offsets: vmaddr
+  at 16 (should be 24), file offset from the vmsize field, file size from the file-offset
+  field, memory size from the file-size field.
+- **BUG-02** `Boot/loader/macho.c` reads the x86 entry point from thread-state index 20
+  (`gs`) instead of 16 (`rip`); `LC_MAIN` is defined as `0x28` instead of `0x80000028`;
+  no bounds checks on segment offsets and sizes.
+- **BUG-03** `Boot/loader/handoff.S`: after the 64→32 switch it jumps to `eax`, which
+  holds the `boot_args` address, not the kernel entry; data segments are not reloaded.
+- **BUG-04** `Boot/loader/main.c`: the memory map in `boot_args` is captured before the
+  final allocations; the map used for `ExitBootServices` never reaches the kernel.
+- **BUG-05** `Boot/loader/main.c`: `deviceTreeP` is zero; XNU then parses physical
+  address 0 as a device tree. Video, runtime-services and other fields are unset.
+- **BUG-06** The arm64 loader path passes the x86 `boot_args` and leaves the MMU and
+  caches on at hand-off.
+- **BUG-07** `Kernel/port/arm64/pmap.c` consists of functions that ignore their arguments
+  and return success — stubs, which the design forbids.
+- **BUG-08** `Kernel/build/driver/compile.sh` defines `__i386__` for x86_64, selecting
+  32-bit paths in XNU headers.
+- **BUG-09** `rv` silently overwrites one manifest with another when two share a name
+  (`Apps/hello` and `Apps/hello-cli` are both `hello`); the one built is `hello-cli`.
+- **BUG-10** `rv shell` prints an environment bash rejects and points at a directory with
+  no `build.ninja`.
+- **BUG-11** `Kernel/Extensions/FreeBSDPort/shim` calls `ifnet_allocate_extended` with
+  the wrong arguments for XNU's declaration.
+- **BUG-12** `Boot/build.sh` references `loader/aarch64/efi-objlst.ld`, which does not
+  exist.
+
+## Gaps by subsystem
+
+**S01 build harness**
+- GAP-01 rv emits ELF; no Mach-O output (needs ADR-03).
+- GAP-02 No dependency files in the compile rule; header edits rebuild nothing.
+- GAP-03 Only `.c` sources compile; `.m`, `.mm`, `.cpp`, `.S` are skipped silently. No
+  dylib, framework, kext or bundle outputs.
+- GAP-04 No sysroot is passed or assembled.
+- GAP-05 Unknown manifest keys are ignored; `state`, `tests`, `vendored` unread.
+- GAP-06 `image`, `test`, `vendors`, `sdk`, `bootstrap`, `audit size`, `kernelcache` not
+  implemented; `graph --forbid` does nothing.
+
+**S02 toolchain**
+- GAP-07 No Darwin program exists; the test programs use Linux system calls.
+- GAP-08 No stage-1 toolchain; CI uses the distribution's clang, unpinned; no
+  `rust-toolchain.toml`; `cargo` not run with `--locked`; `rv` is dynamically linked.
+- GAP-09 The license audit scans only the three manifested directories and only some file
+  types; no crate scanning; no fingerprinting.
+- GAP-10 The host-tool gate skips `Kernel/build/` (which uses gcc, GNU make and GRUB) and
+  parts of `Tools/`.
+- GAP-11 The committed mig lexer was generated by flex, which runs GNU m4. `Tools/mig/build.sh`
+  installs packages with `sudo apt-get`; `_PROVENANCE` names old paths.
+
+**S03 SDK** — not started. No `VENDORS` file at the root (only `Legacy/VENDORS`, no xnu
+pin).
+
+**S04 bootloader** — BUG-01 to BUG-06, BUG-12. CI does not build the loader or run the
+boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT target.
+
+**S05 kernel build**
+- GAP-12 The kernel build is outside `rv`, with hand-written configuration in
+  `Kernel/build/config-include/`.
+- GAP-13 Two mig copies: `Kernel/build/mig` (bootstrap_cmds-99.231.1) produced the
+  committed kernel mig output; `Tools/mig` (138) is the one the design keeps.
+- GAP-14 The vendored XNU has been edited in place: 19 files, about 9,600 lines,
+  including generated system-call tables and hand edits. These become patches and build
+  outputs (ADR-10).
+- GAP-15 No link: the link step resolves against a stub object; the listed undefined
+  symbols cover one object only.
+- GAP-16 No replacements yet for `firehose_kernel` and `cc_kext`.
+- GAP-17 The GRUB-based rig in `Kernel/build/boot/` remains.
+
+**S06 x86_64 platform** — GAP-18: no platform expert, CPU, interrupt-controller or ACPI
+kexts built; seeds in `Kernel/Extensions/` unaudited.
+
+**S07 arm64 platform** — GAP-19: no RVVIRT board; `Kernel/port/arm64/` to be deleted.
+
+**S08 riscv64** — GAP-20: no build of `Kernel/port/riscv64/`; no LLVM triple patch.
+
+**S09 kernelcache** — GAP-21: no tool.
+
+**S10 native drivers** — GAP-22: no family or driver is built.
+
+**S11 foreign drivers**
+- GAP-23 Docs before SYSTEM-DESIGN.md said GPL drivers could not be used at all; ADR-14
+  replaces that.
+- GAP-24 FreeBSDPort: does not compile (BUG-11); builds against XNU private headers, so
+  no stable interface is possible; no IOService class, `Info.plist` or build wiring; its
+  own `mbuf` duplicates XNU's; files lack SPDX headers; no `LICENSE`.
+
+**S12 code signing** — GAP-25: nothing parses or applies signatures; no `codesign` tool.
+
+**S13–S17 user space** — GAP-26: none built. Seeds in `Legacy/`: Libsystem (macOS 12
+era), dyld-1066.8 with its cache builder, objc4, CF (about 10.11 era), launchd-842,
+NextBSD libxpc (BSD-2), an os_log reimplementation (BSD-2), configd, mDNSResponder,
+notifyd. All need updating to current tags.
+
+**S18 filesystems** — GAP-27: hfs and msdosfs vendored, unbuilt; no APFS.
+
+**S20–S23 graphics and frameworks** — GAP-28: nothing outside `Legacy/`. `Legacy/`'s
+AppKit, Foundation, CoreGraphics and QuartzCore are Cocotron-lineage (MIT), API about the
+10.6 era; its WindowServer targets FreeBSD devices and is not reusable;
+`Legacy/Frameworks/CoreGraphics/Makefile` links with `-undefined dynamic_lookup`.
+
+**S24–S29** — GAP-29: not started.
+
+**Repository-wide**
+- GAP-30 `Legacy/` contains GPL/LGPL/AGPL material: autotools `config.guess`/`config.sub`
+  and m4 files, GCC dump files under `Legacy/BSD/lib/ncurses/obj_s`, LGPL `dtrace_ctf`,
+  NSS-derived tri-licensed files in Security, and URW fonts whose license must be
+  checked. An `SDKSettings.json` that appears copied from Apple's SDK.
+- GAP-31 `Kernel/_PROVENANCE` describes the wrong source for the vendored XNU.
+- GAP-32 Paths named in older documents that do not exist: `Docs/spec/`, `Docs/rfc/`,
+  `.mlai/DECISIONS.md`, `Tests/perf/`, `Tests/apps/`, `Tests/kpi/`,
+  `Tools/license-audit.py`, and top-level `Libraries/`, `CoreServices/`, `BSD/`,
+  `SysApps/` (now under `Legacy/`).
+- GAP-33 CI runs only the x86_64 user-space build: no `cargo test`, clippy, arm64 or
+  riscv64 builds, loader build, mig build, boot smokes, Mach-O assertion or negative
+  tests. `Apps/.tmp_bad_manifest` is a stray file.
+
+## Exit criteria for W0 and W1
+
+| Criterion | State |
+|---|---|
+| `rv build` produces Mach-O | open (GAP-01) |
+| Negative tests for the gates run in CI | open (GAP-33) |
+| CI runs tests, clippy, all architectures | open (GAP-33) |
+| License audit covers the tree | open (GAP-09, GAP-30) |
+| One `.clang-format` for our code | met |
+| Provenance records for every vendored tree | open (GAP-31) |
+| mig built without GPL tools | met for the parser; open for the lexer (GAP-11) |
+| Kernel links with zero stubs through `rv` | open (GAP-12, GAP-15) |
+| T0 runs on XNU | open |
+| Tree restructure (W1.5) | met |

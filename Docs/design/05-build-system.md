@@ -1,15 +1,13 @@
 # 05 · Build system
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document specifies the ravynOS build harness: one tool, one manifest format, one graph,
 from the bootloader to the last desktop app. It is for anyone who will build the system,
 port it to a new target, or add a component and wonder where the manifest, the sysroot and
 the license audit live. Companion pieces: `02-architecture.md` for the layer rules the
 harness enforces, `03-kernel.md` for what the kernel build consumes, `11-quality.md` for the
 size and performance budgets the gates check against.
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), sections 1 (toolchain and triple) and 3 (the kernel build under `rv`); current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## Why not the status quo
 

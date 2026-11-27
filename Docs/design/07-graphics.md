@@ -1,15 +1,13 @@
 # 07 — Graphics
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document covers the graphics stack from scanout to application: the
 kernel's display services, the window server, CoreAnimation, the client
 frameworks, and Metal. It is for anyone working on the window server, a GPU
 backend, or a graphics framework. The frameworks themselves — who writes them
 and from what source — belong to [08-frameworks.md](08-frameworks.md); this
 document owns the server, the kernel-side display surface, and Metal.
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), sections 14 (window server, CoreGraphics, AppKit) and 16 (Metal); current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## The stack, scanout to application
 

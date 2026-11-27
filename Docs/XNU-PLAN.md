@@ -1,5 +1,7 @@
 # XNU-first plan: FreeBSD drivers, performance, UI stack, Claude Desktop POC
 
+> Historical plan from before the current design. Superseded by [design/SYSTEM-DESIGN.md](design/SYSTEM-DESIGN.md); its status claims are not current.
+
 Decision (2026-11-24): xnu is the kernel of record. The FreeBSD ISO path stays as a
 hosting convenience, not a second OS. All new low-level work targets
 `Kernel/xnu` and kexts under `Kernel/Extensions/`.

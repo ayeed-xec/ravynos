@@ -1,5 +1,7 @@
 # Objective-C runtime: license and ABI audit
 
+> Superseded by [design/DECISIONS.md](design/DECISIONS.md) ADR-05: ravynOS uses Apple's objc4. Kept for reference.
+
 Research date: 2026-11-24. Verdict: conditional acceptance of MIT-licensed libobjc2 source, subject to a permissive-only dependency/toolchain audit; no claim of macOS 26.x binary compatibility. The research session had no access to the ravynOS clone or its actual runtime build; integrated here.
 
 ## Correct upstream and license

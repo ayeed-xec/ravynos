@@ -1,5 +1,7 @@
 # 13 · Toolchain, SDK and the native-build rule
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 **Status:** Approved and applied. The amendments in §3 are in force in `Docs/DESIGN.md`
 §4/§10 (W0 lane F) and `Docs/design/05-build-system.md`.
 **Date:** 2026-11-26
@@ -12,10 +14,6 @@ The diagrams referenced here live in `diagrams/`:
 `sdk-legal-boundary.svg`.
 
 ---
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), sections 1 (toolchain and triple) and 9 (the SDK); current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## 1. The audit: gaps found in the current design
 
@@ -172,9 +170,9 @@ bootstrap" out of `05-build-system.md` and into scope.
    link; this mechanically enforces the no-undefined-symbols rule of §1.
 3. **Module maps** — generated alongside the headers so clang modules work without
    hand-maintained map files.
-4. **Identity** — (under review: [14-status-and-gaps.md](14-status-and-gaps.md) F1
+4. **Identity** — (under review: [STATUS.md](STATUS.md) F1
    argues the SDK must declare the macOS platform so the apps it builds are Mac apps;
-   [15-implementation-guide.md](15-implementation-guide.md) §9 is written that way)
+   [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) §9 is written that way)
    `SDKSettings.json` regenerated with ravynOS identity: platform
    `ravynos`, harness target `<arch>-ravynos` (the LLVM triple it maps to is the open
    question in §4), display name ravynOS, no

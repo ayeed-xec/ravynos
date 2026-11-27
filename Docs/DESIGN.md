@@ -1,5 +1,7 @@
 # System Design & Wave Roadmap (Roadmap 4.0)
 
+> Background document. [design/SYSTEM-DESIGN.md](design/SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [design/STATUS.md](design/STATUS.md); decisions in [design/DECISIONS.md](design/DECISIONS.md).
+
 **Status:** Authoritative. Supersedes `Docs/ROADMAP.md` (Roadmap 3.0), which has been
 removed along with its P0–P2 work packages.
 **Date:** 2026-11-25

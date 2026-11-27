@@ -1,5 +1,7 @@
 # 11 — Quality: the bar, the gates, the review
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document defines what "done" means for contributed code: the style bar
 each language is held to, the anti-bloat rules a reviewer checks line by line,
 the test and sanitizer requirements, the performance budgets the build gates

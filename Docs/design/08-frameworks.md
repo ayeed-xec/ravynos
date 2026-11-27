@@ -1,5 +1,7 @@
 # 08 — Frameworks
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document specifies the framework strategy: three sourcing tiers with
 their rules, a coverage map of the framework families against those tiers, a
 concrete inventory with first milestones, the ML story built on MLX, and what
@@ -8,10 +10,6 @@ a framework, and for anyone deciding whether a given piece of code may enter
 the tree. The graphics stack these frameworks sit on is
 [07-graphics.md](07-graphics.md); the license rules cited throughout are the
 hard rule from [01-principles.md](01-principles.md).
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), sections 10 (Libsystem, dyld, objc4), 12 (the ABI census), 14 and 15; current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## Three tiers, three sets of rules
 

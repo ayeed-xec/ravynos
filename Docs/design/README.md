@@ -1,21 +1,25 @@
 # ravynOS system design
 
-This is the design documentation for the operating system itself: what it is, how each
-subsystem works, and the order we build it in. It replaces the older design and roadmap
-documents (Roadmap 3.0 and the phase plans, now removed).
+ravynOS runs unmodified Mac applications on Apple's open-source XNU kernel, with our own
+implementations of everything Apple keeps closed and an SDK shaped like Apple's.
 
-Authority is split on purpose. [../DESIGN.md](../DESIGN.md) is the decision record: the
-non-negotiables, the compatibility tiers T0–T5, the performance budgets P1–P10, the lanes
-and the wave numbering W0–W8. The documents here carry the subsystem designs and expand
-each wave into checkable exit criteria. Where a document here contradicts DESIGN.md, the
-document here is the one to fix.
+## Start here
 
-The target is the macOS 27.2.1 generation (build 26B131, Darwin 27.2, kernel
-xnu-13432.41.4), assembled from Apple's own open-source releases plus our own native
-implementations of everything Apple keeps closed. No stubs, no emulation as architecture,
-no GPL code anywhere in the tree.
+| Document | Read it for |
+|---|---|
+| [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) | The design of record: rules, architecture, and every subsystem with how it works, how to build it and when it is done |
+| [STATUS.md](STATUS.md) | Where the code stands: bugs and gaps, numbered |
+| [DECISIONS.md](DECISIONS.md) | Why each major choice was made |
+| [../spec/TEMPLATE.md](../spec/TEMPLATE.md) | The template for specifying closed behavior |
 
-## The documents
+Implementing agents: read SYSTEM-DESIGN.md sections 0–2, then your subsystem, then its
+entries in STATUS.md. Nothing else is required.
+
+## Background documents
+
+These explain the reasoning behind the design in more depth. Where they disagree with
+SYSTEM-DESIGN.md, SYSTEM-DESIGN.md is right. [../DESIGN.md](../DESIGN.md) is the earlier
+project-wide plan, kept for its reasoning.
 
 | # | Document | What it covers |
 |---|----------|----------------|
@@ -30,25 +34,8 @@ no GPL code anywhere in the tree.
 | 9 | [09-compat.md](09-compat.md) | Native Linux and FreeBSD compatibility for binaries and kernel drivers (NVIDIA case study), ML workloads |
 | 10 | [10-mobility.md](10-mobility.md) | The iOS-alternative face: phone stack, SoC bring-up playbook, scope honesty |
 | 11 | [11-quality.md](11-quality.md) | Implementation guidelines: code standards, anti-bloat rules, tests, performance budgets as CI gates, review checklist |
-| 12 | [12-roadmap.md](12-roadmap.md) | Waves W0–W8 (DESIGN.md numbering) with exit criteria, parallel tracks, and current status |
+| 12 | [12-roadmap.md](12-roadmap.md) | Exit criteria for each wave W0–W8, and the parallel tracks |
 | 13 | [13-toolchain-sdk.md](13-toolchain-sdk.md) | Native toolchain bootstrap, the SDK as a build output, the legal boundary between Apple open source and Apple proprietary artifacts |
-| 14 | [14-status-and-gaps.md](14-status-and-gaps.md) | Code against design: what exists, whether it is native, the numbered gaps (G1…) and design flaws (F1…) |
-| 15 | [15-implementation-guide.md](15-implementation-guide.md) | How to build each missing piece: steps, sources to read, and the test that says it is done |
 
-Diagrams live in [diagrams/](diagrams/), one SVG per figure, referenced from the documents.
 
-## Reading order
-
-If you read only two, read 01 and 02: they define the constraints every other document
-assumes. Contributors should then read 11 before writing code, and the document that owns
-the subsystem they are working on. 14 says what the code actually does against this
-design, and 15 is the step-by-step plan for each missing piece. 12 tells you where the project stands and what can start
-in parallel; 13 explains how the toolchain and SDK are built without any Apple
-proprietary input.
-
-## Status
-
-These documents are design, not records: most subsystems described here do not exist
-yet, and each document's "Open questions" section is the honest list of what is not
-settled. The roadmap's exit criteria are how a claim of progress gets checked, and its
-"Where we stand" table is the one place that records which criteria are met today.
+Diagrams live in [diagrams/](diagrams/).

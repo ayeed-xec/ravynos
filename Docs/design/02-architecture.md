@@ -1,5 +1,7 @@
 # 02 — System architecture
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document is the map of ravynOS: the full stack from firmware to
 applications, the top-level layout of the repository, the dependency rules
 that hold the layout together, and the process architecture that runs at
@@ -7,10 +9,6 @@ boot. It names the sibling document that owns each layer and stops there —
 the details live with the layer. Read this after [01-principles.md]
 (01-principles.md); read it again whenever you forget which document owns a
 problem.
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), section 11 (launchd and userland) and the compatibility contract at its top; current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## The stack
 

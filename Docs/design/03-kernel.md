@@ -1,15 +1,13 @@
 # The kernel
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document covers the kernel of record, how we build and vendor it, the
 architectures we target, the driver model, kernel-level compatibility for
 third-party drivers, compute support for large ML workloads, and
 debuggability. It is for anyone working on the kernel, the build harness, or
 a driver. Read it next to [04-boot.md](04-boot.md), which picks up where the kernel
 entry point begins.
-
-The concrete implementation steps for this document live in
-[15-implementation-guide.md](15-implementation-guide.md), sections 3 (kernel build), 5 (arm64 as a VMAPPLE guest), 6 (riscv64), 7 (kexts and the kernelcache) and 8 (code signing); current gaps are listed
-in [14-status-and-gaps.md](14-status-and-gaps.md).
 
 ## Kernel of record
 

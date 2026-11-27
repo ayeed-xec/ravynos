@@ -1,63 +1,21 @@
 # 12 — Roadmap: work waves
 
+> Background document. [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) is the design of record; where this document disagrees with it, SYSTEM-DESIGN.md is right. Status lives only in [STATUS.md](STATUS.md).
+
 This document orders the work. Each wave has a goal, exit criteria that a machine or a
 skeptical reviewer can check, its dependencies, and an honest callout of the hard part. It
 also records where the project stands against those criteria today. Read it to learn what
 to build next, what blocks what, and what is deliberately not scheduled.
 
-## One numbering, one authority
+## Authority
 
-The wave numbers here are the wave numbers of [../DESIGN.md](../DESIGN.md) §10 (Roadmap
-4.0): W0 through W8, each tied to a compatibility tier T0–T5. DESIGN.md is the decision
-record and owns the tier definitions, the performance budget table (P1–P10) and the lane
-structure (A–F); this document expands each wave into checkable exit criteria and names
-the subsystem document that carries the how. When the two disagree, DESIGN.md wins and
-this file is the one that gets fixed.
+The wave numbers are those of [SYSTEM-DESIGN.md](SYSTEM-DESIGN.md) section 6. That
+document owns the subsystems, the tiers T0–T5 and the budgets P1–P10; this one expands
+each wave into checkable exit criteria. Where the two disagree, SYSTEM-DESIGN.md is
+right. Where the project stands against these criteria is recorded only in
+[STATUS.md](STATUS.md).
 
-Work that DESIGN.md does not place in a numbered wave — APFS, Metal, the Linux/FreeBSD
-compatibility subsystems, riscv64, the phone face — runs as **tracks**: parallel lanes
-with their own exit criteria, each attached to the wave that first needs its output. A
-track never gates a wave it is not attached to.
-
-An earlier revision of this file numbered eleven waves (W0–W10) on a different split.
-Those numbers are retired. For readers of older commits and notes, the mapping:
-
-| Retired number | Was | Now |
-|---|---|---|
-| W0 | Skeleton, `rv`, gates | W0 |
-| W1 | xnu builds on Linux (all three triples) | W1 |
-| W1.5 | Tree restructure | W1.5, kept under its own number: it is done |
-| W2 | kite boots the kernel | Boot track (kite), attached to W3 and W4 |
-| W3 | dyld, libc, libdispatch, launchd, IPC | W2 (dynamic runtime) and W3 (userland) |
-| W4 | APFS | APFS track: library in W2, VFS in W4, root volume by W8 |
-| W5 | Framebuffer to WindowServer | W4 |
-| W6 | CoreFoundation, Foundation, first apps | W4 (first window), W6 (width, Terminal, Finder) |
-| W7 | Metal | Metal track: software rasterizer by W6, first hardware backend by W7 |
-| W8 | Compat: driver shims, ELF loader | Compat track, after W3 |
-| W9 | arm64, then riscv64 (port sources started early) | Arch-port lane: arm64 exits at W5, riscv64 as its own track |
-| W10 | Phone face | Phone track, after W5 and W6 |
-
-There are no dates. The build fleet is x86_64 Linux machines with 8 CPUs, 16 GB of RAM and
-no GPU; the contributor count is small. What we control is order and parallelism, and that
-is what this document commits to.
-
-## Where we stand
-
-Checked against branch `darwin-clean` at `338dbda`. "Met" means the criterion is
-checkable in CI today; anything else is open. The full comparison of code against design,
-with numbered gaps and design flaws, is [14-status-and-gaps.md](14-status-and-gaps.md);
-the plan for each gap is [15-implementation-guide.md](15-implementation-guide.md).
-
-| Wave | State | Evidence and what remains |
-|---|---|---|
-| W0 | in progress | Met: `rv` (Rust, BSD-3-Clause, `Tools/rv/`) reads TOML manifests, checks layer fences, detects cycles and emits ninja; `rv build`, `rv graph`, `rv shell`, `rv audit license` exist; CI builds the manifested components and runs the SPDX audit, the format check, the host-tool unit tests (`Tests/tools/run.sh`) and the no-GPL host-tool gate (`Tools/ci/check-host-tools.sh`); root `.clang-format`; `VENDORS`. Open: `Apps/hello` is an **ELF** executable, not Mach-O — clang has no `ravynos` OS and `rv` links with `ld.lld -m elf_*` (13-toolchain-sdk.md, open questions); CI does not run `cargo test`/`cargo clippy` for `rv`, so its layer-rule unit tests are not gated; no committed planted-GPL or stripped-header negative case; `rv image`, `rv test`, `rv vendors`, `rv audit size` unimplemented; no content fingerprinting; provenance records only for xnu and mig; no `Docs/spec/`; no tier test app built by our toolchain as Mach-O |
-| W1 | in progress | Met: Apple's migcom (`bootstrap_cmds-138`, APSL) builds from a pristine vendored copy with a three-patch series applied by our `rvpatch`, parser from byacc — no GPL program in the build path; our own UEFI loader (`Boot/loader/`) boots a test kernel to panic-with-output on x86_64 (OVMF), arm64 (AAVMF) and riscv64 (edk2) in QEMU; build rules are triple-clean for `x86_64-ravynos`, `arm64-ravynos`, `riscv64-ravynos`. Open: generated mig stubs not yet compiled (sysroot header gaps); the kernel link still carries the 97-symbol workplan (`Kernel/build/link/REAL-KERNEL-UNDEFS.txt`); the old GRUB rig still sits in `Kernel/build/boot/`; T0 (a static Mach-O on xnu) not yet run |
-| W1.5 | done | `Boot/`, `Tools/`, `Tests/`, `Apps/`, `Foundation/`, `Kernel/port/` replace the old paths; the upstream desktop tree moved under `Legacy/` and out of the build graph |
-| W2–W8 | not started | Nothing in the tree claims these exits. The arch-port lane has skeletons in `Kernel/port/arm64` and `Kernel/port/riscv64` (pmap, traps, SBI) |
-
-The xnu-13432 vendor bump is not pending: Apple has not published that tag, and
-xnu-12377.121.6 remains the newest published source (03-kernel.md). The bump happens the
-week the tag appears, owned by lane A, absorbed by the wave in flight.
+There are no dates. What we control is order and parallelism.
 
 ## The waves
 
@@ -107,7 +65,7 @@ Exit criteria:
   the boot path). The link is driven by `rv build kernel`.
 - mig is Apple's migcom, vendored pristine with a `why:`/`fate:` patch series applied by
   `rvpatch`, its parser generated by byacc — no GPL build tooling
-  ([05-build-system.md](05-build-system.md), "Tooling boundary"; met). The generated headers
+  ([05-build-system.md](05-build-system.md), "Tooling boundary"). The generated headers
   for the kernel's `.defs` set are committed and act as regression fixtures; a mig change
   that alters them fails CI.
 - T0: a static Mach-O built by our stage-1 toolchain runs on the kernel in QEMU (q35/OVMF)
@@ -121,7 +79,7 @@ Exit criteria:
 - Per-arch from day one: every harness rule, mig invocation and boot script is
   triple-clean — `x86_64-ravynos`, `arm64-ravynos` and `riscv64-ravynos` each build every
   component and pass the same gates on every commit, with no `linux-gnu`, no `unknown`
-  and no arch-conditional shell escapes in build rules (met for the current components).
+  and no arch-conditional shell escapes in build rules.
   Kernel port *sources* are the arch-port lane's, not W1's.
 
 Dependencies: W0.
@@ -235,9 +193,9 @@ Exit criteria:
 - No x86_64 criterion regressed while the port landed.
 
 Dependencies: W1–W3 for the exit tests. The port *sources* do not wait: an arch-port lane
-owns `Kernel/port/arm64` and `Kernel/port/riscv64` and their pmap, trap and SBI pieces,
-works in parallel with every wave from W1 on, and pulls W2–W4's per-arch criteria forward
-as its own milestones (the three-architecture commitment in
+owns the RVVIRT board (SYSTEM-DESIGN.md S07, which reuses XNU's own arm64 pmap and
+exception code) and the riscv64 port (S08), works in parallel with every wave from W1
+on, and pulls W2–W4's per-arch criteria forward as its own milestones (the three-architecture commitment in
 [01-principles.md](01-principles.md)). Runs alongside W4.
 
 The hard part: Apple-silicon assumptions in `osfmk/arm64` are useful in places and dead
@@ -276,8 +234,8 @@ to stub is strongest.
 
 Exit criteria:
 
-- T5: a designated commercial application installs and runs, climbing the ladder Electron
-  app → Qt app → native AppKit app → SwiftUI app.
+- T5: closed-source applications install and run, in this order: a small AppKit app, a Qt
+  app, a SwiftUI app, an Electron app (DECISIONS.md ADR-08).
 - Every gap the ladder exposes lands as spec → implementation → test (DESIGN.md §7).
 - The SwiftUI rung runs on our clean-room SwiftUI/SwiftUICore/AttributeGraph, gated on
   W6's go verdict.
@@ -307,7 +265,7 @@ Dependencies: W7. All lanes converge; lane E owns release engineering.
 ### Boot track — kite
 
 Owned by [04-boot.md](04-boot.md); lane D. kite grows from the UEFI loader already in
-`Boot/loader/`, which loads Mach-O and ELF images and boots test kernels on all three
+`Boot/loader/`, which boots ELF test kernels on all three
 architectures.
 
 - By W1 exit: the loader boots the real kernel and the GRUB rig in `Kernel/build/boot/`
@@ -423,7 +381,7 @@ Recorded so the absence is a decision, with a re-entry path.
 - What notices a stalled wave? With no dates, an exit criterion that nobody works toward is
   silent. DESIGN.md names a wave log and a decision log (`.mlai/DECISIONS.md`) as the
   record; neither exists in the tree yet, and someone needs to own re-triage.
-- kite: DESIGN.md's language policy says Rust, and `Boot/loader/` is C and works on three
+- kite: the language is DECISIONS.md ADR-15 (proposed): keep the C loader. DESIGN.md's policy said Rust, and `Boot/loader/` is C and works on three
   architectures. Rewrite it in Rust before it grows a driver model, or amend the policy
   for the loader? Either is defensible; leaving the two disagreeing is not.
 - Which commercial application is W7's designated target, and which 20 apps form W6's
