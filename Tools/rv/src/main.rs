@@ -5,6 +5,7 @@ mod bootstrap;
 mod graph;
 mod manifest;
 mod ninja;
+mod vendors;
 
 use std::collections::BTreeMap;
 use std::process::exit;
@@ -24,6 +25,7 @@ fn usage() -> ! {
          usage: rv bootstrap [--verify] [--refetch] [-j <jobs>]\n\
          usage: rv graph [--reverse] [--forbid]\n\
          usage: rv shell [<component>]\n\
+         usage: rv vendors check\n\
          usage: rv audit [license]"
     );
     exit(2);
@@ -34,6 +36,16 @@ fn main() {
     let Some(cmd_arg) = (!args.is_empty()).then(|| args.remove(0)) else {
         usage();
     };
+
+    if cmd_arg == "vendors" {
+        match args.first().map(String::as_str) {
+            None | Some("check") => {
+                vendors::check(&std::env::current_dir().expect("rv must run from the tree root"))
+            }
+            _ => usage(),
+        }
+        return;
+    }
 
     let mut target = String::from("x86_64-ravynos");
     let mut names: Vec<String> = Vec::new();

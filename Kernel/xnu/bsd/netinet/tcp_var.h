@@ -920,11 +920,7 @@ extern int mptcp_enable;
 #define LOOPBACK_INTERFACE(tp) (tp->t_inpcb->inp_boundifp != NULL && \
     (tp->t_inpcb->inp_boundifp->if_flags & IFF_LOOPBACK))
 
-#if MPTCP
 #define TCP_SYN_COOKIE_DISABLED(tp) (TFO_ENABLED(tp) || tp->t_mpflags & TMPF_MPTCP_TRUE || LOOPBACK_INTERFACE(tp))
-#else
-#define TCP_SYN_COOKIE_DISABLED(tp) (TFO_ENABLED(tp) || LOOPBACK_INTERFACE(tp))
-#endif
 
 #define TCP_SYN_COOKIE_FORCE_ENABLED(tp) ((tp->t_flagsext & TF_SYN_COOKIE_FORCE_ENABLED) \
     && !TCP_SYN_COOKIE_DISABLED(tp))

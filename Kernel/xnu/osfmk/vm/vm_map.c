@@ -104,7 +104,6 @@
 #include <vm/pmap.h>
 #include <vm/vm_kern_internal.h>
 #include <ipc/ipc_port.h>
-#include <kern/ipc_tt.h>
 #include <kern/sched_prim.h>
 #include <kern/misc_protos.h>
 #include <kern/thread_call.h>
@@ -156,6 +155,7 @@
 #include <os/hash.h>
 
 #if DEVELOPMENT || DEBUG
+extern int proc_selfcsflags(void);
 int vm_log_xnu_user_debug = 0;
 int panic_on_unsigned_execute = 0;
 int panic_on_mlock_failure = 0;

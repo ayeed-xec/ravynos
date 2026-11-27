@@ -197,10 +197,7 @@
 /*
  * If thread groups are needed for x86, set this to 1
  */
-/* ravynos: MASTER options must win over this per-arch default */
-#ifndef CONFIG_THREAD_GROUPS
 #define CONFIG_THREAD_GROUPS 0
-#endif
 #define MAX_CPUS 64
 #define MAX_PSETS 64
 

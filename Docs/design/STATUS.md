@@ -182,9 +182,12 @@ boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT targ
   work (GAP-12's original scope moves to W1).
 - GAP-13 Closed: the `Kernel/build/mig` copy was removed with WP0.0;
   `Tools/mig` (138) is the one the design keeps.
-- GAP-14 The vendored XNU has been edited in place: 19 files, about 9,600 lines,
-  including generated system-call tables and hand edits. These become patches and build
-  outputs (ADR-10).
+- GAP-14 Closed: `Kernel/xnu` is byte-identical to tag `xnu-12377.121.6`
+  (tree `cba06fba7c`); the 11 hand edits were reverted, the 6 generated system-call
+  tables and headers were deleted, and the 2 `CoreEntitlements/V2` forwarders amfi
+  needs became `Kernel/patches/entitlements-v2-headers/0001-*.patch`. The mig copy's
+  committed `parser.c` and `lexxer.c` were removed the same way. Pins live in
+  `VENDORS`; `rv vendors check` fails CI on any drift (ADR-10).
 - GAP-15 No link: the link step resolves against a stub object; the listed undefined
   symbols cover one object only.
 - GAP-16 `libfirehose_kernel` is not built; its source is libdispatch's firehose buffer
@@ -322,15 +325,16 @@ no code at all.)
   the tree: `Kernel/xnu/libkern/c++/OSUnserialize.cpp` and the
   `OSUnserializeXML` headers, `Tools/mig/upstream/migcom.tproj/parser.c` (ADR-17
   requires regeneration with byacc); committed flex output in the mig copy.
-- GAP-31 `Kernel/_PROVENANCE` described the wrong source for the vendored XNU;
-  the file was removed with WP0.0 and provenance moves to VENDORS (GAP-58).
+- GAP-31 Closed for xnu: `VENDORS` records the upstream, tag, commit and tree for it
+  and for migcom, and `rv vendors check` verifies both against git in CI. `_PROVENANCE`
+  files for other trees still need the same treatment (GAP-58).
 - GAP-32 Paths named in older documents that do not exist: `Docs/rfc/`,
   `.mlai/DECISIONS.md`, `Tests/perf/`, `Tests/kpi/`,
   `Tools/license-audit.py`. `Tests/apps/` now exists (WP0.0); top-level
   `Libraries/`, `CoreServices/`, `BSD/`, `SysApps/` were removed with `Legacy/`.
-- GAP-33 CI runs only the x86_64 user-space build: no `cargo test`, clippy, arm64 or
-  riscv64 builds, loader build, mig build, boot smokes, Mach-O assertion or negative
-  tests. `Apps/.tmp_bad_manifest` was a stray file; removed with WP0.0.
+- GAP-33 CI now runs `cargo test`, clippy with `-D warnings` and `rv vendors check`
+  alongside the x86_64 build. Still open: arm64 and riscv64 builds, loader build, mig
+  build, boot smokes, Mach-O assertion and negative tests.
 
 ## Exit criteria for W0 and W1
 
@@ -344,7 +348,7 @@ no code at all.)
 | W0: negative tests fail as designed in CI | open (GAP-33) |
 | W0: audit and host-tool gate cover the tree | open (GAP-09, GAP-10) |
 | W0: no GPL material in the repository | open (GAP-46) |
-| W0: `VENDORS` at the root | open |
+| W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
 | W0: correct `_PROVENANCE` everywhere | open (GAP-31, GAP-58) |
 | W0: SPDX on every file we own | open (GAP-45, GAP-57) |
 | W0: every section 5.6 gate runs in CI | open (GAP-33, GAP-40) |

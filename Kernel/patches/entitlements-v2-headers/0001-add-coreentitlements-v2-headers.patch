@@ -1,0 +1,43 @@
+# why: XNU 12377.121.6 ships the CoreEntitlements headers flat under
+#      EXTERNAL_HEADERS/CoreEntitlements and has no V2/ layout, yet
+#      bsd/kern/amfi/amfi.h includes <CoreEntitlements/V2/API.h> and
+#      <CoreEntitlements/V2/Kernel.h>. These forwarders supply the two paths.
+# fate: delete when S12 vendors a CoreEntitlements that provides V2/ itself, or
+#       when upstream XNU gains the layout.
+--- /dev/null
++++ b/EXTERNAL_HEADERS/CoreEntitlements/V2/API.h
+@@ -0,0 +1,12 @@
++#ifndef _CORE_ENTITLEMENTS_V2_API_H
++#define _CORE_ENTITLEMENTS_V2_API_H
++/*
++ * V2 layout forwarder: amfi.h includes <CoreEntitlements/V2/API.h>,
++ * but the xnu tarball ships the CoreEntitlements headers flat under
++ * EXTERNAL_HEADERS/CoreEntitlements. Point at the real headers.
++ */
++#include <CoreEntitlements/CoreEntitlements.h>
++#include <CoreEntitlements/Entitlements.h>
++#include <CoreEntitlements/Errors.h>
++#include <CoreEntitlements/Runtime.h>
++#endif
+--- /dev/null
++++ b/EXTERNAL_HEADERS/CoreEntitlements/V2/Kernel.h
+@@ -0,0 +1,19 @@
++#ifndef _CORE_ENTITLEMENTS_V2_KERNEL_H
++#define _CORE_ENTITLEMENTS_V2_KERNEL_H
++
++/*
++ * V2 layout forwarder: amfi.h includes <CoreEntitlements/V2/Kernel.h>,
++ * but the xnu tarball ships the CoreEntitlements headers flat under
++ * EXTERNAL_HEADERS/CoreEntitlements and omits the V2 kernel API.
++ * CEContext_t and CEKernelAPI_t are opaque there; declare them so
++ * amfi.h's interface typedefs compile.
++ */
++
++#include <CoreEntitlements/CoreEntitlements.h>
++#include <CoreEntitlements/CoreEntitlementsPriv.h>
++
++typedef const struct CEContext *CEContext_t;
++
++typedef struct CEKernelAPI CEKernelAPI_t;
++
++#endif

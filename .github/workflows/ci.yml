@@ -38,6 +38,15 @@ jobs:
       - name: Build the rv harness
         run: cargo build --manifest-path Tools/rv/Cargo.toml
 
+      - name: rv unit tests
+        run: cargo test --manifest-path Tools/rv/Cargo.toml
+
+      - name: rv lints
+        run: cargo clippy --manifest-path Tools/rv/Cargo.toml --all-targets -- -D warnings
+
+      - name: Vendored trees match their pins
+        run: cargo run --manifest-path Tools/rv/Cargo.toml -- vendors check
+
       - name: rv build (discovers components from their manifests)
         run: cargo run --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
 

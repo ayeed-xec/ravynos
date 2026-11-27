@@ -117,7 +117,6 @@
 
 #include <vm/vm_protos.h>
 #include <mach/mach_port.h>
-#include <mach/mach_traps.h>
 
 #include <security/audit/audit.h>
 #if CONFIG_MACF

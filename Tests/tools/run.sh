@@ -72,6 +72,17 @@ EOF
 	(cd "$d/tree" && expect_fail "rvpatch rejects -p junk" "$WORK/rvpatch" -p1x "$d/good.patch")
 	(cd "$d/tree" && expect_fail "rvpatch rejects negative -p" "$WORK/rvpatch" -p -1 "$d/good.patch")
 	(cd "$d/tree" && expect_fail "rvpatch rejects missing patch" "$WORK/rvpatch" -p1 "$d/none.patch")
+
+	cat >"$d/add.patch" <<'EOF'
+--- /dev/null
++++ b/src/deep/new.txt
+@@ -0,0 +1,2 @@
++alpha
++beta
+EOF
+	(cd "$d/tree" && expect_ok "rvpatch creates a new file" "$WORK/rvpatch" -p1 "$d/add.patch")
+	if [[ "$(cat "$d/tree/src/deep/new.txt" 2>/dev/null)" == $'alpha\nbeta' ]]; then ok; else bad "rvpatch new file content"; fi
+	(cd "$d/tree" && expect_fail "rvpatch refuses to overwrite" "$WORK/rvpatch" -p1 "$d/add.patch")
 }
 
 test_mkfat() {

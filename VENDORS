@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+# Pinned upstream trees (SYSTEM-DESIGN.md S01, ADR-10).
+#
+# `rv vendors check` compares `git rev-parse HEAD:<path>` with `tree` and fails
+# on any difference. A vendored tree is never edited: deltas live in the
+# component's `patches` directory and are applied by rvpatch to a build copy.
+# `fetch = true` trees are downloaded to `build/vendor/<name>` and verified by
+# `commit`; they are never committed, so they carry no `tree`.
+
+[[vendor]]
+name     = "xnu"
+path     = "Kernel/xnu"
+upstream = "https://github.com/apple-oss-distributions/xnu"
+tag      = "xnu-12377.121.6"
+commit   = "ac9718fb1af618d5ce8678d0dc6e8a58f252216f"
+tree     = "cba06fba7c9d041633c55cfa3e3130fc367a5a1b"
+license  = "APSL-2.0"
+patches  = "Kernel/patches"
+
+[[vendor]]
+name     = "migcom"
+path     = "Tools/mig/upstream"
+upstream = "https://github.com/apple-oss-distributions/bootstrap_cmds"
+tag      = "bootstrap_cmds-138"
+commit   = "c71d2d72f48995baaea76148f61002e5299841de"
+tree     = "7ab1533c050d5104f0ad64956a03bd640464b160"
+license  = "Apache-2.0"
+patches  = "Tools/mig/patches"
+subdirs  = ["migcom.tproj"]
+
+[[vendor]]
+name     = "llvm-project"
+path     = "build/vendor/llvm-project"
+upstream = "https://github.com/swiftlang/llvm-project"
+tag      = "swift-6.4.3-RELEASE"
+commit   = "fb5f84d903a3b4e7aea15cd5666598a46f56c833"
+license  = "Apache-2.0"
+fetch    = true

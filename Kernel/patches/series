@@ -1,0 +1,5 @@
+# Patch series for Apple XNU, applied in this order by rvpatch onto
+# build/<target>/xnu/src/ (the pristine Kernel/xnu copy). Every patch carries
+# why:/fate: headers (SYSTEM-DESIGN.md 2.5, ADR-10).
+
+entitlements-v2-headers

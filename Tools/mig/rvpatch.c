@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define MAX_STRIP 64
 
@@ -183,9 +186,26 @@ static size_t parse_range(const char *s, size_t *value, size_t *count)
     return venue;
 }
 
+static void make_parent_dirs(const char *path)
+{
+    size_t len = strlen(path);
+    char *dir = xmalloc(len + 1);
+    memcpy(dir, path, len + 1);
+    for (char *s = dir + 1; *s != '\0'; s++) {
+        if (*s != '/')
+            continue;
+        *s = '\0';
+        if (mkdir(dir, 0755) != 0 && errno != EEXIST)
+            die("cannot create directory", dir);
+        *s = '/';
+    }
+    free(dir);
+}
+
 static void apply_file(struct line *pl, size_t plines, size_t *idx, long pcomps)
 {
     size_t i = *idx;
+    int new_file = starts(&pl[i], "--- /dev/null", 13);
     char *header = header_path(&pl[i + 1], 4);
     const char *target = strip_components(header, pcomps);
     if (!is_safe_relative_path(target))
@@ -193,7 +213,16 @@ static void apply_file(struct line *pl, size_t plines, size_t *idx, long pcomps)
     i += 2;
 
     size_t flen = 0;
-    char *fbuf = read_file(target, &flen);
+    char *fbuf;
+    if (new_file) {
+        if (access(target, F_OK) == 0)
+            die("refusing to overwrite existing file", target);
+        fbuf = xmalloc(1);
+        fbuf[0] = '\0';
+    }
+    else {
+        fbuf = read_file(target, &flen);
+    }
     size_t flines = 0;
     struct line *file = split(fbuf, flen, &flines);
 
@@ -273,6 +302,8 @@ static void apply_file(struct line *pl, size_t plines, size_t *idx, long pcomps)
     while (cursor < flines)
         put(&out, file[cursor].p, file[cursor].n, file[cursor].nl), cursor++;
 
+    if (new_file)
+        make_parent_dirs(target);
     FILE *o = fopen(target, "wb");
     if (o == NULL)
         die("cannot write", target);

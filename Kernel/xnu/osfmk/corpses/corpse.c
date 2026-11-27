@@ -124,7 +124,6 @@
 #include <mach/thread_act.h>
 #include <mach/host_priv.h>
 #include <kern/host.h>
-#include <kern/ipc_tt.h>
 #include <kern/kern_types.h>
 #include <kern/mach_param.h>
 #include <kern/policy_internal.h>

@@ -37,8 +37,6 @@
 
 #include <kern/queue.h>
 
-#include <kern/ipc_mig.h>
-
 #include "mach/host_notify_reply.h"
 
 struct host_notify_entry {
