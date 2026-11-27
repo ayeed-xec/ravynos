@@ -415,12 +415,14 @@ that backs it:
   accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
 - GAP-40 **partial**: `Tools/ci/Containerfile` pins the toolchain but has not been
   built yet, so CI still runs on the runner image.
-- BUG-28 **fixed** (verify pending): the stage-1 toolchain was built from
+- BUG-28 **closed** (linker verified): the stage-1 toolchain was built from
   `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`, whose lld refuses every Mach-O input
   (`This version of lld does not support linking for platform macOS`, reproduced by
   linking one object with that `ld64.lld`), so stage 1 could not link a ravynOS target.
   The pin is now upstream `llvm/llvm-project` at `llvmorg-21.1.6` and the tree builds
-  `X86;AArch64;RISCV` (ADR-31); the rebuild that proves it is running.
+  `X86;AArch64;RISCV` (ADR-31). The lld-only target of the new cache entry links
+  `x86_64` Mach-O (`file` reports a Mach-O executable, exit 0) and RISCV codegen
+  compiles; the full stage-1 install and `--verify` are still running.
 - GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, and
   it passed on 2026-11-27 (`stage1 verify OK: ece9693de…b5c6378`, clang 21.1.6), but
   stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
