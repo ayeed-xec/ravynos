@@ -1,0 +1,10 @@
+name    = "hooktool"
+layer   = "build-toolchain"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "host-tool"
+sources = ["src/**.rs"]
+cargo   = "hooktool/Cargo.toml"
+
+[deps]
+system = ["libz"]

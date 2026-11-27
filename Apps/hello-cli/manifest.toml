@@ -1,6 +1,8 @@
 name    = "hello"
 layer   = "apps"
 license = "BSD-2-Clause"
+state   = "working"
+kind    = "executable"
 
 sources = ["hello.c"]
 

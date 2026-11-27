@@ -1,0 +1,20 @@
+name    = "kit"
+layer   = "frameworks"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "framework"
+sources = ["kit.c"]
+install_name = "/System/Library/Frameworks/Kit.framework/Versions/C/Kit"
+install_path = "/System/Library/Frameworks/Kit.framework/Versions/C"
+current_version = "1.0.0"
+compatibility_version = "1.0.0"
+info_plist = "Info.plist"
+bundle_id = "org.ravynos.Kit"
+resources = ["Resources/**"]
+entitlements = "Kit.entitlements"
+sign = "adhoc"
+embed = ["helper"]
+framework_version = "C"
+
+[deps]
+internal = ["liba"]
