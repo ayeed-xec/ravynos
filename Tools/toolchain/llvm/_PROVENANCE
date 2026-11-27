@@ -1,0 +1,16 @@
+* Fetched from GitHub: swiftlang/llvm-project.git (fetch=true, never committed)
+* Tag: swift-6.4.3-RELEASE
+* Commit: fb5f84d903a3b4e7aea15cd5666598a46f56c833
+* Upstream URL: https://github.com/swiftlang/llvm-project
+* Files fetched: the complete upstream source tree, unmodified, under
+  build/vendor/llvm-project (shallow clone at the pinned commit)
+* Not fetched: nothing; every Linux delta is carried in the stage-1 build
+  scripts, not in the source tree
+* License: Apache-2.0 WITH LLVM-exception (Apache License v2.0 with LLVM
+  Exceptions); no GPL, LGPL or AGPL code anywhere in the tree
+
+This file pins the exact upstream revision the stage-1 toolchain is built
+from. The stage-1 cache key is a content hash over this file, the fetch
+script, the build script and the driver (Tools/toolchain/stage1.sh), so any
+pin or build-rule change produces a new toolchain directory
+(Docs/design/SYSTEM-DESIGN.md, S02 stage-1/D8; Docs/design/ROADMAP.md WP0.4).

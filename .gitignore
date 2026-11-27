@@ -9,3 +9,4 @@ target/
 /Tools/mig/bin/
 /Tools/mig/libexec/
 /Tools/mig/work/
+/Tools/build/
