@@ -67,9 +67,10 @@ pub fn emit(manifests: &BTreeMap<String, Manifest>, order: &[String], target: &s
         if objs.is_empty() {
             continue;
         }
-        let Some(artifact) = artifact(m, target) else {
+        let Some(mut artifact) = artifact(m, target) else {
             continue;
         };
+        artifact.flags = link_flags(m, manifests);
         let libs: Vec<String> = m
             .deps
             .internal
@@ -87,6 +88,8 @@ struct Artifact {
     rule: &'static str,
     path: String,
     install_name: Option<String>,
+    /// Linker options this component adds: versions, re-exports, umbrella.
+    flags: Vec<String>,
     extras: String,
     implicit: Vec<String>,
 }
@@ -97,6 +100,7 @@ impl Artifact {
             rule,
             path,
             install_name: None,
+            flags: Vec::new(),
             extras: String::new(),
             implicit: Vec::new(),
         }
@@ -117,6 +121,9 @@ impl Artifact {
         if let Some(install_name) = &self.install_name {
             line.push_str(&format!("  install_name = {install_name}\n"));
         }
+        if !self.flags.is_empty() {
+            line.push_str(&format!("  link_flags = {}\n", self.flags.join(" ")));
+        }
         if !self.implicit.is_empty() {
             let note = format!("  | {}\n", self.implicit.join(" "));
             line.push_str(&note);
@@ -124,6 +131,31 @@ impl Artifact {
         line.push_str(&self.extras);
         line
     }
+}
+
+/// The S03 linker contract: Apple's version numbers, re-exported dependents,
+/// and the umbrella a libSystem piece names.
+fn link_flags(m: &Manifest, manifests: &BTreeMap<String, Manifest>) -> Vec<String> {
+    let mut flags = Vec::new();
+    if !m.current_version.is_empty() {
+        flags.push(format!("-current_version {}", m.current_version));
+    }
+    if !m.compatibility_version.is_empty() {
+        flags.push(format!(
+            "-compatibility_version {}",
+            m.compatibility_version
+        ));
+    }
+    if !m.umbrella.is_empty() {
+        flags.push(format!("-umbrella {}", m.umbrella));
+    }
+    for dep in &m.reexports {
+        flags.push(format!("-reexport_library {}", link_input(&manifests[dep])));
+    }
+    for dep in &m.deps.upward {
+        flags.push(format!("-upward_library {}", link_input(&manifests[dep])));
+    }
+    flags
 }
 
 /// Where a component's output lands (S01 output kinds, S03 bundle layout), or
@@ -358,11 +390,11 @@ fn compile_and_link_rules(target: &str, sysroot: &str) -> (String, String) {
                 macho_arch(target)
             ),
             format!(
-                "rule link\n  command = ld64.lld {platform} -e __start -L {sysroot}/usr/lib $in -o $out\n\
-                 rule dylib\n  command = ld64.lld {platform} -dylib -install_name $install_name -L {sysroot}/usr/lib $in -o $out\n\
-                 rule app\n  command = ld64.lld {platform} -L {sysroot}/usr/lib $in -o $out\n\
-                 rule bundle\n  command = ld64.lld {platform} -bundle -L {sysroot}/usr/lib $in -o $out\n\
-                 rule kext\n  command = ld64 -arch $arch -kext $in -o $out\n\
+                "rule link\n  command = ld64.lld {platform} -e __start $link_flags -L {sysroot}/usr/lib $in -o $out\n\
+                 rule dylib\n  command = ld64.lld {platform} -dylib -install_name $install_name $link_flags -L {sysroot}/usr/lib $in -o $out\n\
+                 rule app\n  command = ld64.lld {platform} $link_flags -L {sysroot}/usr/lib $in -o $out\n\
+                 rule bundle\n  command = ld64.lld {platform} -bundle $link_flags -L {sysroot}/usr/lib $in -o $out\n\
+                 rule kext\n  command = ld64 -arch $arch -kext $link_flags $in -o $out\n\
                  rule plist\n  command = cp $in $out\n\
                  rule symlink\n  command = ln -sfn $link $out\n"
             ),
@@ -656,5 +688,38 @@ mod tests {
             assert!(ninja.contains(rule), "missing {rule} in {ninja}");
         }
         fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn apple_versions_reexports_and_umbrella_reach_the_linker() {
+        let core = manifest(&DYLIB.replace("libhello", "libcore"));
+        let m = manifest(&DYLIB.replace(
+            "[exports]",
+            "current_version = \"1.2.3\"\ncompatibility_version = \"1.0.0\"\n\
+             umbrella = \"System\"\nreexports = [\"libcore\"]\n\
+             [deps]\ninternal = [\"libcore\"]\n[exports]",
+        ));
+        let ninja = build_ninja(&[core, m], "x86_64-ravynos");
+        for flag in [
+            "-current_version 1.2.3",
+            "-compatibility_version 1.0.0",
+            "-umbrella System",
+            "-reexport_library libcore/libcore.dylib",
+        ] {
+            assert!(ninja.contains(flag), "missing {flag} in {ninja}");
+        }
+        assert!(ninja.contains("link_flags = "), "{ninja}");
+    }
+
+    #[test]
+    fn upward_dependencies_link_as_upward_libraries() {
+        let child = manifest(&DYLIB.replace("libhello", "libsystem_pthread"));
+        let mut parent = manifest(&DYLIB.replace("libhello", "libsystem_c"));
+        parent.deps.upward = vec![String::from("libsystem_pthread")];
+        let ninja = build_ninja(&[child, parent], "arm64-ravynos");
+        assert!(
+            ninja.contains("-upward_library libsystem_pthread/libsystem_pthread.dylib"),
+            "{ninja}"
+        );
     }
 }

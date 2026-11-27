@@ -403,8 +403,12 @@ that backs it:
   validates `Tests/images/<name>` or `Images/<name>` before reporting E-NOT-BUILT S09.
   `kernelcache` (S09), `codesign` (S12) and `symbolicate` (S34) report E-NOT-BUILT and
   exit 3, which CI asserts.
-- GAP-36 **partial**: nine layer fences and same-layer dependencies are in place;
-  manifest keys beyond `kind`/`deps` (versions, re-exports, install paths) are not.
+- GAP-36 **closed**: nine layer fences and same-layer dependencies hold, and the keys
+  beyond `kind`/`deps` are live: `current_version`, `compatibility_version` and
+  `umbrella` become linker options, `reexports` become `-reexport_library` (and must be
+  a declared dependency, `E-REEXPORT`), `deps.upward` becomes `-upward_library`, and
+  `install_path` must be absolute. Four new unit tests; the three-target build still
+  links.
 - GAP-54 **closed**: `rv --root <tree>` works from any directory and the failures carry
   `E-CYCLE`, `E-LAYER`, `E-DEP-UNKNOWN` and `E-ROOT`.
 - GAP-56 **closed**: licences match by exact SPDX id, case-insensitively, with `0BSD`

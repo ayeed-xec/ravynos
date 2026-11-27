@@ -232,6 +232,20 @@ pub fn validate(m: &Manifest) -> Result<(), String> {
     }
     check_rel(&m.source_root, "source_root")?;
     check_rel(&m.vendored.patches, "vendored.patches")?;
+    if !m.install_path.is_empty() && !Path::new(&m.install_path).is_absolute() {
+        return Err(format!(
+            "E-SCHEMA: install_path '{}' must be absolute",
+            m.install_path
+        ));
+    }
+    for r in &m.reexports {
+        if !m.deps.internal.contains(r) {
+            return Err(format!(
+                "E-REEXPORT: component '{}' re-exports '{}' but does not depend on it",
+                m.name, r
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -586,5 +600,22 @@ sources = []
             );
             parse(&text).unwrap_or_else(|e| panic!("target {t} must be valid: {e}"));
         }
+    }
+
+    const BASE: &str = "name = \"libcore\"\nlayer = \"foundation\"\nlicense = \"BSD-2-Clause\"\nstate = \"working\"\nkind = \"dylib\"\nsources = []\n";
+
+    #[test]
+    fn install_path_must_be_absolute() {
+        let err = parse(&format!("{BASE}install_path = \"usr/lib\"\n")).unwrap_err();
+        assert!(err.contains("install_path"), "{err}");
+        assert!(parse(&format!("{BASE}install_path = \"/usr/lib\"\n")).is_ok());
+    }
+
+    #[test]
+    fn a_reexport_must_be_a_dependency() {
+        let err = parse(&format!("{BASE}reexports = [\"libkernel\"]\n")).unwrap_err();
+        assert!(err.contains("E-REEXPORT"), "{err}");
+        let ok = format!("{BASE}reexports = [\"libkernel\"]\n[deps]\ninternal = [\"libkernel\"]\n");
+        assert!(parse(&ok).is_ok());
     }
 }
