@@ -7,6 +7,10 @@ the license audit live. Companion pieces: `02-architecture.md` for the layer rul
 harness enforces, `03-kernel.md` for what the kernel build consumes, `11-quality.md` for the
 size and performance budgets the gates check against.
 
+The concrete implementation steps for this document live in
+[15-implementation-guide.md](15-implementation-guide.md), sections 1 (toolchain and triple) and 3 (the kernel build under `rv`); current gaps are listed
+in [14-status-and-gaps.md](14-status-and-gaps.md).
+
 ## Why not the status quo
 
 PureDarwin builds with Nix flakes (`nix build .#image-minimal`), and calling cmake directly

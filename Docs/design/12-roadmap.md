@@ -43,8 +43,10 @@ is what this document commits to.
 
 ## Where we stand
 
-Checked against branch `darwin-clean` at `338dbda` on 2026-11-27. "Met" means the
-criterion is checkable in CI today; anything else is open.
+Checked against branch `darwin-clean` at `338dbda`. "Met" means the criterion is
+checkable in CI today; anything else is open. The full comparison of code against design,
+with numbered gaps and design flaws, is [14-status-and-gaps.md](14-status-and-gaps.md);
+the plan for each gap is [15-implementation-guide.md](15-implementation-guide.md).
 
 | Wave | State | Evidence and what remains |
 |---|---|---|

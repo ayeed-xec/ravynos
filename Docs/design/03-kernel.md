@@ -7,6 +7,10 @@ debuggability. It is for anyone working on the kernel, the build harness, or
 a driver. Read it next to [04-boot.md](04-boot.md), which picks up where the kernel
 entry point begins.
 
+The concrete implementation steps for this document live in
+[15-implementation-guide.md](15-implementation-guide.md), sections 3 (kernel build), 5 (arm64 as a VMAPPLE guest), 6 (riscv64), 7 (kexts and the kernelcache) and 8 (code signing); current gaps are listed
+in [14-status-and-gaps.md](14-status-and-gaps.md).
+
 ## Kernel of record
 
 We ship Apple's XNU. Not a fork we maintain as a separate kernel, not a

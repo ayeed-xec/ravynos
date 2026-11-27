@@ -7,6 +7,10 @@ backend, or a graphics framework. The frameworks themselves — who writes them
 and from what source — belong to [08-frameworks.md](08-frameworks.md); this
 document owns the server, the kernel-side display surface, and Metal.
 
+The concrete implementation steps for this document live in
+[15-implementation-guide.md](15-implementation-guide.md), sections 14 (window server, CoreGraphics, AppKit) and 16 (Metal); current gaps are listed
+in [14-status-and-gaps.md](14-status-and-gaps.md).
+
 ## The stack, scanout to application
 
 Read the figure bottom-up for hardware, top-down for how a frame is born. A

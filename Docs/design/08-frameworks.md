@@ -9,6 +9,10 @@ the tree. The graphics stack these frameworks sit on is
 [07-graphics.md](07-graphics.md); the license rules cited throughout are the
 hard rule from [01-principles.md](01-principles.md).
 
+The concrete implementation steps for this document live in
+[15-implementation-guide.md](15-implementation-guide.md), sections 10 (Libsystem, dyld, objc4), 12 (the ABI census), 14 and 15; current gaps are listed
+in [14-status-and-gaps.md](14-status-and-gaps.md).
+
 ## Three tiers, three sets of rules
 
 Every framework component is sourced through exactly one of three tiers. The
@@ -50,7 +54,7 @@ adoption does not happen.
 
 The most important Tier 2 case is AppKit itself, and there are two candidate
 seeds. The first is already in our tree: ravynOS's own framework sources
-under `Frameworks/` (AppKit, Foundation, CoreGraphics, CoreText and more),
+under `Legacy/Frameworks/` (AppKit, Foundation, CoreGraphics, CoreText and more),
 which upstream ravynOS states are clean-room originals released under BSD or
 MIT terms. DESIGN.md §6.3 makes them the first choice, each framework passing
 a license check, a quality gate (no unresolved symbols) and spec coverage

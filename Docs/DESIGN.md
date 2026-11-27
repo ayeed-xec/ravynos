@@ -11,7 +11,7 @@ x86_64 and arm64, Mac and non-Mac hardware, with later RISC-V/other ports.
 ## 0. Mission and non-negotiables
 
 Build a native macOS-compatible operating system that runs real Mac applications, is
-architected to Apple-parity standards, and is fundable as a demonstration.
+architected to Apple-parity standards, with a Mac software SDK of its own.
 
 Four constraints bind every decision in this document. None is waivable by an implementer;
 only a dated decision record in `.mlai/DECISIONS.md` can change one.
@@ -41,7 +41,7 @@ judgment and may be revised by the wave owner with a note in the wave log.
 
 Parity is scoped as tiers with testable exits. A tier is done when its exit criterion
 passes on the reference rig, not when its code is written. This is what makes the project
-falsifiable — for contributors, investors, and ourselves.
+falsifiable — for contributors and for ourselves.
 
 | Tier | Definition | Testable exit | Wave |
 |------|-----------|---------------|------|
@@ -207,8 +207,7 @@ surface end to end.
 
 `ISO/`, `SysApps/Installer`, `installravynos/` become the W8 deliverable: a bootable ISO,
 a disk installer, an OS-update path (A/B slot swap so a failed update cannot brick the
-machine — mandatory for bare-metal credibility), and a Mac VM demo package (the funding
-artifact). Filesystem layout matches macOS conventions (`/Library`, `/System`, app
+machine — mandatory for bare-metal credibility), and a Mac VM demo package. Filesystem layout matches macOS conventions (`/Library`, `/System`, app
 bundles) so app installers and NSBundle lookups behave as apps expect.
 
 ---
@@ -384,7 +383,7 @@ compiled code is rejected in review.
 
 It converts unknowns into a testable document the whole team can implement against in
 parallel, it produces the functional understanding the project needs anyway, and it is
-the only study method that leaves the license story intact for funding due diligence.
+the only study method that leaves the license story intact for anyone who audits the tree.
 
 ---
 
@@ -561,7 +560,7 @@ app → native AppKit app → SwiftUI app).
   MIT — license verified 2026-11-26) shows the surface is tractable; it is study
   material and an API-shape oracle, not a drop-in binary.
 
-### Wave 8 — Distro (funding artifact)
+### Wave 8 — Distro
 **Exit:** bootable ISO + installer + A/B update + Mac VM demo package; `LICENSES.md`;
 final perf report (all budgets vs. baselines); **a stock SwiftUI app installs and runs
 out of the box from the installed image** — the demo artifact includes it, because

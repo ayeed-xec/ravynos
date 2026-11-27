@@ -32,6 +32,8 @@ no GPL code anywhere in the tree.
 | 11 | [11-quality.md](11-quality.md) | Implementation guidelines: code standards, anti-bloat rules, tests, performance budgets as CI gates, review checklist |
 | 12 | [12-roadmap.md](12-roadmap.md) | Waves W0–W8 (DESIGN.md numbering) with exit criteria, parallel tracks, and current status |
 | 13 | [13-toolchain-sdk.md](13-toolchain-sdk.md) | Native toolchain bootstrap, the SDK as a build output, the legal boundary between Apple open source and Apple proprietary artifacts |
+| 14 | [14-status-and-gaps.md](14-status-and-gaps.md) | Code against design: what exists, whether it is native, the numbered gaps (G1…) and design flaws (F1…) |
+| 15 | [15-implementation-guide.md](15-implementation-guide.md) | How to build each missing piece: steps, sources to read, and the test that says it is done |
 
 Diagrams live in [diagrams/](diagrams/), one SVG per figure, referenced from the documents.
 
@@ -39,7 +41,8 @@ Diagrams live in [diagrams/](diagrams/), one SVG per figure, referenced from the
 
 If you read only two, read 01 and 02: they define the constraints every other document
 assumes. Contributors should then read 11 before writing code, and the document that owns
-the subsystem they are working on. 12 tells you where the project stands and what can start
+the subsystem they are working on. 14 says what the code actually does against this
+design, and 15 is the step-by-step plan for each missing piece. 12 tells you where the project stands and what can start
 in parallel; 13 explains how the toolchain and SDK are built without any Apple
 proprietary input.
 

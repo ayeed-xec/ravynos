@@ -382,7 +382,7 @@ asking anyone.
 ## Open questions
 
 - Sanitizer coverage for the kernel is much weaker than for userland. Do we
-  invest in a kernel sanitizer configuration XNU can build with, or accept
+  build a kernel sanitizer configuration XNU can build with, or accept
   the gap and lean on QEMU tests? [03-kernel.md](03-kernel.md) owns the
   build side; the quality side needs an owner too.
 - The budget table's "reference hardware" is undefined until the project

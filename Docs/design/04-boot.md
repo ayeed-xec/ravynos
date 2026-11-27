@@ -6,6 +6,10 @@ kernel running on x86_64, arm64 and riscv64. Read it if you are working on the l
 itself, bringing up new hardware, or debugging why a kernel that runs under QEMU will
 not boot on real metal.
 
+The concrete implementation steps for this document live in
+[15-implementation-guide.md](15-implementation-guide.md), sections 4 (XNU on x86_64) and 5 (XNU on arm64); current gaps are listed
+in [14-status-and-gaps.md](14-status-and-gaps.md).
+
 ## Where boot stands today
 
 `Boot/loader/` is our own UEFI loader, in freestanding C (BSD-3-Clause): it loads Mach-O
