@@ -1,0 +1,17 @@
+name    = "vlib"
+layer   = "foundation"
+license = "BSD-2-Clause"
+state   = "experimental"
+kind    = "dylib"
+sources = ["**.c"]
+source_root = "vlib/upstream"
+install_name = "/usr/lib/vlib.dylib"
+install_path = "/usr/lib"
+current_version = "3.1.0"
+compatibility_version = "3.0.0"
+
+[vendored]
+upstream = "https://example.com/vlib"
+tag = "vlib-3.1.0"
+license = "MIT"
+patches = "vlib/patches"

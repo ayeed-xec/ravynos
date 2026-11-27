@@ -1,0 +1,7 @@
+name    = "gen"
+layer   = "foundation"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "data"
+sources = []
+hook    = "hooktool"

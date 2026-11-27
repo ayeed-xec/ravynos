@@ -6,10 +6,24 @@ const FENCES: &[(&str, &[&str])] = &[
     ("bootloader", &[]),
     ("kernel", &[]),
     ("foundation", &["kernel"]),
-    ("server", &["foundation", "frameworks"]),
     ("frameworks", &["foundation"]),
+    ("server", &["frameworks", "foundation"]),
     ("apps", &["frameworks", "foundation", "server"]),
     ("compat", &["kernel"]),
+    ("build-toolchain", &[]),
+    (
+        "test",
+        &[
+            "bootloader",
+            "kernel",
+            "foundation",
+            "frameworks",
+            "server",
+            "apps",
+            "compat",
+            "build-toolchain",
+        ],
+    ),
 ];
 
 pub fn is_layer(name: &str) -> bool {
@@ -24,7 +38,7 @@ fn may_depend(from: &str, to: &str) -> bool {
     FENCES
         .iter()
         .find(|(l, _)| *l == from)
-        .map(|(_, allowed)| allowed.contains(&to))
+        .map(|(_, allowed)| to == from || allowed.contains(&to))
         .unwrap_or(false)
 }
 
@@ -45,6 +59,15 @@ pub fn resolve(
                 eprintln!(
                     "error: {} -> {} (private) violates layer rules\n       {} may not depend on {} layer\n       (02-architecture.md, layer table)",
                     m.name, dep, m.layer, dep_m.layer
+                );
+                std::process::exit(1);
+            }
+        }
+        for dep in &m.deps.upward {
+            if !manifests.contains_key(dep) {
+                eprintln!(
+                    "error: {} declares upward dependency '{}' but no manifest defines it",
+                    m.name, dep
                 );
                 std::process::exit(1);
             }
@@ -138,5 +161,42 @@ mod tests {
     fn unknown_layers_depend_on_nothing() {
         assert!(!may_depend("no-such-layer", "kernel"));
         assert!(!may_depend("kernel", "no-such-layer"));
+    }
+
+    #[test]
+    fn same_layer_edges_are_allowed() {
+        for (layer, _) in FENCES {
+            assert!(may_depend(layer, layer), "{layer} must depend on itself");
+        }
+    }
+
+    #[test]
+    fn all_nine_layers_are_declared() {
+        assert_eq!(FENCES.len(), 9);
+        for (layer, _) in FENCES {
+            assert!(is_layer(layer));
+        }
+    }
+
+    #[test]
+    fn test_layer_may_depend_on_any_layer() {
+        for (layer, _) in FENCES {
+            assert!(may_depend("test", layer), "test must depend on {layer}");
+        }
+        for (layer, _) in FENCES {
+            if *layer != "test" {
+                assert!(
+                    !may_depend(layer, "test"),
+                    "{layer} must not depend on test"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn build_toolchain_is_fenced_to_itself() {
+        assert!(may_depend("build-toolchain", "build-toolchain"));
+        assert!(!may_depend("build-toolchain", "foundation"));
+        assert!(!may_depend("apps", "build-toolchain"));
     }
 }

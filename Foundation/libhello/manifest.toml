@@ -1,6 +1,8 @@
 name    = "libhello"
 layer   = "foundation"
 license = "BSD-2-Clause"
+state   = "working"
+kind    = "static-lib"
 
 sources = [
     "src/**.c",

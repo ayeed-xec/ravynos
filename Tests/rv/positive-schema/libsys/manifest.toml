@@ -1,0 +1,14 @@
+name    = "libsys"
+layer   = "foundation"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "dylib"
+sources = ["sys.c"]
+install_name = "/usr/lib/system/libsys.dylib"
+install_path = "/usr/lib/system"
+current_version = "1.0.0"
+compatibility_version = "1.0.0"
+umbrella = "System"
+
+[deps]
+internal = ["liba"]

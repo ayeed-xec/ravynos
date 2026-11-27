@@ -1,0 +1,29 @@
+name    = "liba"
+layer   = "foundation"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "dylib"
+sources = ["src/**.c", "src/**.h"]
+install_name = "/usr/lib/system/liba.dylib"
+install_path = "/usr/lib/system"
+current_version = "1.2.0"
+compatibility_version = "1.0.0"
+reexports = ["libb"]
+umbrella = "System"
+targets = ["x86_64-ravynos", "arm64-ravynos"]
+
+[exports]
+headers = ["src/**.h"]
+libs    = ["liba.dylib"]
+
+[deps]
+internal = ["libb"]
+upward   = ["libsys"]
+system   = []
+
+[flags.x86_64-ravynos]
+cflags = ["-O2"]
+ldflags = ["-Wl,-fixup-chains"]
+
+[flags.arm64-ravynos]
+cflags = ["-Oz"]

@@ -1,0 +1,13 @@
+name    = "helper"
+layer   = "apps"
+license = "BSD-2-Clause"
+state   = "working"
+kind    = "app"
+sources = ["helper.m"]
+info_plist = "Info.plist"
+bundle_id = "org.ravynos.helper"
+resources = ["assets/**"]
+sign = "none"
+
+[deps]
+internal = ["kit"]
