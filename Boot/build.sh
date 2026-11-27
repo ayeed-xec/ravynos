@@ -110,7 +110,6 @@ a64_needs_link=0
 for obj in "$BUILD"/a64-loader-*.o; do
 	[[ "$obj" -nt "$BUILD/BOOTAA64.EFI" ]] && a64_needs_link=1
 done
-[[ "$ROOT/loader/aarch64/efi-objlst.ld" -nt "$BUILD/BOOTAA64.EFI" ]] && a64_needs_link=1
 if [[ "$a64_needs_link" == 1 ]]; then
 	lld-link -out:"$BUILD/BOOTAA64.EFI" \
 		-subsystem:efi_application \

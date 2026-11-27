@@ -10,24 +10,30 @@ rv_elf_handoff:
 	.globl	rv_macho_handoff
 rv_macho_handoff:
 	cli
-	movq	%rcx, %r9
+	movq	%rcx, %rdi
 	movq	%rdx, %rbx
 	lgdt	rv_gdt_desc(%rip)
-	movabsq	$.Lrv_compat32, %rcx
+	leaq	.Lrv_compat32(%rip), %rcx
 	pushq	$0x18
 	pushq	%rcx
 	lretq
 
 	.code32
 .Lrv_compat32:
-	movl	%ebx, %edi
 	movl	%ebx, %eax
 	movl	%cr0, %ecx
 	andl	$0x7fffffff, %ecx
 	movl	%ecx, %cr0
 	ljmp	$0x18, $.Lrv_go
 .Lrv_go:
-	jmp	*%eax
+	movl	$0x20, %ecx
+	movl	%ecx, %ds
+	movl	%ecx, %es
+	movl	%ecx, %ss
+	xorl	%ecx, %ecx
+	movl	%ecx, %fs
+	movl	%ecx, %gs
+	jmp	*%edi
 
 	.align	8
 rv_gdt:

@@ -12,7 +12,9 @@
 #endif
 #define RV_LC_SEGMENT64 0x19
 #define RV_LC_UNIXTHREAD 0x5
-#define RV_LC_MAIN 0x28
+#define RV_LC_MAIN 0x80000028
+
+#define RV_SEGNAME_TEXT "__TEXT"
 
 static uint32_t rd32(const uint8_t *p)
 {
@@ -29,6 +31,26 @@ static uint64_t macho_phys(uint64_t vaddr)
 	if (vaddr >= 0xffffff8000000000ull)
 		return vaddr - 0xffffff8000000000ull;
 	return vaddr;
+}
+
+static int segname_is_text(const uint8_t *seg)
+{
+	const uint8_t *name = seg + 8;
+	for (int i = 0; i < 7; i++) {
+		if (name[i] != (uint8_t)RV_SEGNAME_TEXT[i])
+			return 0;
+	}
+	return name[7] == 0;
+}
+
+static int segname_is_pagezero(const uint8_t *seg)
+{
+	const uint8_t *name = seg + 8;
+	for (int i = 0; i < 9; i++) {
+		if (name[i] != (uint8_t)"__PAGEZERO"[i])
+			return 0;
+	}
+	return 1;
 }
 
 int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *image)
@@ -48,7 +70,9 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 	uint64_t min_addr = UINT64_MAX;
 	uint64_t max_addr = 0;
 	uint64_t entry_vaddr = 0;
+	uint64_t text_vaddr = 0;
 	int have_entry = 0;
+	int have_text = 0;
 	uint64_t offset = 32;
 
 	for (uint32_t i = 0; i < ncmds; i++) {
@@ -60,9 +84,14 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 			return -1;
 
 		if (cmd == RV_LC_SEGMENT64 && cmdsize >= 72) {
-			uint64_t vmaddr = rd64(data + offset + 16);
-			uint64_t filesize = rd64(data + offset + 40);
-			uint64_t memsize = rd64(data + offset + 48);
+			if (segname_is_pagezero(data + offset)) {
+				offset += cmdsize;
+				continue;
+			}
+			uint64_t vmaddr = rd64(data + offset + 24);
+			uint64_t memsize = rd64(data + offset + 32);
+			uint64_t fileoff = rd64(data + offset + 40);
+			uint64_t filesize = rd64(data + offset + 48);
 			if (memsize == 0) {
 				offset += cmdsize;
 				continue;
@@ -71,21 +100,29 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 				offset += cmdsize;
 				continue;
 			}
+			if (fileoff > size || filesize > size - fileoff)
+				return -1;
 			uint64_t paddr = macho_phys(vmaddr);
+			if (paddr + memsize < paddr)
+				return -1;
+			if (!have_text && segname_is_text(data + offset)) {
+				text_vaddr = vmaddr;
+				have_text = 1;
+			}
 			if (paddr < min_addr)
 				min_addr = paddr;
 			if (paddr + memsize > max_addr)
 				max_addr = paddr + memsize;
 			struct rv_segment *seg = &image->segments[image->segment_count++];
 			seg->paddr = paddr;
-			seg->file_offset = rd64(data + offset + 32);
+			seg->file_offset = fileoff;
 			seg->file_size = filesize;
 			seg->mem_size = memsize;
 		} else if (cmd == RV_LC_UNIXTHREAD && cmdsize >= 184) {
 #if defined(__x86_64__)
 			uint32_t flavor = rd32(data + offset + 8);
 			if (flavor == 4 && !have_entry) {
-				entry_vaddr = rd64(data + offset + 16 + 20 * 8);
+				entry_vaddr = rd64(data + offset + 16 + 16 * 8);
 				have_entry = 1;
 			}
 #elif !defined(__riscv)
@@ -96,7 +133,9 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
 			}
 #endif
 		} else if (cmd == RV_LC_MAIN && cmdsize >= 24 && !have_entry) {
-			entry_vaddr = rd64(data + offset + 8);
+			if (!have_text)
+				return -1;
+			entry_vaddr = text_vaddr + rd64(data + offset + 8);
 			have_entry = 1;
 		}
 		offset += cmdsize;
