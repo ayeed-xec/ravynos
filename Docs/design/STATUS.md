@@ -342,15 +342,35 @@ no code at all.)
 
 ## Exit criteria for W0 and W1
 
+### W0 phase plan
+
+The remaining W0 work runs in four phases on parallel worktrees, merged in order.
+Every phase branch must pass the full gate suite (format, host-tool, cargo test,
+clippy, vendors, negative fixtures) and score 8/10 before it merges.
+
+- **P1 — rv core (worktree wt-B, branch `wp/rv`)**: GAP-01 — emit Mach-O for
+  x86_64 and arm64 with the existing ELF path kept for riscv64; honour `kind`
+  (dylib builds a dylib, not an `ar` archive); replace `process::exit`/`unwrap`
+  in library code with error returns (BUG-27 remainder, GAP-02–06).
+- **P2 — stage-1 toolchain (wt-A, `wp/toolchain`)**: run the stage-1 build to
+  completion, make `--verify` rebuild from source and compare hashes instead of
+  trusting its own output (GAP-55), and record the cache layout.
+- **P3 — gates and provenance (wt-C, `wp/gates-ci`)**: host-tool gate covers
+  `Tools/toolchain/` and every script (GAP-10); the §5.6 gate list runs in CI
+  (GAP-40); SPDX sweep over the remaining files (GAP-45/57); `_PROVENANCE` for
+  the remaining trees (GAP-58).
+- **P4 — re-audit (lead)**: after P1–P3 merge, rescore every area in the summary
+  table against the 8/10 bar and update STATUS.md.
+
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
-| W0: `rv` builds the tree with no duplicate names | open (BUG-27) |
+| W0: `rv` builds the tree with no duplicate names | open (BUG-27 remainder: `kind` handling, `process::exit`/`unwrap` in library code) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | open (GAP-01) |
 | W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55) |
 | W0: every merged component scores at least 8/10 in review | open (all areas in the summary) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
-| W0: audit and host-tool gate cover the tree | open (GAP-09, GAP-10) |
+| W0: audit and host-tool gate cover the tree | open (GAP-10; GAP-09 licence half is closed) |
 | W0: no GPL material in the repository | open (GAP-46) |
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
 | W0: correct `_PROVENANCE` everywhere | open (GAP-31, GAP-58) |
