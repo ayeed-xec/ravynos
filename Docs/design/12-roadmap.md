@@ -93,6 +93,36 @@ targets xnu-13432.41.4 (Darwin 27.2.0, per [01-principles.md]
 (01-principles.md)) — lands in this wave when Apple publishes the source,
 and the patch series is what makes that bump hours instead of weeks.
 
+### W1.5 — Tree restructure to the target layout
+
+Goal: the repository matches the layout in
+[02-architecture.md](02-architecture.md) before W2 adds the first large
+body of new code, so nothing new lands in a directory that is about to move.
+Today our own code is spread across `build/`, `tools/`, `tests/`, `Tests/`,
+`components/`, `apps/` and `Kernel/RVOS/`, beside the upstream desktop tree
+(`Developer/`, `BSD/`, `Frameworks/`, `CoreServices/`, `SystemLibrary/`,
+`SysApps/`).
+
+Done in slices, each one a single reviewable commit with every gate green:
+
+1. `Boot/` from `build/boot/` (loader, mkfat, elf2pe, pefix, image and run
+   scripts); `Tools/` from `tools/rv/`, `build/mig/` and `build/ci/`;
+   `Tests/` absorbs `tests/`; `Kernel/port/` from `Kernel/RVOS/platform/`.
+2. `components/` and `apps/` fold into `Foundation/` and `Apps/`.
+3. The upstream desktop tree moves under `Legacy/` and leaves the build
+   graph; components return from it one at a time as later waves adopt them.
+
+Exit criteria:
+
+- Every top-level directory is one of the eleven in the target layout, plus
+  `Legacy/` until W6 empties it.
+- CI, the no-GPL gate, the format gate, `cargo test`, the host tool unit
+  tests and the x86_64, arm64 and riscv64 boot smokes pass after each slice.
+- `git log --follow` traces every moved file to its history (moves are
+  `git mv`, never delete-and-add).
+
+Dependencies: W1 boot and harness work. Blocks: W2.
+
 ### W2 — kite boots that kernel from the ESP
 
 Goal: our own bootloader replaces the reference loader, per
