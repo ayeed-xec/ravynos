@@ -203,8 +203,9 @@ keeps DTrace. No other CDDL code enters the tree.
 this repository and nothing depends on them (ADR-24). The default system provides
 `JavaScriptCore.framework` and `WebKit.framework` at Apple's paths as our own
 implementations of their public APIs over permissively licensed engines, as S30
-specifies. Apple's LGPL WebKit may be built in a separate repository and installed by the
-user as an optional replacement.
+specifies. Apple's LGPL WebKit may be built in a separate repository and installed under
+`/Library/Optional/`; by dyld's search rule (S14) an optional package is used only where
+the system provides no framework at that install name, so it never replaces ours.
 
 ### ADR-24 — Permissive first
 
