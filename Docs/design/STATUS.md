@@ -16,8 +16,8 @@ container (GAP-40 remainder).
 
 | Area | Score | Verdict |
 |---|---|---|
-| `Tools/rv` (WP0.1–WP0.3) | 8/10 | passes: Mach-O for x86_64 and arm64 (checked with `file`), kind-aware rules, errors returned instead of `process::exit`, E-DUP-NAME with a fixture, 33 unit tests |
-| Stage-1 bootstrap (WP0.4) | 5/10 | builds on the host; `--verify` now rebuilds and compares hashes (GAP-55) but no reproducible rebuild has been observed end to end; not in CI |
+| `Tools/rv` (WP0.1–WP0.3) | 9/10 | passes: Mach-O for x86_64 and arm64 (checked with `file`), every S01 output kind (framework, app, xpc-service, dext, plugin, bundle, kext), `-isysroot` and stub linking, `rv test` and `rv image`, errors returned instead of `process::exit`, E-DUP-NAME with a fixture, 61 unit tests |
+| Stage-1 bootstrap (WP0.4) | 6/10 | builds on the host and `--verify` rebuilds and compares hashes (GAP-55); BUG-28 — the Swift fork's `ld64.lld` refused every Mach-O input — is fixed by ADR-31 and the rebuild that proves it is in flight; not in CI |
 | `Boot/loader` (WP0.9) | 6/10 | three-arch boot smokes green; device tree still missing (W1) |
 | `Tools/mig` | 8/10 | passes: byacc-generated parser, three-patch rvpatch series, corrected `--regen-lexer` paths, `_PROVENANCE` repaired |
 | CI and gates | 7/10 | arm64 build, Mach-O assertion, SPDX gate, boot smokes, license audit and whole-tree host-tool gate all wired; still on `ubuntu-latest` with no `Tools/ci/Containerfile` (GAP-40 remainder) |
@@ -435,7 +435,7 @@ that backs it:
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: verify implemented, reproducible rebuild not yet observed) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: verify implemented and passed on the Swift pin; the ADR-31 upstream rebuild is in flight, and stage-1 still lacks `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe) |
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 5/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
