@@ -19,6 +19,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# stage1.sh lives in <root>/Tools/toolchain; the repository root is two up.
 TREE="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 VERIFY=0
@@ -79,6 +80,20 @@ verify() {
 }
 
 if [ "$VERIFY" -eq 1 ]; then
+    # GAP-55: verify must not trust what a previous run wrote. A real verify
+    # rebuilds into a scratch dir with the same content hash and compares the
+    # fresh tools.sha256 against the recorded one; only an exact match passes.
+    VERIFY_TMP="$CACHE/.verify.$$"
+    bash "$SCRIPT_DIR/llvm/build.sh" build/vendor/llvm-project "$VERIFY_TMP" ${JOBS:+"$JOBS"} \
+        || { echo "error: verify rebuild failed" >&2; exit 1; }
+    ( cd "$VERIFY_TMP/bin" && sha256sum ./* ) >"$VERIFY_TMP/tools.sha256"
+    if ! diff -q "$VERIFY_TMP/tools.sha256" "$CACHE/tools.sha256" >/dev/null; then
+        echo "error: verify: fresh build hash differs from the recorded tools.sha256" >&2
+        diff "$CACHE/tools.sha256" "$VERIFY_TMP/tools.sha256" | head -10 >&2
+        rm -rf "$VERIFY_TMP"
+        exit 1
+    fi
+    rm -rf "$VERIFY_TMP"
     verify
     exit $?
 fi
