@@ -89,8 +89,8 @@ as its wave starts.
 | W1 | L1, L2, L3, L4, L5, L6, L9, L13, L14 |
 | W2 | L1, L3, L7, L8, L13, L14 |
 | W3 | L3, L4, L5, L6, L7, L8, L9, L12, L13, L14 |
-| W4 | L6, L7, L10, L11, L13, L14 |
-| W5 | L7–L14 |
+| W4 | L1, L6, L7, L10, L11, L13, L14 |
+| W5 | L1, L7–L14 |
 | W6 | L3, L6, L10, L11, L13, L14 |
 | W7 | L1, L9, L12, L14 |
 
@@ -132,9 +132,11 @@ material.
 - **WP0.3** (L1, S01) Compile rules for `.c .m .mm .cpp .S`, depfiles, dylib, framework,
   executable, kext and bundle outputs; sysroot assembly; `rv shell` fixed. Needs
   WP0.1. Done: header edit rebuilds dependents only; a two-dylib test links.
-- **WP0.4** (L1, S02) Stage-1 toolchain: LLVM, Apple `ld64` and `cctools`, byacc,
-  unifdef; `rv bootstrap`; `rust-toolchain.toml`; `rv` built static with musl. Done:
-  `rv bootstrap --verify` reproduces its hashes.
+- **WP0.4** (L1, S02) Stage-1 toolchain, first part: LLVM from `swiftlang/llvm-project`
+  (clang, lld, LLVM tools, libclang), byacc, unifdef, migcom, rvpatch, mkfat, elf2pe;
+  `rv bootstrap`; `rust-toolchain.toml`; `rv` built static with musl; CI container from
+  `Tools/ci/Containerfile` without bison, flex or m4. Done: `rv bootstrap --verify`
+  reproduces its hashes (weekly job); CI uses the cached stage 1.
 - **WP0.5** (L14) License audit over the whole tree, every file type; crate scanning;
   host-tool gate over every script with the full deny list. Done: planted cases in
   `Tests/rv/` fail as designed.
@@ -166,15 +168,19 @@ memory-disk root and runs a static Mach-O program that reports its result on ser
 - **WP1.3** (L3, S05) Restore `Kernel/xnu` to its pristine tag; move the in-tree edits
   into `Kernel/patches` or generated outputs. Done: the pristine check passes.
 - **WP1.4** (L1, L3, S02, S05) XNU host tools (ADR-21): `config` with byacc and a
-  hand-written scanner, `doconf` logic in `rv`, `kextsymboltool`, `newvers`. Needs
-  WP0.4. Done: configuration generated for x86_64 and RVVIRT.
+  hand-written scanner, `doconf` logic in `rv`, `kextsymboltool`, `newvers`; the
+  system-call and libsyscall generators re-implemented in Rust in `Tools/xnuhook`.
+  Needs WP0.4. Done: configuration and generated tables for x86_64 and RVVIRT match
+  golden files.
+- **WP1.4a** (L1, S02) Apple `ld64` and `cctools` in stage 1. Needs WP0.4. Done: a
+  static Mach-O and a kext bundle link.
 - **WP1.5** (L3, S05) The kernel hook: compile and link plan into ninja; mig and
   system-call generation; Bison outputs regenerated with byacc. Needs WP1.3, WP1.4,
   WP1.9.
   Done: `rv build xnu` compiles every selected file.
-- **WP1.6** (L3, S05) `libfirehose_kernel` from libdispatch; `libcc_kext` over the
-  ADR-12 crypto library; zero-stub link with `ld64`. Needs WP1.5. Done: the link
-  report shows no undefined symbols on both architectures.
+- **WP1.6** (L3, S05) Vendor libdispatch for `libfirehose_kernel` and BoringSSL for
+  `libcc_kext` (ADR-12); zero-stub link with `ld64`. Needs WP1.5, WP1.4a, WP1.11. Done:
+  the link report shows no undefined symbols on both architectures.
 - **WP1.7** (L4, S06) x86_64 minimum: AMD and TCG timing patch (ADR-20), CPU and
   interrupt bring-up for one CPU. Needs WP1.6, WP1.1. Done: XNU prints its banner
   under QEMU.
@@ -185,13 +191,16 @@ memory-disk root and runs a static Mach-O program that reports its result on ser
   headers generate and compile (needed by WP1.5).
 - **WP1.10** (L3, S09) `rv kernelcache`: `MH_FILESET` boot collection with the HFS kext.
   Needs WP1.6. Done: a kernelcache boots on both architectures.
-- **WP1.11** (L3, S12) Minimal code-signing policy: ad-hoc signatures accepted; trust
-  cache and entitlement interfaces present. Needs WP1.6. Done: a signed static binary
-  loads; a tampered one is refused.
-- **WP1.12** (L9, L14, S19, section 5.2) Early-tier harness: HFS memory-disk image,
-  `RVTEST` protocol, `run-tier.sh`. Needs WP1.10. Done: harness runs in CI.
-- **WP1.13** (L1, S02) T0 program and the static link with `ld64`. Needs WP0.4. Done:
-  **T0 passes on x86_64 and arm64.**
+- **WP1.11** (L3, S12) Boot-time policy hooks: `TrustCache/API.h`; the `img4`
+  interface, the AMFI trust-cache interface and CoreEntitlements registered from
+  `Kernel/port/common/` before `trust_cache_runtime_init`; ad-hoc signatures accepted.
+  Done: XNU passes trust-cache initialization; a signed static binary loads and a
+  tampered one is refused.
+- **WP1.12** (L9, L14, S19, section 5.2) Early-tier harness: `Tools/hfsimage`, image
+  manifests in `Tests/images/`, the `RVTEST` protocol, `rv image` and `rv test t0`.
+  Needs WP1.10. Done: the harness runs in CI under TCG.
+- **WP1.13** (L1, S02) The freestanding T0 program, linked static with `ld64` and signed
+  by `rv codesign`. Needs WP1.4a. Done: **T0 passes on x86_64 and arm64.**
 - **WP1.14** (L14) Budgets P2, P9, P10 armed; GRUB rig and `Kernel/build/` deleted.
   Needs WP1.13.
 
@@ -214,8 +223,9 @@ CoreFoundation, a first slice of Foundation and the Swift runtime work.
 - **WP2.6** (L1, S03) `rv build sdk`: headers, `.tbd` stubs, framework bundles,
   `SDKSettings.json`, Availability macros, `rv sdk`. Needs WP2.1–WP2.4. Done: T1
   builds against the SDK alone.
-- **WP2.7** (L7, S16) Swift runtime and stdlib; Swift compiler in stage 1. Needs WP2.3.
-  Done: a Swift command-line program runs.
+- **WP2.7** (L1, L7, S02, S16) Swift compiler in stage 1 (interim: the pinned swift.org
+  release); Swift runtime and stdlib. Needs WP2.3. Done: a Swift command-line program
+  runs.
 - **WP2.8** (L14) Budgets P3, P4, P5 armed. Done: **T1 passes on x86_64 and arm64.**
 
 ## 6. W3 — Boot to a login prompt
@@ -240,6 +250,9 @@ login with the BSD userland.
 - **WP3.8** (L8, S21) IOKit.framework, powerd, `sysctl hw.*`, slice policy. Done:
   probes.
 - **WP3.9** (L6, S11, track) FreeBSD and OpenBSD environments start: `vtnet` echo test.
+- **WP3.11** (L9, S20) Network basics: DHCP through configd, DNS through mDNSResponder,
+  `getaddrinfo`. Done: probes.
+- **WP3.12** (L3, S12) Containers and `secinitd`/`containermanagerd` once launchd runs.
 - **WP3.10** (L14) Boot on one physical PC and one arm64 machine. Done: **T2 passes on
   x86_64 and arm64.**
 
@@ -262,6 +275,9 @@ and on the two physical machines.
 - **WP4.6** (L11, S25) AppKit: application, windows, views, controls, menus, nibs.
   Needs WP4.3–WP4.5. Done: AppKit probes for the T3 program.
 - **WP4.7** (L11, S26) Keyboard layouts and text input for the T3 program.
+- **WP4.9** (L11, S29) Minimal `tccd`: policy answers for screen capture and file access.
+- **WP4.10** (L1, S34) `actool` and `ibtool` replacements; `Tools/abi-census`.
+- **WP4.11** (L13) Census of the T4 set; demand table merged. Needs WP4.10.
 - **WP4.8** (L14) Budgets P1, P6, P7 armed. Done: **T3 passes on x86_64 and arm64.**
 
 ## 8. W5 — Twenty applications
@@ -270,7 +286,7 @@ and on the two physical machines.
 architectures: networking, keychain, audio, the remaining frameworks, Metal on the CPU,
 and `.dmg` and `.pkg` installation.
 
-- **WP5.1** (L13) Census of the T4 set; demand table merged. Starts in W4.
+- **WP5.1** (L1, S34) The `metal` and `metallib` tools for S28.
 - **WP5.2** (L11, S25) AppKit width by census: documents, panels, drag and drop,
   pasteboard, LaunchServices, Dock, menu bar.
 - **WP5.3** (L9, S20) CFNetwork, NSURLSession, TLS and certificates.
@@ -279,9 +295,9 @@ and `.dmg` and `.pkg` installation.
 - **WP5.6** (L10, S28) Metal API and CPU backend; OpenGL.
 - **WP5.7** (L11, S26, S31) Text system width, accessibility, notifications, printing,
   the remaining frameworks by census.
-- **WP5.8** (L11, S30) JavaScriptCore API.
+- **WP5.8** (L11, S30) JavaScriptCore API over QuickJS-ng.
 - **WP5.9** (L12, S33) `.dmg` and `.pkg` installation.
-- **WP5.10** (L7, L13) The SwiftUI go/no-go decision, recorded as an ADR.
+- **WP5.10** (L11, L13) SwiftUI scope from the census, recorded in S25's spec.
 - **WP5.11** (L14) Budget P8 armed. Done: **T4 passes on x86_64 and arm64.**
 
 Each of WP5.2–WP5.9 closes when every census entry it owns is implemented, specified
@@ -295,9 +311,11 @@ a Qt app, a SwiftUI app, an Electron app — and one GPU backend runs Metal.
 - **WP6.1** (L13) Census of the T5 set; specs for their private SPI.
 - **WP6.2** (L3, S12) Full security policy: hardened runtime, library validation,
   sandbox profiles, quarantine.
-- **WP6.3** (L11, S25, S16) SwiftUI on our runtime, if W5 decided go.
+- **WP6.3** (L11, S25, S16) SwiftUI, SwiftUICore, AttributeGraph and Combine.
 - **WP6.4** (L10, S28) First GPU backend on a native driver; Metal sample subset.
-- **WP6.5** (L11, S30) WKWebView on the chosen permissive engine.
+- **WP6.5** (L11, S30) WKWebView on Ladybird LibWeb.
+- **WP6.7** (L6, L11, S10, S31) Bluetooth: FreeBSD-derived stack, IOBluetooth and
+  CoreBluetooth.
 - **WP6.6** (L10, L11) Electron's needs: cross-process layers, sandbox start, Metal
   through ANGLE. Done: **T5 passes on x86_64 and arm64, in order.**
 
@@ -325,7 +343,16 @@ SwiftUI application out of the box.
   with an MIT DRM driver, OpenBSD Wi-Fi on hardware; the optional GPL channel gates
   nothing.
 
-## 12. Open questions
+## 12. After W7
+
+Planned work beyond the first distribution. Until each lands, its APIs behave as the
+owning subsystem specifies (an error or an empty result, never a fake success): HTTP/3,
+NTLM and VPN (S20); App Nap (S21); SMB client (S19); AAC and HEVC once licensing allows
+(ADR-25, S27); speech synthesis and a screen reader (S26); SwiftData and Core ML (S31);
+Spotlight importers (S31); fast user switching (S18); Endpoint Security (S12); FileVault
+(S19).
+
+## 13. Open questions
 
 - Who holds the Apple hardware for L13, and how many machines are needed to keep the
   probe queue short?
