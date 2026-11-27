@@ -8,29 +8,25 @@ pub fn emit(
     order: &[String],
     target: &str,
 ) -> String {
-    let host = target.ends_with("-linux-gnu");
     let mut out = String::new();
     out.push_str(&format!("target = {target}\n"));
     out.push_str("rule lib\n  command = llvm-ar rcs $out $in\n");
-    if host {
-        out.push_str(
-            "rule cc\n  command = clang -c $in -o $out $includes\n\
-             rule link\n  command = clang -fuse-ld=lld $in -o $out\n\n",
-        );
-    } else if is_macho_target(target) {
-        let arch = macho_arch(target);
+    let (cc_flags, link_rules) = compile_and_link_rules(target);
+    for (rule, dialect) in [
+        ("cc", ""),
+        ("cxx", "-x c++ "),
+        ("objc", "-x objective-c "),
+        ("objcxx", "-x objective-c++ "),
+    ] {
         out.push_str(&format!(
-            "rule cc\n  command = clang --target={arch}-apple-macos11 -ffreestanding -fno-builtin -nostdinc -c $in -o $out $includes\n\
-             rule link\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -e __start $in -o $out\n\
-             rule dylib\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -dylib $in -o $out\n\n"
-        ));
-    } else {
-        out.push_str(&format!(
-            "rule cc\n  command = clang --target=$target -ffreestanding -fno-builtin -nostdinc -c $in -o $out $includes\n\
-             rule link\n  command = ld.lld {} -static $in -o $out\n\n",
-            ld_emulation(target)
+            "rule {rule}\n  command = clang {cc_flags}{dialect}-I../sysroot/{target}/usr/include -MMD -MF $out.d -c $in -o $out $includes\n  depfile = $out.d\n  deps = gcc\n"
         ));
     }
+    out.push_str(&format!(
+        "rule as\n  command = clang {cc_flags}-c $in -o $out $includes\n"
+    ));
+    out.push_str(&link_rules);
+    out.push('\n');
     for name in order {
         let m = &manifests[name];
         let comp_dir = &m.name;
@@ -46,12 +42,12 @@ pub fn emit(
         }
         let mut objs = Vec::new();
         for src in &srcs {
-            if !src.ends_with(".c") {
+            let Some(rule) = compile_rule(src) else {
                 continue;
-            }
+            };
             let obj = src.replace('/', "_");
             out.push_str(&format!(
-                "build {comp_dir}/{obj}.o: cc ../../{}/{src}\n  includes = {includes}\n",
+                "build {comp_dir}/{obj}.o: {rule} ../../{}/{src}\n  includes = {includes}\n",
                 m.dir.display()
             ));
             objs.push(format!("{comp_dir}/{obj}.o"));
@@ -209,6 +205,45 @@ fn wildcard(pat: &str, s: &str) -> bool {
         pi += 1;
     }
     pi == p.len()
+}
+
+fn compile_and_link_rules(target: &str) -> (String, String) {
+    if target.ends_with("-linux-gnu") {
+        return (
+            String::new(),
+            String::from("rule link\n  command = clang -fuse-ld=lld $in -o $out\n"),
+        );
+    }
+    if is_macho_target(target) {
+        let arch = macho_arch(target);
+        return (
+            format!("--target={arch}-apple-macos11 -ffreestanding -fno-builtin -nostdinc "),
+            format!(
+                "rule link\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -e __start $in -o $out\n\
+                 rule dylib\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -dylib $in -o $out\n"
+            ),
+        );
+    }
+    (
+        format!("--target={target} -ffreestanding -fno-builtin -nostdinc "),
+        format!(
+            "rule link\n  command = ld.lld {} -static $in -o $out\n",
+            ld_emulation(target)
+        ),
+    )
+}
+
+/// The ninja rule that compiles a source file, or None for a file we do not
+/// compile (headers, data). Extensions decide the language the way clang does.
+fn compile_rule(src: &str) -> Option<&'static str> {
+    match src.rsplit('.').next()? {
+        "c" => Some("cc"),
+        "m" => Some("objc"),
+        "mm" => Some("objcxx"),
+        "cc" | "cpp" | "cxx" => Some("cxx"),
+        "S" | "s" => Some("as"),
+        _ => None,
+    }
 }
 
 fn ld_emulation(target: &str) -> &'static str {

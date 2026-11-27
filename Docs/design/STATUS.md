@@ -371,6 +371,32 @@ phases did not finish is named in the exit criteria: the stage-1 reproducible re
 (GAP-55) has still never been observed end to end, and CI still runs on the runner
 image rather than the `Tools/ci/Containerfile` build (GAP-40).
 
+### Gap closure after P4
+
+The entries above record the tree at `b1746b5ce`. What changed since, with the check
+that backs it:
+
+- GAP-02 **closed**: compile rules carry `-MMD -MF $out.d` with `depfile`/`deps = gcc`;
+  touching `Foundation/libhello/include/hello.h` recompiles and relinks.
+- GAP-03 **partial**: `.c`, `.m`, `.mm`, `.cpp`/`.cc`/`.cxx` and `.S`/`.s` have rules;
+  framework, kext and bundle outputs still do not exist.
+- GAP-04 **partial**: `rv sdk` assembles `build/sysroot/<target>` with public headers
+  and libraries and the compile rules point `-I` at it; `-isysroot` and import-only
+  linking are still missing.
+- GAP-06 **partial**: `rv sdk` and `rv audit size` exist; `image`, `test` and
+  `kernelcache` do not.
+- GAP-36 **partial**: nine layer fences and same-layer dependencies are in place;
+  manifest keys beyond `kind`/`deps` (versions, re-exports, install paths) are not.
+- GAP-54 **closed**: `rv --root <tree>` works from any directory and the failures carry
+  `E-CYCLE`, `E-LAYER`, `E-DEP-UNKNOWN` and `E-ROOT`.
+- GAP-56 **closed**: licences match by exact SPDX id, case-insensitively, with `0BSD`
+  accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
+- GAP-40 **partial**: `Tools/ci/Containerfile` pins the toolchain but has not been
+  built yet, so CI still runs on the runner image.
+- GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, but
+  stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
+  elf2pe, and its cache key omits the host cmake and ninja versions.
+
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |

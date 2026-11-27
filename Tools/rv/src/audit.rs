@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 const ACCEPT: &[&str] = &[
+    "0BSD",
     "APSL-2.0",
     "BSD",
     "BSD-2-Clause",
@@ -18,25 +19,57 @@ const ACCEPT: &[&str] = &[
     "LicenseRef-PublicDomain",
 ];
 
-const FAIL: &[&str] = &["GPL", "LGPL", "AGPL"];
+/// Copyleft licences are refused by exact SPDX id, not by prefix: 'LGPL-2.1'
+/// must not pass because it does not start with 'GPL' (GAP-56).
+const FAIL: &[&str] = &[
+    "GPL-1.0",
+    "GPL-1.0-only",
+    "GPL-1.0-or-later",
+    "GPL-2.0",
+    "GPL-2.0-only",
+    "GPL-2.0-or-later",
+    "GPL-3.0",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "LGPL-2.0",
+    "LGPL-2.0-only",
+    "LGPL-2.0-or-later",
+    "LGPL-2.1",
+    "LGPL-2.1-only",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0",
+    "LGPL-3.0-only",
+    "LGPL-3.0-or-later",
+    "AGPL-1.0",
+    "AGPL-1.0-only",
+    "AGPL-3.0",
+    "AGPL-3.0-only",
+    "AGPL-3.0-or-later",
+    "CC-BY-SA-4.0",
+];
+
+/// The licence expression without trailing comments, compared case-insensitively.
+fn normalize(license: &str) -> String {
+    license.trim().to_lowercase()
+}
+
+fn verdict(license: &str) -> Result<(), &'static str> {
+    let id = normalize(license);
+    if FAIL.iter().any(|bad| bad.eq_ignore_ascii_case(&id)) {
+        return Err("is prohibited");
+    }
+    if ACCEPT.iter().any(|ok| ok.eq_ignore_ascii_case(&id)) {
+        return Ok(());
+    }
+    Err("is not on the accept list")
+}
 
 pub fn license(tree: &Path, manifests: &BTreeMap<String, Manifest>) -> Result<(), String> {
     let mut failures = Vec::new();
     for m in manifests.values() {
-        let expr: String = m
-            .license
-            .to_uppercase()
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '.')
-            .collect();
-        if FAIL.iter().any(|bad| expr.starts_with(bad)) {
+        if let Err(why) = verdict(&m.license) {
             failures.push(format!(
-                "{}: manifest license '{}' is prohibited",
-                m.name, m.license
-            ));
-        } else if !ACCEPT.iter().any(|a| expr.starts_with(&a.to_uppercase())) {
-            failures.push(format!(
-                "{}: manifest license '{}' is not on the accept list",
+                "{}: manifest license '{}' {why}",
                 m.name, m.license
             ));
         }
@@ -143,4 +176,30 @@ fn check(rel: &str, text: &str, failures: &mut Vec<String>) {
         return;
     }
     failures.push(format!("{rel}: no SPDX-License-Identifier header"));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn copyleft_ids_are_refused_by_exact_id() {
+        for id in ["GPL-2.0-only", "LGPL-2.1-or-later", "AGPL-3.0", "gpl-3.0"] {
+            assert!(verdict(id).is_err(), "{id} must be refused");
+        }
+    }
+
+    #[test]
+    fn lookalike_ids_are_not_accepted() {
+        for id in ["BSD-4-Clause", "MIT-0", "Apache-2.0 OR GPL-2.0"] {
+            assert_eq!(verdict(id), Err("is not on the accept list"), "{id}");
+        }
+    }
+
+    #[test]
+    fn accept_list_matches_case_insensitively() {
+        for id in ["BSD-2-Clause", "bsd-3-clause", "0BSD", "ISC", "Unlicense"] {
+            assert!(verdict(id).is_ok(), "{id} must be accepted");
+        }
+    }
 }

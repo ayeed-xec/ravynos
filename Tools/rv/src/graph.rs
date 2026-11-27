@@ -50,13 +50,13 @@ pub fn resolve(
         for dep in &m.deps.internal {
             let Some(dep_m) = manifests.get(dep) else {
                 return Err(format!(
-                    "error: {} declares dependency '{}' but no manifest defines it",
+                    "error: E-DEP-UNKNOWN: {} declares dependency '{}' but no manifest defines it",
                     m.name, dep
                 ));
             };
             if !may_depend(&m.layer, &dep_m.layer) {
                 return Err(format!(
-                    "error: {} -> {} (private) violates layer rules\n       {} may not depend on {} layer\n       (02-architecture.md, layer table)",
+                    "error: E-LAYER: {} -> {} (private) violates layer rules\n       {} may not depend on {} layer\n       (02-architecture.md, layer table)",
                     m.name, dep, m.layer, dep_m.layer
                 ));
             }
@@ -64,7 +64,7 @@ pub fn resolve(
         for dep in &m.deps.upward {
             if !manifests.contains_key(dep) {
                 return Err(format!(
-                    "error: {} declares upward dependency '{}' but no manifest defines it",
+                    "error: E-DEP-UNKNOWN: {} declares upward dependency '{}' but no manifest defines it",
                     m.name, dep
                 ));
             }
@@ -85,7 +85,7 @@ fn visit(
 ) -> Result<(), String> {
     match state.get(comp) {
         Some(2) => return Ok(()),
-        Some(1) => return Err(format!("error: dependency cycle through '{comp}'")),
+        Some(1) => return Err(format!("error: E-CYCLE: dependency cycle through '{comp}'")),
         _ => {}
     }
     state.insert(comp.to_string(), 1);
@@ -116,7 +116,7 @@ fn emit(
 ) -> Result<(), String> {
     match state.get(comp).copied().unwrap_or(0) {
         2 => return Ok(()),
-        1 => return Err(format!("error: dependency cycle through '{comp}'")),
+        1 => return Err(format!("error: E-CYCLE: dependency cycle through '{comp}'")),
         _ => {}
     }
     state.insert(comp.to_string(), 1);

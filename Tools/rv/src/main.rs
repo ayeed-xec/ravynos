@@ -17,28 +17,43 @@ enum Cmd {
     Graph,
     Shell,
     Audit,
+    AuditSize,
+    Sdk,
 }
 
 fn usage() -> ! {
     eprintln!(
-        "usage: rv build [-t <target>] [<component>|<layer>...]\n\
+        "usage: rv [--root <tree>] <command>\n\
+         usage: rv build [-t <target>] [<component>|<layer>...]\n\
          usage: rv bootstrap [--verify] [--refetch] [-j <jobs>]\n\
          usage: rv graph [--reverse] [--forbid]\n\
          usage: rv shell [<component>]\n\
+         usage: rv sdk [-t <target>]\n\
          usage: rv vendors check\n\
-         usage: rv audit [license]"
+         usage: rv audit [license|size] [-t <target>]"
     );
     exit(2);
 }
 
 fn main() {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let mut root: Option<std::path::PathBuf> = None;
+    while args.first().map(String::as_str) == Some("--root") {
+        args.remove(0);
+        let Some(dir) = (!args.is_empty()).then(|| args.remove(0)) else {
+            usage();
+        };
+        root = Some(std::path::PathBuf::from(dir));
+    }
     let Some(cmd_arg) = (!args.is_empty()).then(|| args.remove(0)) else {
         usage();
     };
+    let tree = match root {
+        Some(dir) => dir,
+        None => std::env::current_dir().expect("rv must run from the tree root"),
+    };
 
     if cmd_arg == "vendors" {
-        let tree = std::env::current_dir().expect("rv must run from the tree root");
         match args.first().map(String::as_str) {
             None | Some("check") => report(vendors::check(&tree)),
             _ => usage(),
@@ -75,18 +90,29 @@ fn main() {
             Cmd::Graph
         }
         "bootstrap" => Cmd::Bootstrap,
+        "sdk" => {
+            if let Some(t) = args.iter().position(|a| a == "-t") {
+                target = args.get(t + 1).cloned().unwrap_or_else(|| usage());
+            }
+            Cmd::Sdk
+        }
         "shell" => {
             names = args.clone();
             Cmd::Shell
         }
-        "audit" => match args.first().map(String::as_str) {
-            None | Some("license") => Cmd::Audit,
-            _ => usage(),
-        },
+        "audit" => {
+            if let Some(t) = args.iter().position(|a| a == "-t") {
+                target = args.get(t + 1).cloned().unwrap_or_else(|| usage());
+            }
+            match args.first().map(String::as_str) {
+                None | Some("license") => Cmd::Audit,
+                Some("size") => Cmd::AuditSize,
+                _ => usage(),
+            }
+        }
         _ => usage(),
     };
 
-    let tree = std::env::current_dir().expect("rv must run from the tree root");
     report(run(cmd, &tree, &args, &target, &names, reverse));
 }
 
@@ -98,6 +124,12 @@ fn run(
     names: &[String],
     reverse: bool,
 ) -> Result<(), String> {
+    if !tree.is_dir() {
+        return Err(format!(
+            "error: E-ROOT: {} is not a directory (rv --root <tree>)",
+            tree.display()
+        ));
+    }
     let manifests = manifest::load_all(tree)?;
     let deps = graph::resolve(&manifests)?;
     match cmd {
@@ -109,6 +141,8 @@ fn run(
         }
         Cmd::Shell => shell(tree, &manifests, &deps, target, names.first()),
         Cmd::Audit => audit::license(tree, &manifests),
+        Cmd::AuditSize => audit_size(tree, target),
+        Cmd::Sdk => sdk(tree, &manifests, target),
     }
 }
 
@@ -253,5 +287,103 @@ fn shell(
         tree.join("build").join(target).join(&comp).display(),
         comp
     );
+    Ok(())
+}
+
+/// Assembles `build/sysroot/<target>` from what the build produced: every
+/// component's public headers land in usr/include and its libraries in usr/lib,
+/// so a component can compile against installed interfaces only (GAP-04).
+fn sdk(
+    tree: &std::path::Path,
+    manifests: &BTreeMap<String, manifest::Manifest>,
+    target: &str,
+) -> Result<(), String> {
+    let sysroot = tree.join("build").join("sysroot").join(target);
+    let include = sysroot.join("usr").join("include");
+    let lib = sysroot.join("usr").join("lib");
+    for dir in [&include, &lib] {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("error: create {}: {e}", dir.display()))?;
+    }
+    let mut headers = 0;
+    let mut libs = 0;
+    let build_dir = tree.join("build").join(target);
+    for m in manifests.values() {
+        let headers_dir = tree.join(&m.dir).join("include");
+        if headers_dir.is_dir() {
+            for entry in std::fs::read_dir(&headers_dir)
+                .map_err(|e| format!("error: read {}: {e}", headers_dir.display()))?
+                .flatten()
+            {
+                let path = entry.path();
+                if path.extension().map(|e| e == "h").unwrap_or(false) {
+                    let name = path.file_name().unwrap_or_default();
+                    std::fs::copy(&path, include.join(name))
+                        .map_err(|e| format!("error: install {}: {e}", path.display()))?;
+                    headers += 1;
+                }
+            }
+        }
+        let artifact = build_dir.join(&m.name);
+        let candidates: Vec<String> = match m.kind.as_str() {
+            "static-lib" => vec![format!("{}.a", m.name)],
+            "dylib" => vec![format!("lib{}.dylib", m.name)],
+            _ => Vec::new(),
+        };
+        for file in candidates {
+            let src = artifact.join(&file);
+            if src.is_file() {
+                let dst = lib.join(src.file_name().unwrap_or_default());
+                std::fs::copy(&src, &dst)
+                    .map_err(|e| format!("error: install {}: {e}", src.display()))?;
+                libs += 1;
+            }
+        }
+    }
+    println!(
+        "sdk: {headers} headers and {libs} libraries in {}",
+        sysroot.display()
+    );
+    Ok(())
+}
+
+/// Reported sizes of this target's build outputs, so a change that doubles a
+/// binary is visible (GAP-06).
+fn audit_size(tree: &std::path::Path, target: &str) -> Result<(), String> {
+    let build_dir = tree.join("build").join(target);
+    if !build_dir.is_dir() {
+        return Err(format!(
+            "error: nothing built for {target} ({} does not exist)",
+            build_dir.display()
+        ));
+    }
+    let mut rows: Vec<(String, u64)> = Vec::new();
+    let mut total = 0;
+    for entry in std::fs::read_dir(&build_dir)
+        .map_err(|e| format!("error: read {}: {e}", build_dir.display()))?
+        .flatten()
+    {
+        let path = entry.path();
+        if !path.is_dir() || path.file_name().map(|n| n == "nobuild").unwrap_or(false) {
+            continue;
+        }
+        for file in std::fs::read_dir(&path)
+            .map_err(|e| format!("error: read {}: {e}", path.display()))?
+            .flatten()
+        {
+            let file = file.path();
+            if file.is_dir() {
+                continue;
+            }
+            let size = std::fs::metadata(&file).map(|m| m.len()).unwrap_or(0);
+            total += size;
+            rows.push((file.display().to_string(), size));
+        }
+    }
+    rows.sort();
+    for (path, size) in &rows {
+        println!("{size:>10}  {path}");
+    }
+    println!("{total:>10}  total ({target})");
     Ok(())
 }
