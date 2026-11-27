@@ -3556,6 +3556,19 @@ images, volume layout and automatic mounting.
   and `diskutil list -plist` output is parsed by scripts and installers.
 - NFS client is in the kernel; SMB client mounts via `mount_smbfs`.
 
+**Language and structure (ADR-15).** APFS is Rust. `Foundation/apfs-core/` is a
+`no_std` crate with the on-disk structures, checksums, B-trees, object map, space
+manager and snapshots, written from the *Apple File System Reference*; every field read
+from disk is bounds-checked before use. Three users link it: the tools (`newfs_apfs`,
+`fsck_apfs`) as ordinary Rust binaries; the kernel file system
+`Kernel/Extensions/apfs/` (kind `kext`), whose C layer registers `vfsops` and
+`vnodeops` with XNU and calls the crate through a C ABI, with the crate built for the
+kernel (no unwinding, XNU's allocator, panics routed to `panic()`); and the bootloader,
+which links the crate as a static library built for the `*-uefi` targets. The first
+APFS stage proves the Rust kext path: a Rust function called from a kext, linked by
+Apple's ld64 into the kernelcache, running in QEMU. PureDarwin's `libapfsrw` (MIT,
+BSD-3-Clause) is reference material (ADR-27).
+
 **Design.**
 
 - **Ramdisk root.** The loader (S04) loads an HFS+ image into memory and adds the

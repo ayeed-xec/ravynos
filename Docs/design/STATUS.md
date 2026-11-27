@@ -166,6 +166,11 @@ no code at all.)
   `Tools/mig/patches`.
 - GAP-40 GitHub's default CI image ships bison, flex and m4; CI needs its own container
   (SYSTEM-DESIGN section 2.2).
+- GAP-42 `Kernel/Extensions/IOUSBFamily/src/IOUSBController.cpp`, `IOUSBControllerV2.cpp`,
+  `IOUSBDevice.cpp`, `IOUSBInterface.cpp` and `include/IOKit/usb/IOUSBController.h` are
+  PureDarwin's reconstruction of Apple's closed classes and carry no license header.
+  They may not be built until PureDarwin states their license (PUREDARWIN-SEEDS.md
+  section 6) or they are rewritten.
 - GAP-41 XNU's system-call and libsyscall generators use host sed, awk and Perl
   (`bsd/kern/makesyscalls.sh`, `libsyscall/xcodescripts/*.pl`); no Rust replacements
   exist.

@@ -134,14 +134,24 @@ Notes:
 - `cmake/circular.cmake` (GPL-3).
 - Trenta icons under `src/Userspace/*/Resources` (CC-BY-SA-4.0).
 
-## 6. Questions for PureDarwin's authors
+## 6. Already in the ravynOS tree
+
+Upstream ravynOS took several PureDarwin pieces before this survey: the IOUSBFamily
+reconstruction (no license header, GAP-42), PureDarwin's changes to Apple's IOACPIFamily,
+AppleAPIC, ApplePS2Controller and IOPCIFamily (APSL), the CMake scripts and libkmod
+recorded in `Kernel/_PROVENANCE`, the toolchain import in
+`Legacy/Developer/Default.xctoolchain` (cctools, mig, xar, unifdef, dtrace_ctf), and the
+ISO tooling in `Legacy/ISO`. The rules in section 1 apply to them as to new imports.
+
+## 7. Questions for PureDarwin's authors
 
 Sent before any affected file is taken:
 
 1. The license of files with no header, in particular: `PDACPIKernel.cpp`,
    `PDACPIGlue.cpp`, `PDACPIPower.cpp`, the arm64 platform expert, `IONVMEFamily`,
    `IOGOPFramebuffer`, `PDHyperV`, the ext4 driver, the IOUSBFamily reconstruction, the
-   new riscv64 files in XNU, `CGL.c`, the QuartzCore files, and the AppKit additions
+   new riscv64 files in XNU, the IOUSBFamily reconstruction files already in the
+   ravynOS tree (`IOUSBController*`, `IOUSBDevice.cpp`, `IOUSBInterface.cpp`), `CGL.c`, the QuartzCore files, and the AppKit additions
    (`NSStoryboard.m`, `NSAccessibility.m`, `NSNibArchiveUnarchiver.m`).
 2. Whether the MPL-2.0-only files (Foundation, CoreServices, HIServices, the EFI NVRAM,
    embedded controller, I2C and USB networking drivers) can be offered under

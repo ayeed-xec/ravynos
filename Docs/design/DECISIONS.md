@@ -147,6 +147,14 @@ window server, `rv`, new tools). The bootloader: the existing C loader in `Boot/
 is kept and fixed rather than rewritten in Rust; it is small, freestanding and already
 runs on three architectures.
 
+APFS (S19) is written in Rust: one `no_std` crate, `apfs-core`, holds the on-disk format
+and is used by the user-space tools, by the kernel file system (a kext whose thin C layer
+implements XNU's VFS and vnode callbacks and calls the crate), and by the bootloader's
+read-only reader (the crate built as a static library for the UEFI targets, linked into
+the C loader). Parsing untrusted on-disk structures is where Rust's bounds and lifetime
+checks pay most.
+
+
 ### ADR-16 — Fonts
 
 **Accepted.** Fonts may be under the SIL Open Font License or another permissive
