@@ -17,6 +17,13 @@ pub fn emit(
             "rule cc\n  command = clang -c $in -o $out $includes\n\
              rule link\n  command = clang -fuse-ld=lld $in -o $out\n\n",
         );
+    } else if is_macho_target(target) {
+        let arch = macho_arch(target);
+        out.push_str(&format!(
+            "rule cc\n  command = clang --target={arch}-apple-macos11 -ffreestanding -fno-builtin -nostdinc -c $in -o $out $includes\n\
+             rule link\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -e __start $in -o $out\n\
+             rule dylib\n  command = ld64.lld -arch {arch} -platform_version macos 11.0 11.0 -dylib $in -o $out\n\n"
+        ));
     } else {
         out.push_str(&format!(
             "rule cc\n  command = clang --target=$target -ffreestanding -fno-builtin -nostdinc -c $in -o $out $includes\n\
@@ -52,23 +59,38 @@ pub fn emit(
         if objs.is_empty() {
             continue;
         }
-        match m.exports.libs.first() {
-            Some(lib) => out.push_str(&format!("build {comp_dir}/{lib}: lib {}\n", objs.join(" "))),
-            None => {
-                let libs: Vec<String> = m
-                    .deps
-                    .internal
-                    .iter()
-                    .map(|d| lib_output(&manifests[d]))
-                    .collect();
-                out.push_str(&format!(
-                    "build {comp_dir}/{}: link {} {}\n",
-                    m.name,
-                    objs.join(" "),
-                    libs.join(" ")
-                ));
+        let kind = m.kind.as_str();
+        if kind == "static-lib" || kind == "data" {
+            if let Some(lib) = m.exports.libs.first() {
+                out.push_str(&format!("build {comp_dir}/{lib}: lib {}\n", objs.join(" ")));
+                continue;
             }
         }
+        if kind == "dylib" {
+            let lib = m
+                .exports
+                .libs
+                .first()
+                .cloned()
+                .unwrap_or_else(|| format!("lib{}.dylib", m.name));
+            out.push_str(&format!(
+                "build {comp_dir}/{lib}: dylib {}\n",
+                objs.join(" ")
+            ));
+            continue;
+        }
+        let libs: Vec<String> = m
+            .deps
+            .internal
+            .iter()
+            .map(|d| lib_output(&manifests[d]))
+            .collect();
+        out.push_str(&format!(
+            "build {comp_dir}/{}: link {} {}\n",
+            m.name,
+            objs.join(" "),
+            libs.join(" ")
+        ));
     }
     out
 }
@@ -198,5 +220,20 @@ fn ld_emulation(target: &str) -> &'static str {
         "-m elf64lriscv"
     } else {
         ""
+    }
+}
+
+/// A Mach-O target gets clang as the linker driver so it picks lld with the
+/// right emulation; ld.lld's bare `-m` flags are ELF-only.
+fn is_macho_target(target: &str) -> bool {
+    target.starts_with("x86_64") || target.starts_with("arm64") || target.starts_with("aarch64")
+}
+
+/// ld64.lld's -arch spelling for the target triple.
+fn macho_arch(target: &str) -> &'static str {
+    if target.starts_with("arm64") || target.starts_with("aarch64") {
+        "arm64"
+    } else {
+        "x86_64"
     }
 }

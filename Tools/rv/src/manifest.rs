@@ -141,7 +141,14 @@ pub struct Vendored {
 
 pub fn load_all(tree: &Path) -> BTreeMap<String, Manifest> {
     let mut found = BTreeMap::new();
-    collect(tree, tree, &mut found);
+    let mut failures = Vec::new();
+    collect(tree, tree, &mut found, &mut failures);
+    if !failures.is_empty() {
+        for f in &failures {
+            eprintln!("error: {f}");
+        }
+        std::process::exit(1);
+    }
     found
 }
 
@@ -246,7 +253,12 @@ fn check_rel(p: &str, what: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn collect(root: &Path, dir: &Path, found: &mut BTreeMap<String, Manifest>) {
+fn collect(
+    root: &Path,
+    dir: &Path,
+    found: &mut BTreeMap<String, Manifest>,
+    failures: &mut Vec<String>,
+) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -276,34 +288,46 @@ fn collect(root: &Path, dir: &Path, found: &mut BTreeMap<String, Manifest>) {
         }
         let manifest_path = path.join("manifest.toml");
         if manifest_path.is_file() {
-            let text = std::fs::read_to_string(&manifest_path).unwrap_or_else(|e| {
-                eprintln!("error: cannot read {}: {e}", manifest_path.display());
-                std::process::exit(1);
-            });
+            let text = match std::fs::read_to_string(&manifest_path) {
+                Ok(t) => t,
+                Err(e) => {
+                    failures.push(format!(
+                        "E-IO: cannot read {}: {e}",
+                        manifest_path.display()
+                    ));
+                    continue;
+                }
+            };
             match parse(&text) {
                 Ok(mut m) => {
-                    m.dir = path
-                        .strip_prefix(root)
-                        .expect("manifest under tree root")
-                        .to_path_buf();
+                    let dir = match path.strip_prefix(root) {
+                        Ok(d) => d.to_path_buf(),
+                        Err(e) => {
+                            failures.push(format!("E-IO: {}: {e}", manifest_path.display()));
+                            continue;
+                        }
+                    };
+                    m.dir = dir;
                     if let Some(prev) = found.get(&m.name) {
-                        eprintln!(
-                            "error: E-DUP-NAME: manifests {} and {} are both named '{}'",
+                        failures.push(format!(
+                            "E-DUP-NAME: manifests {} and {} are both named '{}'",
                             prev.dir.display(),
                             m.dir.display(),
                             m.name
-                        );
-                        std::process::exit(1);
+                        ));
+                        continue;
                     }
                     found.insert(m.name.clone(), m);
                 }
                 Err(e) => {
-                    eprintln!("error: bad manifest {}: {e}", manifest_path.display());
-                    std::process::exit(1);
+                    failures.push(format!(
+                        "E-SCHEMA: bad manifest {}: {e}",
+                        manifest_path.display()
+                    ));
                 }
             }
         }
-        collect(root, &path, found);
+        collect(root, &path, found, failures);
     }
 }
 
