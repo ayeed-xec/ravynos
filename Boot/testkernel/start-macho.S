@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // Copyright (c) 2026 The ravynOS Authors
-// Entered in 32-bit protected mode with eax = boot_args PA, matching the
-// loader's XNU-style hand-off; builds identity page tables and returns to
-// long mode before calling kmain.
 	.text
 	.code32
 	.globl	_start
@@ -47,10 +44,12 @@ _start:
 	.balign	4096
 rv_pml4:
 	.quad	0
-	.space	4092
+	.space	4088
+	.balign	4096
 rv_pdpt:
 	.quad	0
-	.space	4092
+	.space	4088
+	.balign	4096
 rv_pd:
 	i = 0
 	.rept	512
