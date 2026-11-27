@@ -4,9 +4,10 @@
 * Upstream URL: https://github.com/apple-oss-distributions/bootstrap_cmds
 * Files vendored: migcom.tproj/* (complete tproj, unmodified) and APPLE_LICENSE
 * Not vendored: mig.xcodeproj, xcodescripts (Xcode-only build glue; replaced
-  by ravynos/build/mig/build.sh)
+  by Tools/mig/build.sh)
 - migcom (SPDX:APSL-2.0)
 
 This is the pristine upstream copy; every Linux delta is a patch in
-ravynos/build/mig/patches/ applied by ravynos/build/mig/build.sh at build
-time (Docs/design/12-roadmap.md, W1 patch-series convention).
+Tools/mig/patches/ applied by Tools/mig/build.sh at build time
+(SYSTEM-DESIGN.md S01 and ADR-10: vendored trees stay pristine; changes live in
+patches/ and are applied by rvpatch).

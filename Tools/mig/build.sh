@@ -40,9 +40,17 @@ if [ "${1:-}" = "--regen-lexer" ]; then
         command -v "$tool" >/dev/null 2>&1 || {
             echo "error: --regen-lexer needs $tool (opt-in only)" >&2; exit 1; }
     done
+    lexer="$SCRIPT_DIR/generated/lexxer.c"
     ( cd "$RAVYNOS_ROOT" &&
-        flex -o build/mig/generated/lexxer.c tools/mig/upstream/migcom.tproj/lexxer.l )
-    echo "== regenerated build/mig/generated/lexxer.c from lexxer.l"
+        flex -o "$lexer" Tools/mig/upstream/migcom.tproj/lexxer.l )
+    # flex writes no licence header; ours must survive the regeneration (ADR-17).
+    {
+        printf '// SPDX-License-Identifier: BSD-2-Clause\n'
+        printf '// Copyright (c) 2026 The ravynOS Authors\n'
+        printf '\n'
+        cat "$lexer"
+    } > "$lexer.new" && mv "$lexer.new" "$lexer"
+    echo "== regenerated ${lexer#"$RAVYNOS_ROOT"/} from lexxer.l"
 fi
 
 rm -rf "$WORK"

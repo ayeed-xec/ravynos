@@ -9,15 +9,18 @@ numbers are permanent, and a closed item is marked closed, not deleted.
 
 Audit of `darwin-clean` at `b1746b5ce` (four reviewers: build harness, bootloader,
 kernel side, toolchain and repository hygiene), scored against the section 2.7 gate of
-8/10. No component passes the gate.
+8/10. Re-audited after P1–P4 landed on top of `43757342b4`: `Tools/rv` and `Tools/mig`
+now pass the gate, and the areas still below it are the stage-1 reproducible rebuild
+(never yet observed end to end), the loader (device tree arrives in W1) and the CI
+container (GAP-40 remainder).
 
 | Area | Score | Verdict |
 |---|---|---|
-| `Tools/rv` (WP0.1–WP0.3) | 4/10 | rework; Mach-O output and kind handling missing (BUG-27, GAP-01–GAP-06) |
-| Stage-1 bootstrap (WP0.4) | 3/10 | rework; the build step has never run (BUG-22) |
-| `Boot/loader` (WP0.9) | 2/10 | rework; no device tree, smokes pass on a panic |
-| `Tools/mig` | 5/10 | patches and paths need fixing (GAP-11, GAP-55) |
-| CI and gates | 3/10 | partial coverage (GAP-09, GAP-10, GAP-33, GAP-56) |
+| `Tools/rv` (WP0.1–WP0.3) | 8/10 | passes: Mach-O for x86_64 and arm64 (checked with `file`), kind-aware rules, errors returned instead of `process::exit`, E-DUP-NAME with a fixture, 33 unit tests |
+| Stage-1 bootstrap (WP0.4) | 5/10 | builds on the host; `--verify` now rebuilds and compares hashes (GAP-55) but no reproducible rebuild has been observed end to end; not in CI |
+| `Boot/loader` (WP0.9) | 6/10 | three-arch boot smokes green; device tree still missing (W1) |
+| `Tools/mig` | 8/10 | passes: byacc-generated parser, three-patch rvpatch series, corrected `--regen-lexer` paths, `_PROVENANCE` repaired |
+| CI and gates | 7/10 | arm64 build, Mach-O assertion, SPDX gate, boot smokes, license audit and whole-tree host-tool gate all wired; still on `ubuntu-latest` with no `Tools/ci/Containerfile` (GAP-40 remainder) |
 | FreeBSDPort | — | removed from the tree (WP0.0); rewrite under S11 (BUG-11, BUG-19, GAP-24) |
 | IOUSBFamily reconstruction | — | deleted (WP0.0); native stack in S10 (GAP-42, GAP-43) |
 | RavynXHCIPort | — | removed from the tree (WP0.0); rewrite when S10 starts (BUG-17, GAP-48) |
@@ -362,20 +365,26 @@ clippy, vendors, negative fixtures) and score 8/10 before it merges.
 - **P4 — re-audit (lead)**: after P1–P3 merge, rescore every area in the summary
   table against the 8/10 bar and update STATUS.md.
 
+P1–P3 are merged (`f9115e8b0a`, `b8a715c9ec`, `93a3f2213b` + `cddbe0a56c`, merged as
+`f2cdb4d701` and `43757342b4`) and P4 updated the summary table above. What those
+phases did not finish is named in the exit criteria: the stage-1 reproducible rebuild
+(GAP-55) has still never been observed end to end, and CI still runs on the runner
+image rather than the `Tools/ci/Containerfile` build (GAP-40).
+
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
-| W0: `rv` builds the tree with no duplicate names | open (BUG-27 remainder: `kind` handling, `process::exit`/`unwrap` in library code) |
-| W0: `rv` produces Mach-O for x86_64 and arm64 | open (GAP-01) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55) |
-| W0: every merged component scores at least 8/10 in review | open (all areas in the summary) |
+| W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
+| W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: verify implemented, reproducible rebuild not yet observed) |
+| W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 5/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
-| W0: audit and host-tool gate cover the tree | open (GAP-10; GAP-09 licence half is closed) |
-| W0: no GPL material in the repository | open (GAP-46) |
+| W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
+| W0: no GPL material in the repository | open (GAP-46: `IOPCIFamily` removed, but bison/flex-generated output remains inside the pristine vendored trees, ADR-17) |
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
-| W0: correct `_PROVENANCE` everywhere | open (GAP-31, GAP-58) |
-| W0: SPDX on every file we own | open (GAP-45, GAP-57) |
-| W0: every section 5.6 gate runs in CI | open (GAP-33, GAP-40) |
+| W0: correct `_PROVENANCE` everywhere | closed (GAP-31, GAP-58; xnu and migcom in `VENDORS`, mig `_PROVENANCE` paths repaired) |
+| W0: SPDX on every file we own | closed (GAP-45, GAP-57; 15 remaining files fixed, `Tools/ci/check-spdx.sh` in CI) |
+| W0: every section 5.6 gate runs in CI | open (GAP-40: all gates wired except the `Tools/ci/Containerfile` build) |
 | W1: kernel links with no stubs, both arches | open (GAP-12–GAP-16, GAP-41) |
 | W1: loader boots XNU to its banner, both arches | open (BUG-02–BUG-06, BUG-24–BUG-26, GAP-39) |
 | W1: T0 passes on both arches | open (GAP-07) |

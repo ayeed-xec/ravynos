@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BSD-2-Clause
+// Copyright (c) 2026 The ravynOS Authors
+
 #line 2 "build/mig/generated/lexxer.c"
 
 #line 4 "build/mig/generated/lexxer.c"

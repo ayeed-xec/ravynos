@@ -30,6 +30,11 @@ jobs:
         run: |
           bash -n Tools/ci/check-format.sh
           shellcheck Tools/ci/check-format.sh
+          bash -n Tools/ci/check-spdx.sh
+          shellcheck Tools/ci/check-spdx.sh
+
+      - name: SPDX identifiers on every file we own
+        run: Tools/ci/check-spdx.sh
 
       - name: Host tool unit tests (rvpatch, mkfat, elf2pe)
         run: |
@@ -49,7 +54,15 @@ jobs:
         run: cargo run --manifest-path Tools/rv/Cargo.toml -- vendors check
 
       - name: rv build (discovers components from their manifests)
-        run: cargo run --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
+        run: |
+          cargo run --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
+          cargo run --manifest-path Tools/rv/Cargo.toml -- build -t arm64-ravynos
+
+      - name: Linked user-space output is Mach-O for its target
+        run: |
+          file "build/x86_64-ravynos/hello/hello" | grep -q "Mach-O 64-bit x86_64"
+          file "build/arm64-ravynos/hello/hello" | grep -q "Mach-O 64-bit arm64"
+          echo "Mach-O assertion: OK"
 
       - name: rv audit license
         run: cargo run --manifest-path Tools/rv/Cargo.toml -- audit license
@@ -60,6 +73,30 @@ jobs:
 
       - name: mig builds from the pinned tree plus its patches
         run: Tools/mig/build.sh
+
+  boot:
+    name: boot smokes (QEMU TCG)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU and firmware
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang lld llvm \
+            qemu-system-x86 qemu-system-arm qemu-system-misc ovmf qemu-efi-aarch64 opensbi
+
+      - name: x86_64 boot smoke
+        run: Tests/boot/smoke.sh
+
+      - name: Mach-O loader smoke
+        run: Tests/boot/smoke-macho.sh
+
+      - name: arm64 boot smoke
+        run: Tests/boot/smoke-arm64.sh
+
+      - name: riscv64 boot smoke
+        run: Tests/boot/smoke-riscv64.sh
 
   format:
     name: clang-format / rustfmt gate
