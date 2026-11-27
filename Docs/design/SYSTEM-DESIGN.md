@@ -1077,6 +1077,7 @@ verbose (verify how x86 XNU reads it). Ramdisk boots add `rd=md0`
 
 **Sources.** Ours, BSD-2-Clause. EFI definitions written from the UEFI specification.
 No GNU-EFI, no Clover, no OpenCore code.
+PureDarwin seeds (xnu-loader as a reference): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** `Boot/loader/` (`loader`, kind `uefi-app`, targets `*-uefi`),
 `Boot/testkernel/` (`testkernel`, kind `test-kernel`), `Boot/mkfat/` (`mkfat`),
@@ -1279,6 +1280,7 @@ replacements for `makesyscalls.sh`, `create-syscalls.pl`, `compile-syscalls.pl`)
 `cc_kext` glue, board library: ours, BSD-2-Clause. libdispatch firehose: Apache-2.0,
 vendored. BoringSSL: vendored, license checked per file (ADR-12). DTrace files in
 XNU: CDDL, ADR-22.
+PureDarwin seeds (XNU build and root-mount changes): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** `Kernel/manifest.toml` (`xnu`, layer `kernel`, kind `executable`,
 `source_root = "Kernel/xnu"`, `vendored.patches = "Kernel/patches"`).
@@ -1457,6 +1459,7 @@ SMBIOS identity, ACPI battery and AC nubs, ACPI S5 shutdown, and the x86_64 T3 r
   `deps.internal = ["xnu"]`.
 
 **Sources.**
+PureDarwin seeds (AMD/TSC XNU changes, uACPI, ACPI platform expert): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - `Kernel/Extensions/IOACPIFamily/` — seed, APSL-2.0 with PureDarwin and ravynOS changes
   (ADR-22). Keep: `ACPIPlatformExpert`, `ACPICPU`, `ACPIPCIBridge`, `ACPIRTC`,
@@ -1679,6 +1682,7 @@ and is not used in this repository.
 **Sources.** XNU (APSL-2.0, vendored pristine, ADR-10); patches,
 `Kernel/port/arm64-virt/` and the kexts ours (BSD-2-Clause). `Kernel/port/arm64/`
 (BUG-07) is deleted: its pmap and exception stubs duplicate XNU code and are not seeds.
+PureDarwin seeds (arm64 board and PAC knowledge): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** `Kernel/patches/arm64-rvvirt/`; `Kernel/port/arm64-virt/` (`rorgn.c`,
 board functions, reset-vector helper; manifest `name = "port-arm64-virt"`);
@@ -1960,6 +1964,7 @@ preferred for new drivers (S10).
 **Sources.** Ours (Rust, BSD-2-Clause). Format from XNU headers (APSL-2.0, read only).
 `Kernel/kext_tools` (APSL-2.0) is a reference only and leaves the tree once the tool
 and `kmutil` replace it.
+PureDarwin seeds (kc-tools): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** `Tools/kernelcache/` (`name = "kernelcache"`, kind `host-tool`,
 `cargo = "Cargo.toml"`, built with `cargo build --locked --release` for target `host`;
@@ -2106,6 +2111,7 @@ implementation. Kexts link with Apple ld64 `-kext` and declare
 `deps.internal = ["xnu"]`.
 
 **Sources.**
+PureDarwin seeds (virtio, AHCI, xHCI, Realtek drivers): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - Families: vendored Apple releases (APSL), pristine plus patches (ADR-10).
 - `Kernel/Extensions/{IOPCIFamily,IOStorageFamily,IOHIDFamily,IONetworkingFamily,
@@ -2311,6 +2317,7 @@ LinuxKPI (BSD-2-Clause) is a reference and per-file seed, excluding any GPL file
 `Kernel/Extensions/FreeBSDPort/` (shim ours; `vtnet/` FreeBSD 11.4, BSD-2-Clause) is a
 seed: the shim moves to `Kernel/ForeignKPI/freebsd/`; `vtnet` is re-imported at the
 FreeBSD 15.1 release tag.
+PureDarwin seeds (fbsdkpi and FreeBSD/Wi-Fi drivers): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** `Kernel/ForeignKPI/{core,freebsd,openbsd,linux,bridges}/` (names
 `kpi-core`, `kpi-freebsd`, `kpi-openbsd`, `kpi-linux`, `kpi-bridges`),
@@ -2511,6 +2518,7 @@ XML and DER entitlements (`0xfade7171`, `0xfade7172`), resource directory
 [--entitlements <plist>] [--options runtime] <path>`.
 
 **Sources.**
+PureDarwin seeds (libsandbox): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - XNU code-signing paths (APSL-2.0, vendored).
 - `Legacy/Frameworks/Security/OSX/libsecurity_codesigning` (APSL-2.0): reference for
@@ -3477,6 +3485,7 @@ tags); `Legacy/Libraries/CrashReporterClient` (license check);
 per file; reference only until audited). Clean-room, BSD-2-Clause: logd, `log`,
 cfprefsd, `defaults`, distnoted, opendirectoryd, `dscl`, loginwindow, fseventsd,
 timed, ReportCrash, version files.
+PureDarwin seeds (FSEvents): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** Layer `server`: `Server/{logd,cfprefsd,notifyd,distnoted,configd,`
 `mDNSResponder,opendirectoryd,loginwindow,fseventsd,timed,ReportCrash}/`, manifest
@@ -3624,6 +3633,7 @@ mode per tier above.
 `Legacy/BSD/sbin/{newfs_hfs,fsck_hfs,mount_hfs}` (APSL; reference only, replaced by
 the current `hfs` tag). Clean-room, BSD-2-Clause: APFS, UDIF, vnode disk driver,
 `hdiutil`, `diskutil`, `Tools/hfsimage`.
+PureDarwin seeds (root mount, ext4 (license pending)): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 **Location.** Layer `kernel`: `Kernel/Extensions/{hfs,msdosfs,apfs,vndisk}/`. Layer
 `foundation`: `Foundation/libapfs/` (name `libapfs`). Layer `server`:
@@ -4040,6 +4050,7 @@ subsystem provides the process (WindowServer), the client framework every GUI ap
   `spaces.md`, `capture-tcc.md`, `iosurface.md`.
 
 **Sources.**
+PureDarwin seeds (IOSurface and iosurfaced): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - IOSurface kext and framework: clean-room, ours, BSD-2-Clause; API from public
   headers and documentation.
@@ -4242,6 +4253,7 @@ through these frameworks.
   tolerance (max channel delta and percentage of differing pixels) in `tolerance.toml`.
 
 **Sources.**
+PureDarwin seeds (CoreText, CoreGraphics, CVPixelBuffer): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - CoreGraphics: clean-room, ours. Seeds: `Legacy/Frameworks/CoreGraphics` and
   `Legacy/Frameworks/Onyx2D` (Cocotron, MIT); API shape only after audit; the Makefile
@@ -4384,6 +4396,7 @@ server's render server.
 - Timing: commit to on-screen within one frame for P6/P7.
 
 **Sources.**
+PureDarwin seeds (QuartzCore renderer (study)): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - Seed: `Legacy/Frameworks/QuartzCore` (Cocotron lineage). None of its 58 source
   files carries a license or copyright header; no file is used until the audit
@@ -4543,6 +4556,7 @@ Dock, Carbon remnants and SwiftUI on top.
 - Formats: NIBArchive, keyed-archive nib, `.storyboardc`, `Assets.car`, `.icns`.
 
 **Sources.**
+PureDarwin seeds (AppKit fixes, Carbon): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - AppKit: clean-room, ours. Seed `Legacy/Frameworks/AppKit` (Cocotron, MIT, with later
   MIT changes; 398 entries): audit file by file; reuse API shape and simple classes
@@ -4704,6 +4718,7 @@ software read and drive the interface.
   `InputMethodServerControllerClass`, `TISInputSourceID`; verify list).
 
 **Sources.**
+PureDarwin seeds (Carbon text input): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - All frameworks: clean-room, ours, BSD-2-Clause.
 - CLDR keyboard data: vendored, Unicode-3.0.
@@ -4863,6 +4878,7 @@ decode, encode and capture audio and video.
 - Latency: output buffer 512 frames at 48 kHz default; glitch counters exported.
 
 **Sources.**
+PureDarwin seeds (audio frameworks and coreaudiod): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - coreaudiod, HAL, AudioToolbox, CoreMIDI, CoreMedia, VideoToolbox, AVFoundation:
   clean-room, ours, BSD-2-Clause.
@@ -4999,6 +5015,7 @@ many apps; plus OpenGL/CGL for older apps and Qt; plus compute frameworks by cen
   (private, used by S10 drivers' user-space parts).
 
 **Sources.**
+PureDarwin seeds (OpenGL/CGL (license pending)): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - Metal, MetalKit, CGL, the CPU backend, the AIR reader: clean-room, ours.
 - Mesa NIR, GL front end, llvmpipe, GPU compilers: vendored from Mesa, MIT per file;
@@ -5562,6 +5579,7 @@ menu-bar extras and Control Center.
   installer scripts and T4 apps uses.
 
 **Sources.**
+PureDarwin seeds (Userspace apps): see [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md), ADR-27.
 
 - zsh: vendored, Zsh licence. `Legacy/BSD/usr.bin/zsh` is zsh 5.9; before import,
   remove GPL files: `Completion/Unix/Command/_darcs` (GPL header), `config.guess` and

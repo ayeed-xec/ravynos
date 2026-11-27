@@ -11,6 +11,7 @@ implementations of everything Apple keeps closed and an SDK shaped like Apple's.
 | [ROADMAP.md](ROADMAP.md) | Waves, parallel lanes and work packages: what is built when, and by which lane |
 | [STATUS.md](STATUS.md) | Where the code stands: bugs and gaps, numbered |
 | [DECISIONS.md](DECISIONS.md) | Why each major choice was made |
+| [PUREDARWIN-SEEDS.md](PUREDARWIN-SEEDS.md) | What may be taken from PureDarwin, studied, or avoided |
 | [../spec/TEMPLATE.md](../spec/TEMPLATE.md) | The template for specifying closed behavior |
 
 Implementing agents: read SYSTEM-DESIGN.md sections 0–2, then your subsystem, then its
