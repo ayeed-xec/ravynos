@@ -393,7 +393,8 @@ that backs it:
   accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
 - GAP-40 **partial**: `Tools/ci/Containerfile` pins the toolchain but has not been
   built yet, so CI still runs on the runner image.
-- GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, but
+- GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, and
+  it passed on 2026-11-27 (`stage1 verify OK: ece9693de…b5c6378`, clang 21.1.6), but
   stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
   elf2pe, and its cache key omits the host cmake and ninja versions.
 - GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
