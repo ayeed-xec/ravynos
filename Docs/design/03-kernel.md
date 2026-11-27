@@ -29,7 +29,7 @@ once Apple publishes it; everything below assumes that baseline.
 
 The vendored source sits in the tree unmodified at `Kernel/xnu/`. Our
 changes are a quilt patch series under `Kernel/patches/` (DESIGN.md
-§8.2), each patch filed with a short RFC in `Docs/rfc/` before it lands. Nobody edits files under the vendored root; a build harness applies
+§8.2), each patch filed with a short RFC in `Docs/design/` before it lands. Nobody edits files under the vendored root; a build harness applies
 the series before compiling and can regenerate a pristine upstream tree at
 any time, which keeps our delta measurable with `quilt series | wc -l` or a
 plain diff against the upstream tarball.

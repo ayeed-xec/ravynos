@@ -77,6 +77,9 @@ as its wave starts.
 - **One lane per directory**, as in section 1.2.
 - **Green main.** Every merge passes CI. A lane that breaks main reverts first and fixes
   second.
+- **Every merge names its score.** A merge commit carries the quality score out of ten
+  from section 2.7 in its message body, with the factors that fell short; nothing merges
+  below 8/10 (GAP-59).
 - **No stubs, no shortcuts.** A work package is not done if it closes its test with a
   stub, a disabled check or a weakened test (SYSTEM-DESIGN section 2.4).
 - **Owner's identity on every commit.** Agents set git's `user.name` and `user.email`

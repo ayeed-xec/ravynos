@@ -396,6 +396,13 @@ that backs it:
 - GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, but
   stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
   elf2pe, and its cache key omits the host cmake and ninja versions.
+- GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
+  every commit since the restructure has a subject of 64 characters or fewer, and
+  ROADMAP.md 1.4 now requires a merge commit to name its score. History before the
+  restructure still mixes `Docs:` and `docs:` and carries one foreign author address.
+- GAP-32 **partial**: the RFC path now points at `Docs/design/`, the decision-log path at
+  `Docs/design/DECISIONS.md`; `Tests/perf/` and `Tests/kpi/` stay as planned paths that
+  arrive with W2.
 
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|

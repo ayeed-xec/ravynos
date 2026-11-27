@@ -377,8 +377,8 @@ Recorded so the absence is a decision, with a re-entry path.
 ## Open questions
 
 - What notices a stalled wave? With no dates, an exit criterion that nobody works toward is
-  silent. DESIGN.md names a wave log and a decision log (`.mlai/DECISIONS.md`) as the
-  record; neither exists in the tree yet, and someone needs to own re-triage.
+  silent. DESIGN.md names a wave log and a decision log (`Docs/design/DECISIONS.md`) as the
+  record; the decision log exists, the wave log does not, and someone needs to own re-triage.
 - kite: the language is DECISIONS.md ADR-15 (proposed): keep the C loader. DESIGN.md's policy said Rust, and `Boot/loader/` is C and works on three
   architectures. Rewrite it in Rust before it grows a driver model, or amend the policy
   for the loader? Either is defensible; leaving the two disagreeing is not.
