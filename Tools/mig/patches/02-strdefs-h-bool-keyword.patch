@@ -1,7 +1,7 @@
 # why: strdefs.h uses `bool` as a parameter name (strbool); that is a
 #      keyword on C23 compilers (gcc 15+, recent clang), where the
 #      vendored header no longer parses.
-# fate: keep until mig moves to our own MIT-licensed implementation.
+# fate: upstream
 diff -u a/migcom.tproj/strdefs.h b/migcom.tproj/strdefs.h
 --- a/migcom.tproj/strdefs.h
 +++ b/migcom.tproj/strdefs.h
