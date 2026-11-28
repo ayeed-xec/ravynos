@@ -1,5 +1,6 @@
 # why: mig.sh is the mig driver shell script; port for Linux:
-#      - /usr/bin/arch does not exist, derive host arch from uname
+#      - /usr/bin/arch does not exist; leave the arch unset and turn an
+#        explicit -arch into a target triple, never the host's arch (BUG-32)
 #      - /usr/bin/xcrun does not exist; preprocess with clang, not cc
 #        (cc is gcc on Debian, GPL-3; clang -E is the same C preprocessor)
 #      - clang on Linux rejects -arch; drop it from the preprocessor line
@@ -17,17 +18,31 @@ diff -u a/migcom.tproj/mig.sh b/migcom.tproj/mig.sh
    fi
  fi
  
-@@ -91,7 +91,8 @@
+@@ -91,7 +91,9 @@
  cppflags="-D__MACH30__"
  
  files=
 -arch=`/usr/bin/arch`
-+# Linux: /usr/bin/arch does not exist; derive the host arch from uname.
-+arch=$(uname -m 2>/dev/null || echo x86_64)
++# Linux: /usr/bin/arch does not exist. Leave the arch unset instead of
++# guessing the host's: a cross build must not inherit it (BUG-32).
++arch=
  
  WORKTMP=`/usr/bin/mktemp -d "${TMPDIR:-/tmp}/mig.XXXXXX"`
  if [ $? -ne 0 ]; then
-@@ -177,10 +178,10 @@
+@@ -131,6 +133,12 @@
+     esac
+ done
+ 
++# A caller that passes -arch keeps it meaningful without Apple clang's flag:
++# it becomes the target triple, unless an explicit -target was given.
++if [ -n "${arch}" ] && [ -z "${target+x}" ]; then
++    target=( "--target=${arch}-apple-macosx27.2" )
++fi
++
+ # process the rest as files
+ until [ $# -eq 0 ]
+ do
+@@ -177,10 +186,10 @@
      if [ -n "$MIG_TRACE_HEADERS" ]
      then
        env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=only-direct-system CC_PRINT_HEADERS_FILE="$MIG_TRACE_HEADERS" \
@@ -40,7 +55,7 @@ diff -u a/migcom.tproj/mig.sh b/migcom.tproj/mig.sh
      fi
      if [ $? -ne 0 ]
      then
-@@ -225,7 +226,7 @@
+@@ -225,7 +234,7 @@
      fi
      if [ -n "$MIG_TRACE_HEADERS" ]
      then
