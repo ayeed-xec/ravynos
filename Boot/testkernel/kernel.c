@@ -49,10 +49,10 @@ __attribute__((noinline)) static void rv_panic(const char *reason, struct rv_boo
             const uint8_t *d = base + (uint64_t)i * ba->MemoryMapDescriptorSize;
             uint32_t type = (uint32_t)d[0] | ((uint32_t)d[1] << 8) | ((uint32_t)d[2] << 16) |
                             ((uint32_t)d[3] << 24);
-            uint64_t pages = (uint64_t)d[16] | ((uint64_t)d[17] << 8) | ((uint64_t)d[18] << 16) |
-                             ((uint64_t)d[19] << 24) | ((uint64_t)d[20] << 32) |
-                             ((uint64_t)d[21] << 40) | ((uint64_t)d[22] << 48) |
-                             ((uint64_t)d[23] << 56);
+            uint64_t pages = (uint64_t)d[24] | ((uint64_t)d[25] << 8) | ((uint64_t)d[26] << 16) |
+                             ((uint64_t)d[27] << 24) | ((uint64_t)d[28] << 32) |
+                             ((uint64_t)d[29] << 40) | ((uint64_t)d[30] << 48) |
+                             ((uint64_t)d[31] << 56);
             if (type == 7)
                 conventional_pages += pages;
         }

@@ -35,7 +35,7 @@ _start:
 
 	.code64
 .Lrv_long:
-	leaq	rv_stack_top(%rip), %rsp
+	leaq	rv_stack_top+0x10000(%rip), %rsp
 	call	_kmain
 	cli
 	hlt

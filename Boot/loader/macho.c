@@ -26,11 +26,21 @@ static uint64_t rd64(const uint8_t *p)
     return (uint64_t)rd32(p) | ((uint64_t)rd32(p + 4) << 32);
 }
 
+#define RV_KERNEL_BASE_X86_64 0xffffff8000000000ull
+
 static uint64_t macho_phys(uint64_t vaddr)
 {
-    if (vaddr >= 0xffffff8000000000ull)
-        return vaddr - 0xffffff8000000000ull;
+#if defined(__x86_64__)
+    if (vaddr >= RV_KERNEL_BASE_X86_64)
+        return vaddr - RV_KERNEL_BASE_X86_64;
     return vaddr;
+#else
+    // The arm64 and riscv64 hand-off is W1 (WP1.2): neither has an
+    // arch-correct slide for a Mach-O image yet, and the x86 base would load
+    // the kernel at the wrong physical address.
+    (void)vaddr;
+    return UINT64_MAX;
+#endif
 }
 
 static int segname_is_text(const uint8_t *seg)
@@ -45,12 +55,13 @@ static int segname_is_text(const uint8_t *seg)
 
 static int segname_is_pagezero(const uint8_t *seg)
 {
+    static const char pagezero[] = "__PAGEZERO";
     const uint8_t *name = seg + 8;
-    for (int i = 0; i < 9; i++) {
-        if (name[i] != (uint8_t) "__PAGEZERO"[i])
+    for (int i = 0; i < 10; i++) {
+        if (name[i] != (uint8_t)pagezero[i])
             return 0;
     }
-    return 1;
+    return name[10] == 0;
 }
 
 int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *image)
@@ -58,6 +69,8 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
     if (size < 32 || rd32(data) != RV_MACHO_MAGIC64)
         return -1;
     if (rd32(data + 4) != RV_MACHO_CPU_HOST)
+        return -1;
+    if (rd32(data + 12) != RV_MACHO_FILETYPE_EXEC)
         return -1;
 
     uint32_t ncmds = rd32(data + 16);
@@ -96,13 +109,17 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
                 offset += cmdsize;
                 continue;
             }
-            if (image->segment_count >= RV_MAX_SEGMENTS) {
-                offset += cmdsize;
-                continue;
-            }
+            if (filesize > memsize)
+                return -1;
+            // A skipped segment would leave a hole in the image and the entry
+            // point could land in it; refuse instead (macho.c, BUG-02).
+            if (image->segment_count >= RV_MAX_SEGMENTS)
+                return -1;
             if (fileoff > size || filesize > size - fileoff)
                 return -1;
             uint64_t paddr = macho_phys(vmaddr);
+            if (paddr == UINT64_MAX)
+                return -2;
             if (paddr + memsize < paddr)
                 return -1;
             if (!have_text && segname_is_text(data + offset)) {
@@ -147,6 +164,8 @@ int rv_parse_macho(const uint8_t *data, uint64_t size, struct rv_kernel_image *i
         return -1;
 
     uint64_t entry_paddr = macho_phys(entry_vaddr);
+    if (entry_paddr == UINT64_MAX)
+        return -2;
     if (entry_paddr < min_addr || entry_paddr >= max_addr)
         return -1;
 

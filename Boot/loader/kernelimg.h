@@ -7,6 +7,9 @@
 
 #define RV_MAX_SEGMENTS 32
 
+// mach-o/loader.h: the two header fields this loader checks.
+#define RV_MACHO_FILETYPE_EXEC 2u
+
 enum rv_kernel_kind { RV_KERNEL_ELF = 1, RV_KERNEL_MACHO = 2 };
 
 struct rv_segment {
