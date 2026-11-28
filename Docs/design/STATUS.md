@@ -118,7 +118,11 @@ What exists, and whether it is a real implementation:
 - BUG-23 Fixed: the pin extraction is `sed -n 's/^\* \(Tag\|Commit\): /  \1: /p'`
   (`Tools/toolchain/stage1.sh:111`), which now yields both lines of `_PROVENANCE`.
 - **BUG-24** `Boot/testkernel`: the stack pointer is set to the bottom of `__stack`
-  instead of the top.
+  instead of the top. Fixed in the three ELF start files; still open in the Mach-O one:
+  `start-macho.S:60` defines `rv_stack_top` with `.zerofill __DATA,__stack,rv_stack_top,…`,
+  which names the section start, so `%rsp` starts at `0x406000` and the stack grows down
+  into `__TEXT`. The smoke passes only because the call chain is shallow (independent
+  Boot/ review, `darwin-clean` at `5b77e75b04`).
 - **BUG-25** `Boot/loader`: loader data the kernel reads is allocated as
   `EfiRuntimeServicesData` outside the range `ksize` covers; `SetVirtualAddressMap` is
   never called; `boot_args` `Revision` is 0 and the command line is the placeholder
@@ -139,33 +143,59 @@ What exists, and whether it is a real implementation:
   https://github.com/ayeed-xec/ravynos/actions/runs/46135899021 (job "boot smokes
   (QEMU TCG)", each step printing "hand-off validated, deliberate probe panic
   captured").
-- BUG-27 Partly fixed in `rv`: a manifest `name` must be one path component (no `/`,
-  `\`, `..` or leading `.`), so it can no longer resolve outside `build/`; manifest
-  discovery skips symbolic links; duplicate names are covered by a negative fixture.
-  Still open: `kind` is read but ignored, so a dylib is built as an `ar` archive, and
-  library code calls `process::exit` and `unwrap`.
+- BUG-27 Closed. A manifest `name` must be one path component (no `/`, `\`, `..` or
+  leading `.`), so it can no longer resolve outside `build/`; manifest discovery skips
+  symbolic links; duplicate names are covered by a negative fixture. `kind` decides
+  the output: `Foundation/libhello` (`kind = "dylib"`) links as `MH_DYLIB` and CI
+  asserts it. No library code calls `process::exit` any more (`rv bootstrap` returned
+  its usage error through `exit` until wp/gap55-small-tools); the remaining `exit`
+  calls are in `main.rs`, the binary's own entry point.
 - **BUG-28** `Kernel/Extensions/hfs/core/BTreeMiscOps.c:181-201` was edited in place to
   relax `VerifyHeader`, so corrupt B-tree headers are accepted.
+- **BUG-30** `Boot/testkernel/kernel.c:51-53` reads a memory descriptor's
+  NumberOfPages from bytes 16–23, which is `VirtualStart`; the field is at offset 24
+  (`Boot/loader/efi.h:37-44`). Every smoke log prints `conventional_pages=0x00000000`
+  and nothing checks it (independent Boot/ review, `5b77e75b04`).
 
 ## Gaps by subsystem
 
-**S01 build harness**
-- GAP-01 rv emits ELF; no Mach-O output (needs ADR-03).
-- GAP-02 No dependency files in the compile rule; header edits rebuild nothing.
-- GAP-03 Only `.c` sources compile; `.m`, `.mm`, `.cpp`, `.S` are skipped silently. No
-  dylib, framework, kext or bundle outputs.
-- GAP-04 No sysroot is passed or assembled.
-- GAP-05 Unknown manifest keys are ignored; `state`, `tests`, `vendored` unread.
-- GAP-06 `image`, `test`, `vendors`, `sdk`, `bootstrap`, `audit size`, `kernelcache` not
-  implemented; `graph --forbid` does nothing.
-- GAP-54 `rv` has no `--root`; cycle and layer errors lack the `E-CYCLE` and `E-LAYER`
-  codes; there are no negative tests; the fixtures in `Tests/rv/positive-schema` are
-  wired to nothing and one uses a key (`match`) outside the schema.
+**S01 build harness** — the entries below were written at `b1746b5ce`; where the code
+has since changed, the entry says so and points at the evidence.
+- GAP-01 Closed. rv emits Mach-O for `x86_64-ravynos` and `arm64-ravynos` with the
+  ADR-03 triple `<arch>-apple-macosx27.2`, `-platform_version macos 27.2 27.2` and
+  chained fixups (`Tools/rv/src/ninja.rs`, unit test
+  `darwin_targets_use_the_adr03_triple_and_os_version`); CI checks every linked
+  output with `Tools/ci/check-macho.sh` (magic, CPU, file type, `LC_BUILD_VERSION`
+  platform macos, minos 27.2). It emitted `--target=<arch>-apple-macos11` and
+  `macos 11.0 11.0` until this change, against ADR-01 and the S01 target table.
+- GAP-02 Closed (see "Gap closure after P4").
+- GAP-03 Closed (see "Gap closure after P4").
+- GAP-04 Closed (see "Gap closure after P4").
+- GAP-05 Closed. Every manifest table is `deny_unknown_fields`; `state` is checked
+  against `working | incomplete | experimental` and `vendored` is parsed. The
+  `unknown-key` case in `Tests/rv/negative/run.sh` fails with `E-UNKNOWN-KEY`.
+- GAP-06 Partly closed (see "Gap closure after P4"). Still open: `rv graph --forbid`
+  is accepted and ignored (`Tools/rv/src/main.rs`, `"--forbid" => {}`).
+- GAP-54 Closed (see "Gap closure after P4").
+- S01 done-when 3 (no gap number; it was never filed): `rv build -t x86_64-ravynos libhello` and
+  `-t arm64-ravynos` must produce `libhello.dylib` of file type `MH_DYLIB`.
+  `Foundation/libhello` is now `kind = "dylib"` with install name
+  `/usr/lib/libhello.dylib`, `hello-cli` links it, and CI asserts `MH_DYLIB` on both
+  arches. libhello and hello-cli dropped `riscv64-ravynos`: a riscv64 dylib needs
+  the Mach-O target of ADR-03. Also fixed: `rv build` checked `targets` on every
+  manifest instead of the selected ones (S01); unit tests in `Tools/rv/src/main.rs`.
 
 **S02 toolchain**
-- GAP-07 No Darwin program exists; the test programs use Linux system calls.
-- GAP-08 No stage-1 toolchain; CI uses the distribution's clang, unpinned; no
-  `rust-toolchain.toml`; `cargo` not run with `--locked`; `rv` is dynamically linked.
+- GAP-07 No Darwin program exists. `Tests/apps/hello` and `Tests/apps/hello-cli` link
+  as Mach-O for macOS 27.2, but they write and exit through Linux system calls (`syscall`
+  1/60 on x86_64, `svc 0` 64/93 on arm64), so they are file-format fixtures for the
+  Mach-O assertion and not Darwin programs. `libhello` makes no system call. The first
+  Darwin program is the T0 program of W1.
+- GAP-08 Partly closed. `rust-toolchain.toml` pins Rust 1.97.0 with rustfmt and clippy,
+  and CI calls cargo with `--locked`. Still open: the rv gates job builds with the
+  runner's apt clang, lld and llvm (unpinned) instead of stage 1 and the pinned image
+  (the switch is planned under GAP-40 below); `rv` is dynamically linked against glibc
+  (no musl target); `.cargo/config.toml` forces `linker=clang` for every target.
 - GAP-09 Closed for licensing: the audit now walks the whole tree instead of only the
   manifested directories. A file is accepted when it carries an SPDX header, sits in a
   tree pinned by `VENDORS` (whose entry states the license), or is a generated or tool
@@ -202,7 +232,9 @@ riscv64 smokes, each as its own step (run 46135899021). The arm64 smoke uses
 **S05 kernel build**
 - GAP-12 Closed: `Kernel/build/` was removed with WP0.0; the kernel build outside
   `rv` no longer exists in the tree. Rebuilding it inside `rv` is the W1 kernel
-  work (GAP-12's original scope moves to W1).
+  work (GAP-12's original scope moves to W1). Commit `0000cf5991` recreated
+  `Kernel/build/` for `gen-parsers.sh`, against ADR-30; that script moved into
+  `Tools/xnuhook` and the directory is gone again.
 - GAP-13 Closed: the `Kernel/build/mig` copy was removed with WP0.0;
   `Tools/mig` (138) is the one the design keeps.
 - GAP-14 Closed: `Kernel/xnu` is byte-identical to tag `xnu-12377.121.6`
@@ -254,9 +286,12 @@ riscv64 smokes, each as its own step (run 46135899021). The arm64 smoke uses
   (`libkern/c++/OSUnserialize.cpp` and both
   `OSUnserializeXMLSharedImplementation.h` copies) are removed from the tree,
   listed under `VENDORS.prune`, and the pin is updated to the pruned tree
-  (`c35cb043…`). `Kernel/build/gen-parsers.sh` regenerates both parsers with
-  byacc `-P` into a build directory and refuses to run if a pruned copy is back;
-  the W1 kernel build compiles that output. The `IOPCIFamily` pciutils patches
+  (`c35cb043…`). The `xnu` build hook, `Tools/xnuhook`, plans their regeneration
+  with byacc (`-p OSUnserialize`, `-p OSUnserializeXML`) and refuses to plan if a
+  pruned copy is back; the W1 kernel build compiles that output. An earlier
+  `Kernel/build/gen-parsers.sh` ran `byacc -P` on both grammars with no prefix,
+  which made `OSUnserialize.y` reentrant against its own `yylex()` and gave both
+  parsers the same `yyparse`; it is gone. The `IOPCIFamily` pciutils patches
   and `iig_shims.h` named in older text are no longer in the tree.
 - GAP-52 Several kexts use `com.ravynos.*` bundle IDs where the macOS family's bundle ID
   is required for matching.
@@ -368,9 +403,10 @@ no code at all.)
   `Tests/perf/` and `Tests/kpi/` are referenced only as planned W2 paths. `Tests/apps/`
   exists (WP0.0); top-level `Libraries/`, `CoreServices/`, `BSD/`, `SysApps/` were
   removed with `Legacy/`.
-- GAP-33 CI now runs `cargo test`, clippy with `-D warnings` and `rv vendors check`
-  alongside the x86_64 build. Still open: arm64 and riscv64 builds, loader build, mig
-  build, boot smokes, Mach-O assertion and negative tests.
+- GAP-33 Closed. CI runs `cargo test`, clippy with `-D warnings`, `rv vendors check`,
+  the x86_64 and arm64 builds, the Mach-O assertion, the negative fixtures, the mig
+  build and smoke, the loader build and all four boot smokes (`.github/workflows/ci.yml`).
+  riscv64 user space is not built (ADR-03).
 
 ## Exit criteria for W0 and W1
 
@@ -408,8 +444,9 @@ that backs it:
 
 - GAP-46 **closed**: XNU's `libkern/c++/OSUnserialize.cpp` and both
   `OSUnserializeXMLSharedImplementation.h` copies are removed and listed under
-  `VENDORS.prune`; the pin is the pruned tree `c35cb043…`; `Kernel/build/gen-parsers.sh`
-  regenerates both parsers with byacc `-P` and five host-tool cases cover it.
+  `VENDORS.prune`; the pin is the pruned tree `c35cb043…`; `Tools/xnuhook` plans
+  their byacc regeneration and its `cargo test` runs the plan with the stage-1 byacc
+  (prefixes, which parser is reentrant, determinism, refused requests).
 - GAP-02 **closed**: compile rules carry `-MMD -MF $out.d` with `depfile`/`deps = gcc`;
   touching `Foundation/libhello/include/hello.h` recompiles and relinks.
 - GAP-03 **closed**: `.c`, `.m`, `.mm`, `.cpp`/`.cc`/`.cxx` and `.S`/`.s` have rules,
@@ -509,7 +546,7 @@ that backs it:
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 7/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
-| W0: no GPL material in the repository | closed (GAP-46: migcom's bison/flex output and XNU's Bison outputs pruned and enforced by `VENDORS.prune`; `Kernel/build/gen-parsers.sh` regenerates the XNU parsers with byacc) |
+| W0: no GPL material in the repository | closed (GAP-46: migcom's bison/flex output and XNU's Bison outputs pruned and enforced by `VENDORS.prune`; `Tools/xnuhook` plans the XNU parsers' byacc regeneration) |
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
 | W0: correct `_PROVENANCE` everywhere | closed (GAP-31, GAP-58; xnu and migcom in `VENDORS`, mig `_PROVENANCE` paths repaired) |
 | W0: SPDX on every file we own | closed (GAP-45, GAP-57; 15 remaining files fixed, `Tools/ci/check-spdx.sh` in CI) |
