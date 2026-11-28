@@ -14,6 +14,7 @@ State: incomplete. The plan holds one step today:
   symbol prefix its header comment names (`-p OSUnserialize`,
   `-p OSUnserializeXML`). The Bison copies upstream ships are pruned from
   `Kernel/xnu` (VENDORS `prune`); the hook refuses to plan if one reappears.
+  Its copy of the pruned list is tested against `VENDORS`.
 
 Not planned yet, all W1 work:
 
@@ -23,9 +24,12 @@ Not planned yet, all W1 work:
   generators, rewritten in Rust;
 - mig over the kernel `.defs`;
 - `version.c`, export lists and symbol sets;
-- the kernel-header fix-ups the grammars' `to build` comments apply to
-  Bison output (dropping the `<stdio.h>` include), which need the kernel
-  compile to check against;
+- the post-steps the grammars' `to build` comments apply to the generated
+  file: prepending the first 50 lines of the `.y` (its license header) and
+  replacing or dropping the `<stdio.h>` include; byacc's skeleton also includes
+  `<stdlib.h>` and `<string.h>`, and the XML output defines `yyerror` twice
+  (once as a macro in the grammar). All of these need the kernel compile to
+  check against, so they come with it;
 - compile, link and install.
 
 `rv` does not run hooks yet, so nothing consumes the plan outside the tests.

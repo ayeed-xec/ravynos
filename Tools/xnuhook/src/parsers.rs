@@ -110,6 +110,26 @@ mod tests {
     }
 
     #[test]
+    fn pruned_list_matches_vendors() {
+        // VENDORS is the source of truth for what is pruned from Kernel/xnu;
+        // the hook repeats the list because it sees only the source copy.
+        let vendors = fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../VENDORS"),
+        )
+        .unwrap();
+        let entry = vendors
+            .split("[[vendor]]")
+            .find(|e| e.contains("name     = \"xnu\""))
+            .expect("VENDORS has an xnu entry");
+        let line = entry
+            .lines()
+            .find(|l| l.starts_with("prune"))
+            .expect("xnu has a prune list");
+        let listed: Vec<&str> = line.split('"').skip(1).step_by(2).collect();
+        assert_eq!(listed, PRUNED);
+    }
+
+    #[test]
     fn a_missing_grammar_is_an_error() {
         let src = fake_xnu("missing");
         fs::remove_file(src.join(GRAMMARS[1].0)).unwrap();

@@ -349,8 +349,14 @@ test_check_macho() {
 		return
 	}
 	ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -dylib \
-		-install_name /usr/lib/libh.dylib "$d/h.o" -o "$d/old.dylib" 2>/dev/null
-	clang --target=x86_64-unknown-linux-gnu -ffreestanding -nostdinc -c "$d/h.c" -o "$d/h.elf.o"
+		-install_name /usr/lib/libh.dylib "$d/h.o" -o "$d/old.dylib" 2>/dev/null || {
+		bad "check-macho: cannot link the minos 11.0 fixture"
+		return
+	}
+	clang --target=x86_64-unknown-linux-gnu -ffreestanding -nostdinc -c "$d/h.c" -o "$d/h.elf.o" || {
+		bad "check-macho: cannot compile the ELF fixture"
+		return
+	}
 
 	expect_ok "check-macho accepts an x86_64 dylib" bash "$check" "$d/libh.dylib" x86_64 DYLIB
 	expect_fail "check-macho rejects the wrong file type" bash "$check" "$d/libh.dylib" x86_64 EXECUTE
