@@ -10,9 +10,11 @@ numbers are permanent, and a closed item is marked closed, not deleted.
 Audit of `darwin-clean` at `b1746b5ce` (four reviewers: build harness, bootloader,
 kernel side, toolchain and repository hygiene), scored against the section 2.7 gate of
 8/10. Re-audited after P1–P4 landed on top of `43757342b4`: `Tools/rv` and `Tools/mig`
-now pass the gate, and the areas still below it are the stage-1 reproducible rebuild
-(never yet observed end to end), the loader (device tree arrives in W1) and the CI
-container (GAP-40 remainder).
+now pass the gate, and the areas still below it are stage-1's remaining tools (GAP-55
+residue), the loader (device tree arrives in W1) and the CI container (GAP-40
+remainder). The stage-1 reproducible rebuild has been observed end to end: key
+`af8a5c44…` installed, then `--verify` rebuilt it into a scratch tree and the two hash
+lists diffed empty.
 
 | Area | Score | Verdict |
 |---|---|---|
@@ -377,9 +379,10 @@ clippy, vendors, negative fixtures) and score 8/10 before it merges.
 
 P1–P3 are merged (`f9115e8b0a`, `b8a715c9ec`, `93a3f2213b` + `cddbe0a56c`, merged as
 `f2cdb4d701` and `43757342b4`) and P4 updated the summary table above. What those
-phases did not finish is named in the exit criteria: the stage-1 reproducible rebuild
-(GAP-55) has still never been observed end to end, and CI still runs on the runner
-image rather than the `Tools/ci/Containerfile` build (GAP-40).
+phases did not finish is named in the exit criteria: CI still runs on the runner image
+rather than the `Tools/ci/Containerfile` build (GAP-40). The stage-1 reproducible
+rebuild, which P2 left unproven, was observed end to end afterwards under cache key
+`af8a5c44…` (GAP-55 entry below).
 
 ### Gap closure after P4
 
@@ -440,10 +443,14 @@ that backs it:
   `tools.sha256` as a hash mismatch, after ninety minutes of compiling; it now refuses
   at once with "not built … run `rv bootstrap` first" (checked: exit 1 in under a
   second, no rebuild), and `hash-tools.sh` is part of the cache key because it decides
-  what the recorded hashes cover. The `--verify` run under the new key `af8a5c44…` is
-  in flight; stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch,
-  mkfat or elf2pe, and its cache key omits the host cmake and ninja versions. BUG-28 was
-  the reason the earlier pass proved nothing about linking; ADR-31 changes the source tree.
+  what the recorded hashes cover. The `--verify` run under key `af8a5c44…` then
+  completed end to end: the install built and stamped the key, `--verify` rebuilt it
+  into `build/toolchain/af8a5c44…/.verify.<pid>`, the two `tools.sha256` lists diffed
+  empty, and the re-hashed installed binaries passed `sha256sum -c` (job
+  `stage1-build-verify`, exit 0, `stage1 verify OK: af8a5c44…`, clang 21.1.6). Stage-1
+  still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or elf2pe, and
+  its cache key omits the host cmake and ninja versions. BUG-28 was the reason the
+  earlier pass proved nothing about linking; ADR-31 changes the source tree.
 - GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
   every commit since the restructure has a subject of 64 characters or fewer, and
   ROADMAP.md 1.4 now requires a merge commit to name its score. History before the
@@ -457,7 +464,7 @@ that backs it:
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: the upstream ADR-31 install builds, installs and links Mach-O, and its two independent builds hash identically after the verify defect was fixed; the `--verify` run and the missing `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe keep it open) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55 residue: the upstream ADR-31 install builds, installs and links Mach-O, and `--verify` reproduced key `af8a5c44…` end to end with an empty hash diff; the missing `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe keep it open) |
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 7/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
