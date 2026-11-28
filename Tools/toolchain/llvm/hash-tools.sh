@@ -17,7 +17,8 @@ set -euo pipefail
 # (SYSTEM-DESIGN.md S02 stage-1/D8). A glob over bin/ would also hash clang-21,
 # clang-cl, clang-cpp and llvm-objcopy and would print "./clang" where the
 # recorded list says "clang", so a rebuild could never match.
-TOOLS=(clang clang++ lld ld.lld ld64.lld lld-link wasm-ld llvm-ar llvm-nm llvm-symbolizer llvm-strip)
+TOOLS=(clang clang++ lld ld.lld ld64.lld lld-link wasm-ld llvm-ar llvm-nm llvm-symbolizer llvm-strip
+    llvm-objdump llvm-lipo dsymutil)
 
 if [ "$#" -ne 1 ]; then
     echo "usage: $0 <bin-dir>|--list" >&2

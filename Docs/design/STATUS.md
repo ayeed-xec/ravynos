@@ -454,10 +454,13 @@ that backs it:
   completed end to end: the install built and stamped the key, `--verify` rebuilt it
   into `build/toolchain/af8a5c44…/.verify.<pid>`, the two `tools.sha256` lists diffed
   empty, and the re-hashed installed binaries passed `sha256sum -c` (job
-  `stage1-build-verify`, exit 0, `stage1 verify OK: af8a5c44…`, clang 21.1.6). Stage-1
-  still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or elf2pe, and
-  its cache key omits the host cmake and ninja versions. BUG-28 was the reason the
-  earlier pass proved nothing about linking; ADR-31 changes the source tree.
+  `stage1-build-verify`, exit 0, `stage1 verify OK: af8a5c44…`, clang 21.1.6).
+  Since then the key moved to `llvm/key.sh`, which hashes the host cmake, ninja and
+  clang versions along with the scripts, and the tool set gained `llvm-objdump`,
+  `llvm-lipo` and `dsymutil` with `-ffile-prefix-map`. The rebuild of key
+  `04c9139e…` is in flight. Stage-1 still does not build `libclang`, byacc, rvpatch,
+  mkfat or elf2pe. BUG-28 was the reason the earlier pass proved nothing about
+  linking; ADR-31 changes the source tree.
 - GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
   every commit since the restructure has a subject of 64 characters or fewer, and
   ROADMAP.md 1.4 now requires a merge commit to name its score. History before the

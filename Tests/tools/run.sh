@@ -216,12 +216,38 @@ test_doc_paths() {
 	done
 }
 
+test_stage1_key() {
+	local k1 k2 d="$WORK/keytool" copy="$WORK/keycopy" t
+
+	k1=$(bash "$ROOT/Tools/toolchain/llvm/key.sh")
+	if [[ $k1 =~ ^[0-9a-f]{64}$ ]]; then ok; else bad "stage1 key is not a sha256: $k1"; fi
+	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh")" = "$k1" ]; then ok; else bad "stage1 key is not deterministic"; fi
+
+	# The host tool versions decide what the build produces, so they are keyed.
+	mkdir -p "$d/bin"
+	printf '#!/bin/sh\necho "cmake version 0.0.0-under-test"\n' >"$d/bin/cmake"
+	chmod +x "$d/bin/cmake"
+	k2=$(PATH="$d/bin:$PATH" bash "$ROOT/Tools/toolchain/llvm/key.sh")
+	if [ "$k1" != "$k2" ]; then ok; else bad "stage1 key ignores the host cmake version"; fi
+
+	# GAP-55: the stage-1 set carries the Mach-O inspection tools stage 2 needs.
+	for t in llvm-objdump llvm-lipo dsymutil; do
+		if bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" --list | grep -qx "$t"; then ok; else bad "hash-tools: $t is not in the stage-1 list"; fi
+	done
+
+	# ... and the content of the scripts that build it.
+	cp -a "$ROOT/Tools/toolchain" "$copy"
+	printf '\n# a change to a hashed input\n' >>"$copy/llvm/build.sh"
+	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$copy")" != "$(bash "$ROOT/Tools/toolchain/llvm/key.sh")" ]; then ok; else bad "stage1 key ignores changes to build.sh"; fi
+}
+
 test_rvpatch
 test_mkfat
 test_elf2pe
 test_hash_tools
 test_xnu_parsers
 test_doc_paths
+test_stage1_key
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

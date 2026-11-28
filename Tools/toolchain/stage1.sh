@@ -42,9 +42,9 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-# The cache key: content hash over every file that determines what gets built.
-HASH_INPUTS=(stage1.sh llvm/_PROVENANCE llvm/fetch.sh llvm/build.sh llvm/hash-tools.sh)
-HASH=$(cd "$SCRIPT_DIR" && sha256sum "${HASH_INPUTS[@]}" | sha256sum | awk '{print $1}')
+# The cache key: content hash over every file that determines what gets built,
+# plus the host tool versions (llvm/key.sh owns both lists).
+HASH=$(bash "$SCRIPT_DIR/llvm/key.sh" "$SCRIPT_DIR")
 CACHE="$TREE/build/toolchain/$HASH"
 STAMP="$CACHE/.stage1-ok"
 BIN="$CACHE/bin"

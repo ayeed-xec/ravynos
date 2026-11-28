@@ -33,7 +33,7 @@ fi
 
 # The stage-1 tool set. These targets are what stage 2 and the rv build need;
 # building exactly these keeps the build small and the provenance tight.
-TARGETS=(clang lld llvm-ar llvm-nm llvm-symbolizer llvm-strip)
+TARGETS=(clang lld llvm-ar llvm-nm llvm-symbolizer llvm-strip llvm-objdump llvm-lipo dsymutil)
 # The installed names come from hash-tools.sh, the one list the recorded hashes
 # and the `--verify` comparison both use.
 mapfile -t INSTALLED < <(bash "$SCRIPT_DIR/hash-tools.sh" --list)
@@ -66,12 +66,12 @@ echo "llvm build: configuring (clang $(clang -dumpversion), ninja, $JOBS jobs)"
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_C_COMPILER=clang \
         -DCMAKE_CXX_COMPILER=clang++ \
-        -DCMAKE_C_FLAGS="-g0" \
-        -DCMAKE_CXX_FLAGS="-g0" \
+        -DCMAKE_C_FLAGS="-g0 -ffile-prefix-map=$SRC=/llvm-project" \
+        -DCMAKE_CXX_FLAGS="-g0 -ffile-prefix-map=$SRC=/llvm-project" \
         -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
         -DLLVM_ENABLE_PROJECTS="clang;lld" \
         -DLLVM_TARGETS_TO_BUILD="X86;AArch64;RISCV" \
-        -DLLVM_DISTRIBUTION_COMPONENTS="clang;lld;llvm-ar;llvm-nm;llvm-symbolizer;llvm-strip" \
+        -DLLVM_DISTRIBUTION_COMPONENTS="clang;lld;llvm-ar;llvm-nm;llvm-symbolizer;llvm-strip;llvm-objdump;llvm-lipo;dsymutil" \
         -DLLVM_APPEND_VC_REV=OFF \
         -DLLVM_ENABLE_BINDINGS=OFF \
         -DLLVM_BUILD_RUNTIME=OFF \
