@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+#
+# Stage 1, LLVM component (SYSTEM-DESIGN.md S02): `rv bootstrap llvm` builds
+# clang, lld and the LLVM tools into build/toolchain/<key>/, and
+# `rv bootstrap --verify llvm` rebuilds them from source in a second job and
+# compares hashes. It runs only when an LLVM input changes, weekly, or by hand,
+# never for a build-tools change (stage1-buildtools.yml), because a rebuild
+# takes hours. Tools/rv/src/bootstrap.rs is an input because it drives the LLVM
+# build, so an edit there also costs a full build and verify.
+#
+# Actions caches are branch-scoped: a branch reads its own entries and those
+# of the default branch (darwin). The weekly schedule also runs only on the
+# default branch, so it starts once this file is on darwin.
+name: stage1-llvm
+
+on:
+  push:
+    branches: [darwin, main, darwin-clean, 'wp/**']
+    paths:
+      - 'Tools/toolchain/stage1.sh'
+      - 'Tools/toolchain/llvm/**'
+      - 'Tools/rv/src/bootstrap.rs'
+      - '.github/workflows/stage1-llvm.yml'
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: stage1-llvm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: rv bootstrap llvm
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage 0 (host clang, lld, cmake, ninja)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld cmake ninja-build
+
+      - name: Cache key
+        id: key
+        run: |
+          key=$(bash Tools/toolchain/llvm/key.sh)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the LLVM component
+        uses: actions/cache@v4
+        with:
+          path: build/toolchain/${{ steps.key.outputs.key }}
+          key: stage1-llvm-${{ runner.arch }}-${{ steps.key.outputs.key }}
+
+      - name: rv bootstrap llvm
+        run: cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap llvm
+
+      - name: LLVM build log
+        if: failure()
+        run: tail -n 200 "build/toolchain/${{ steps.key.outputs.key }}/build.log" || true
+
+      # The object tree is only needed during the build; leaving it would put
+      # several gigabytes into the cache entry.
+      - name: Drop the LLVM object tree before the cache is saved
+        run: rm -rf "build/toolchain/${{ steps.key.outputs.key }}/obj"
+
+  verify:
+    name: rv bootstrap --verify llvm
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage 0 (host clang, lld, cmake, ninja)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld cmake ninja-build
+
+      - name: The key matches the bootstrap job
+        run: test "$(bash Tools/toolchain/llvm/key.sh)" = "${{ needs.bootstrap.outputs.key }}"
+
+      - name: Restore the LLVM component
+        uses: actions/cache/restore@v4
+        with:
+          path: build/toolchain/${{ needs.bootstrap.outputs.key }}
+          key: stage1-llvm-${{ runner.arch }}-${{ needs.bootstrap.outputs.key }}
+          fail-on-cache-miss: true
+
+      - name: rv bootstrap --verify llvm
+        run: cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap --verify llvm
+
+      - name: LLVM rebuild log
+        if: failure()
+        run: tail -n 200 build/toolchain/${{ needs.bootstrap.outputs.key }}/.verify.*/build.log || true

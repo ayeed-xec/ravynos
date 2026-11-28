@@ -1,8 +1,7 @@
 # why: glibc only typedefs u_int under _DEFAULT_SOURCE; migcom's type.h
 #      needs it unconditionally on Linux (type.h already special-cases
 #      linux and includes <linux/types.h>, which lacks u_int).
-# fate: keep until mig moves to our own MIT-licensed implementation
-#       (Docs/design/03-kernel.md) or upstream accepts a fix.
+# fate: permanent
 diff -u a/migcom.tproj/type.h b/migcom.tproj/type.h
 --- a/migcom.tproj/type.h
 +++ b/migcom.tproj/type.h

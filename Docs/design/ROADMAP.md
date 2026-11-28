@@ -161,7 +161,7 @@ material, and the tree holds only the SYSTEM-DESIGN section 3.2 layout (ADR-30).
   `Tools/ci/Containerfile` without bison, flex or m4. Done: `rv bootstrap --verify`
   reproduces its hashes (weekly job); CI uses the cached stage 1. The pin is upstream
   `llvmorg-21.1.6`, not the Swift fork, whose lld refuses every Mach-O input (ADR-31,
-  BUG-28); the tree builds `X86;AArch64;RISCV` so clang can target `riscv64-unknown-e`.
+  BUG-29); the tree builds `X86;AArch64;RISCV` so clang can target `riscv64-unknown-e`.
 - **WP0.5** (L14) License audit over the whole tree, every file type; crate scanning;
   host-tool gate over every script with the full deny list. Done: planted cases in
   `Tests/rv/` fail as designed.
