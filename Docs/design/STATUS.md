@@ -15,8 +15,10 @@ this file were given by the agents that wrote the code; they are withdrawn. The
 
 No area passes the gate. The tree builds Mach-O for x86_64 and arm64 with the macOS 27.2
 target, `libhello` links as `MH_DYLIB`, the build tools are a reproducible stage-1
-component, and CI runs every gate, the four boot smokes and the Mach-O assertion. What
-keeps each area below 8 is listed in its row.
+component, and CI runs every gate that exists, the four boot smokes and the Mach-O
+assertion, all inside the pinned gate image. Some section 5.6 checks do not exist yet
+(10 of the 12 S01 negative cases, GAP-65; the mig golden-output comparison). What keeps
+each area below 8 is listed in its row.
 
 | Area | Score | Reviewed by | Verdict |
 |---|---|---|---|
@@ -25,15 +27,15 @@ keeps each area below 8 is listed in its row.
 | `Boot/loader` (WP0.9) | 3/10 | independent reviewer agent, at `5b77e75b04` | the x86_64 Mach-O path boots an identity-linked `LC_MAIN` test kernel and the four smokes are strict (BUG-26 closed); no device tree, `Revision` 0, no `SetVirtualAddressMap`, x86-only `macho_phys`, the arm64 hand-off passes x86 `boot_args` with the MMU on (BUG-02 to BUG-06, BUG-13, BUG-24, BUG-25, BUG-30); every loader `.c` file fails clang-format and `Boot/` is outside the format gate |
 | `Tools/mig` | 6/10 | independent reviewer agent, at `aba318d45b` | pristine tree plus the rvpatch series, byacc parser and hand-written lexer build and pass the smoke; no golden-output test, and `-arch` is dropped so a cross-arch run silently targets the host (BUG-32) |
 | `Tools/xnuhook` (parser step) | 7/10 | independent reviewer agent, at `aba318d45b` | deterministic contract-v1 plan for the two byacc parsers with real-byacc tests; the output is never compiled, rv never runs the hook, and the pruned list repeats `VENDORS` |
-| CI and gates | 4/10 | independent reviewer agent, at `aba318d45b` | every gate runs in CI, but most on the bare runner with apt tools; the host-tool deny list lacks `flex`, `sed`, `awk` and `perl` (GAP-10); the image job omits several gates; the head it scored was red (fixed since, see GAP-40) |
-| FreeBSDPort | — | removed from the tree (WP0.0); rewrite under S11 (BUG-11, BUG-19, GAP-24) |
-| IOUSBFamily reconstruction | — | deleted (WP0.0); native stack in S10 (GAP-42, GAP-43) |
-| RavynXHCIPort | — | removed from the tree (WP0.0); rewrite when S10 starts (BUG-17, GAP-48) |
-| RavynAHCIPort | — | removed from the tree (WP0.0); rewrite when S10 starts (GAP-48) |
-| AppleAPIC | — | removed from the tree (WP0.0); re-vendor, then patch (BUG-20) |
-| ApplePS2Controller | — | removed from the tree (WP0.0); re-vendor controller, rewrite keyboard files (GAP-45) |
-| IOACPIFamily (PureDarwin edits) | — | removed from the tree (WP0.0); re-vendor, then patch (BUG-14, GAP-47) |
-| hfs | — | removed from the tree (WP0.0); re-vendor from the tagged release (GAP-44) |
+| CI and gates | 4/10 | independent reviewer agent, at `aba318d45b` | scored before every gate moved into the pinned image (GAP-40); open then and now: the host-tool deny list lacks `flex`, `sed`, `awk` and `perl` (GAP-10), 10 of the 12 S01 negative cases and the mig golden test do not exist, and nothing builds with stage 1 |
+| FreeBSDPort | — | — | removed from the tree (WP0.0); rewrite under S11 (BUG-11, BUG-19, GAP-24) |
+| IOUSBFamily reconstruction | — | — | deleted (WP0.0); native stack in S10 (GAP-42, GAP-43) |
+| RavynXHCIPort | — | — | removed from the tree (WP0.0); rewrite when S10 starts (BUG-17, GAP-48) |
+| RavynAHCIPort | — | — | removed from the tree (WP0.0); rewrite when S10 starts (GAP-48) |
+| AppleAPIC | — | — | removed from the tree (WP0.0); re-vendor, then patch (BUG-20) |
+| ApplePS2Controller | — | — | removed from the tree (WP0.0); re-vendor controller, rewrite keyboard files (GAP-45) |
+| IOACPIFamily (PureDarwin edits) | — | — | removed from the tree (WP0.0); re-vendor, then patch (BUG-14, GAP-47) |
+| hfs | — | — | removed from the tree (WP0.0); re-vendor from the tagged release (GAP-44) |
 
 The W0 wave report claimed WP0.1–WP0.4 and WP0.9 as delivered. They are merged but not
 done: each is open below until it meets its "Done when" and passes review.
@@ -87,10 +89,13 @@ What exists, and whether it is a real implementation:
   the command line is a placeholder.
 - **BUG-06** The arm64 loader path passes the x86 `boot_args` and leaves the MMU and
   caches on at hand-off.
-- **BUG-07** `Kernel/port/arm64/pmap.c` consists of functions that ignore their arguments
-  and return success — stubs, which the design forbids.
-- **BUG-08** `Kernel/build/driver/compile.sh` defines `__i386__` for x86_64, selecting
-  32-bit paths in XNU headers.
+- **BUG-07** Moot in the tree: `Kernel/port/arm64/` was removed with WP0.0, and the
+  rule stands for its rewrite (S07). `Kernel/port/arm64/pmap.c` consisted of functions that ignore their arguments
+  of functions that ignored their arguments and returned success — stubs, which the
+  design forbids.
+- **BUG-08** Moot in the tree: `Kernel/build/` was removed with WP0.0; the W1 kernel
+  build in `Tools/xnuhook` must not repeat it. `Kernel/build/driver/compile.sh` defined
+  `__i386__` for x86_64, selecting 32-bit paths in XNU headers.
 - **BUG-09** Closed. `Apps/hello` and `Apps/hello-cli` were both named `hello`;
   `rv` rejected duplicate names with `E-DUP-NAME`, so every `rv` command failed on
   the tree as committed. The tree now follows the section 3.2 layout: both programs
@@ -107,10 +112,11 @@ What exists, and whether it is a real implementation:
   only when the firmware places it below 4 GB; nothing checks this.
 - **BUG-14** `IOACPIFamily`: the two `evaluateObject` overloads call each other with no
   base case; the first `_STA` evaluation overflows the kernel stack.
-- **BUG-15** `Kernel/port/riscv64/trap.S` adjusts `sp` by 256 bytes on entry and does
-  not restore it on every exit path; each trap leaks 256 bytes of stack.
-- **BUG-16** `Kernel/port/arm64` references `arm64_exception_entry`, which nothing
-  defines.
+- **BUG-15** Moot in the tree: `Kernel/port/riscv64/` was removed with WP0.0; it applies
+  to the S08 rewrite. `Kernel/port/riscv64/trap.S` adjusted `sp` by 256 bytes on entry and
+  did not restore it on every exit path; each trap leaked 256 bytes of stack.
+- **BUG-16** Moot in the tree: `Kernel/port/arm64/` was removed with WP0.0. It
+  referenced `arm64_exception_entry`, which nothing defined.
 - **BUG-17** `RavynXHCIPort::stop` frees ring and context memory before halting the
   controller; the controller can DMA into freed memory, and objects are used after
   release.
@@ -283,11 +289,11 @@ has since changed, the entry says so and points at the evidence.
   serves a branch only its own caches and the default branch's. Until the stage-1
   workflows are on `darwin`, the weekly verify does not run and each branch builds
   LLVM from a cold cache once.
-  The stage-1 jobs also run on the bare `ubuntu-latest` runner rather than in the
-  `Tools/ci/Containerfile` image (S02 done-when a), because the image's Ubuntu cargo
-  1.75 cannot read the version-4 `Cargo.lock`; the image needs a pinned Rust first.
-  Until then a runner-image update that changes cmake, ninja or clang moves the LLVM
-  key and costs a full rebuild.
+  `stage1-buildtools.yml` runs inside the pinned gate image; `stage1-llvm.yml` still
+  runs on the bare `ubuntu-latest` runner with its apt cmake, ninja and clang (S02
+  done-when a), so a runner-image update that changes one of them moves the LLVM key
+  and costs a full rebuild. It moves into the image with the next LLVM build (GAP-40
+  step 3).
 - GAP-11 Closed. The mig lexer is hand-written (`Tools/mig/generated/lexxer.c`; GAP-46),
   and `Tools/mig/build.sh` no longer installs anything: it takes byacc and rvpatch
   from the stage-1 build tools and stops with "build the stage-1 tools" without
@@ -297,8 +303,8 @@ has since changed, the entry says so and points at the evidence.
   preprocessor error, which it used to pass over (`tests/trivial.defs` had a `#`
   SPDX line).
 
-**S03 SDK** — GAP-29: not started. No `VENDORS` file at the root (the old
-`Legacy/VENDORS` was removed with WP0.0; no xnu pin).
+**S03 SDK** — GAP-29: not started. (`VENDORS` exists at the root and pins xnu; see
+GAP-31.)
 
 **S04 bootloader** — BUG-02 to BUG-06, BUG-13, BUG-24, BUG-25. The source uses tabs
 against `.clang-format`. CI builds the loader and runs the x86_64, Mach-O, arm64 and
@@ -422,7 +428,8 @@ no code at all.)
   smokes need an Intel CPU model, and AMD support needs the ADR-20 patch.
 - GAP-35 XNU's own host tools (`SETUP/config`, `doconf`) need bison, flex and csh;
   ADR-21 replacements do not exist.
-- GAP-36 `rv` rejects dependencies within one layer and knows only seven layers —
+- GAP-36 Closed (see "Gap closure after P4"; the `targets` part in the S01 done-when 3
+  note above). Original report: `rv` rejects dependencies within one layer and knows only seven layers —
   `build-toolchain` and `test` are missing (`Tools/rv/src/graph.rs:5-13`); it checks
   `targets` on every manifest rather than the selected ones (`main.rs:139-148`);
   manifest discovery no longer skips the removed `Legacy/`; the manifest has no keys for
@@ -433,26 +440,28 @@ no code at all.)
   VENDORS (GAP-58); the patches live in `Tools/mig/patches`.
 - GAP-40 Partly closed. GitHub's runner image ships bison, flex and m4, so CI needs its
   own container (SYSTEM-DESIGN 2.2, 5.6). `Tools/ci/Containerfile` is that container:
-  base `ubuntu:24.04` pinned by digest, apt pinned to the 2026-11-27 archive snapshot,
-  Rust 1.97.0 from a checksum-pinned rustup (matching `rust-toolchain.toml`, checked
-  in the job), and the image build fails if bison, flex or m4 is present.
-  `ca-certificates` alone comes from the live archive, to reach the snapshot over
-  https. Evidence: https://github.com/ayeed-xec/ravynos/actions/runs/46139710547, job "gates in the pinned image". The
-  "gates in the pinned image" job builds it and runs, inside it, the stage-1 build
-  tools, the format, SPDX, host-tool and commit-subject gates, `Tests/tools/run.sh`,
-  rv's and xnuhook's tests and clippy, `rv build` for both Darwin targets and the
-  Mach-O assertion. GNU binutils is in the image as a dependency of clang-18 and
-  libc6-dev and is never run.
-  Still open, and the plan for the switch, in order:
-  1. Run the boot smokes in the image (QEMU and firmware are already in it); then
-     the runner-side "rv gates" and "boot smokes" jobs and their unpinned apt installs
-     go, and the image job is the only gate. Needs nothing from stage 1.
-  2. Run `stage1-buildtools.yml` in the image, so its key hashes the image's clang.
-  3. After the next LLVM build (GAP-61: libclang, `llvm-readtapi`) is cached on the
-     default branch (GAP-64): run `stage1-llvm.yml` in the image (S02 done-when a)
-     and put the stage-1 `bin` first on PATH in the gate job, so rv and the smokes
-     build with stage-1 clang and `ld64.lld` instead of the image's clang-18.
-  4. Link rv statically against musl (GAP-08).
+  base `ubuntu:24.04` pinned by digest; apt reads only the 2026-11-27 archive snapshot,
+  pinned above anything installed, and the image build fails if any installed package
+  differs from the snapshot (ca-certificates and openssl are bootstrapped from the live
+  archive and then brought back to their snapshot versions); Rust 1.97.0 from a
+  checksum-pinned rustup with auto-install off, so a `rust-toolchain.toml` that names
+  another version fails the gate; and the build fails if bison, flex or m4 is present.
+  Every CI gate runs inside it: `Tools/ci/gates.sh` (the stage-1 build tools, lint,
+  host-tool, SPDX, format and commit-subject gates over every commit of the push,
+  `Tests/tools/run.sh`, rv's and xnuhook's tests and clippy, `rv test`, the exit-3
+  checks, `rv vendors check`, `rv build` for both Darwin targets with the Mach-O
+  assertion, `rv audit license`, the negative fixtures and the mig smoke), the four
+  boot smokes, and `stage1-buildtools.yml`. No CI job installs from the runner's apt
+  except `stage1-llvm.yml`.
+  Still open, in order:
+  1. GNU binutils is in the image as a dependency of clang-18 and libc6-dev. Nothing
+     runs it (the host-tool gate), but section 2.2 says the image holds none of the
+     disallowed tools; it goes when the image's clang comes from stage 1 (step 2).
+  2. After the next LLVM build (GAP-61: libclang, `llvm-readtapi`) is cached on the
+     default branch (GAP-64): run `stage1-llvm.yml` in the image (S02 done-when a), put
+     the stage-1 `bin` first on PATH in `gates.sh` and the smokes so rv and the test
+     kernels build with stage-1 clang and `ld64.lld`, and drop clang-18 from the image.
+  3. Link rv statically against musl (GAP-08).
 - GAP-45 Files with no license header beyond GAP-42: the keyboard files of
   `ApplePS2Controller` (PureDarwin), all 95 files of FreeBSDPort. Without a stated
   license they are not used; they are rewritten (ADR-27).
@@ -554,8 +563,10 @@ that backs it:
 - GAP-04 **closed**: compile and link carry `-isysroot ../sysroot/<target>`, links add
   `-L ../sysroot/<target>/usr/lib`, and a dependent links a producer's exported `.tbd`
   stub as `-l<name>`, or the built artifact by path when there is no stub (unit-tested).
-  `rv build` succeeds for x86_64, arm64 and riscv64.
-- GAP-06 **closed**: `rv test` runs every `Tests/**/test.toml` (`script`/`host` kinds;
+  `rv build` succeeds for x86_64 and arm64. `riscv64-ravynos` is refused with
+  `E-NOT-BUILT S08` (exit 3) until the ADR-03 riscv64 Mach-O target exists; before
+  that it built ELF for an unknown OS, which ADR-03 rejects.
+- GAP-06 **partly closed** (`rv graph --forbid` is still ignored; GAP-06 above): `rv test` runs every `Tests/**/test.toml` (`script`/`host` kinds;
   `qemu` skipped until S09; a file without `kind` is a schema fixture), and `rv image`
   validates `Tests/images/<name>` or `Images/<name>` before reporting E-NOT-BUILT S09.
   `kernelcache` (S09), `codesign` (S12) and `symbolicate` (S34) report E-NOT-BUILT and
@@ -570,8 +581,9 @@ that backs it:
   `E-CYCLE`, `E-LAYER`, `E-DEP-UNKNOWN` and `E-ROOT`.
 - GAP-56 **closed**: licences match by exact SPDX id, case-insensitively, with `0BSD`
   accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
-- GAP-40 **partly closed** (see the GAP-40 entry above for the current state):
-  `Tools/ci/Containerfile` was missing
+- GAP-40 **partly closed**. This entry records the state at `43757342b4`; the image no
+  longer installs Ubuntu's `cargo`, `rustc` or `rustfmt` and no longer builds from the
+  `ubuntu:24.04` tag (see the GAP-40 entry above). At the time, `Tools/ci/Containerfile` was missing
   `clang-format-18`, `cargo`, `rustc` and `rustfmt`, which the format gate needs, so the
   image could never have run it; it installs them now and links `clang-format`. The image
   builds from `ubuntu:24.04` and every gate passes inside it: `check-format.sh`,
@@ -649,7 +661,7 @@ that backs it:
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
 | W0: correct `_PROVENANCE` everywhere | closed (GAP-31, GAP-58; xnu and migcom in `VENDORS`, mig `_PROVENANCE` paths repaired) |
 | W0: SPDX on every file we own | closed (GAP-45, GAP-57; 15 remaining files fixed, `Tools/ci/check-spdx.sh` in CI) |
-| W0: every section 5.6 gate runs in CI | open (GAP-40: every gate runs in CI, most of them inside the pinned image; the boot smokes and the runner-side rv gates still run on the bare runner with apt tools, and nothing builds with stage 1 yet) |
+| W0: every section 5.6 gate runs in CI | open (GAP-40: every gate that exists runs inside the pinned image, but nothing builds with stage 1 yet; GAP-65: 10 of the 12 S01 negative cases do not exist; no mig golden-output comparison) |
 | W1: kernel links with no stubs, both arches | open (GAP-12–GAP-16, GAP-41) |
 | W1: loader boots XNU to its banner, both arches | open (BUG-02–BUG-06, BUG-24, BUG-25, GAP-39) |
 | W1: T0 passes on both arches | open (GAP-07) |
