@@ -23,7 +23,7 @@ each area below 8 is listed in its row.
 | Area | Score | Reviewed by | Verdict |
 |---|---|---|---|
 | `Tools/rv` (WP0.1–WP0.3) | 4/10 | independent reviewer agent, at `aba318d45b` | Mach-O for both arches, schema, layer and cycle checks work; missing: the include scan, `E-LICENSE`/`E-NO-SPDX`/`E-FORMAT`, hook execution, sysroot staging, per-target `flags`, `source_root`, four S01 commands, and 10 of the 12 S01 negative cases (GAP-65); `rv shell` (BUG-10) and `rv sdk` (BUG-31) are broken |
-| Stage-1 bootstrap (WP0.4) | 5/10 | independent reviewer agent, at `aba318d45b` | the build tools build and `--verify` reproduces them in CI; the LLVM component has no completed CI run, lacks libclang and `llvm-readtapi` (GAP-61), does not run in the gate image, and CI does not build with stage 1 (GAP-40) |
+| Stage-1 bootstrap (WP0.4) | 5/10 | independent reviewer agent, at `aba318d45b` | the build tools build and `--verify` reproduces them in CI; the LLVM component has no completed CI run, lacks libclang and `llvm-readtapi` (GAP-61), does not run in the gate image, and CI does not build with stage 1 (GAP-40); since that review, `rv bootstrap` and `--verify` for both components went green in CI (https://github.com/ayeed-xec/ravynos/actions/runs/46135178066) |
 | `Boot/loader` (WP0.9) | 3/10 | independent reviewer agent, at `5b77e75b04` | the x86_64 Mach-O path boots an identity-linked `LC_MAIN` test kernel and the four smokes are strict (BUG-26 closed); no device tree, `Revision` 0, no `SetVirtualAddressMap`, x86-only `macho_phys`, the arm64 hand-off passes x86 `boot_args` with the MMU on (BUG-02 to BUG-06, BUG-13, BUG-24, BUG-25, BUG-30); every loader `.c` file fails clang-format and `Boot/` is outside the format gate |
 | `Tools/mig` | 6/10 | independent reviewer agent, at `aba318d45b` | pristine tree plus the rvpatch series, byacc parser and hand-written lexer build and pass the smoke; no golden-output test, and `-arch` is dropped so a cross-arch run silently targets the host (BUG-32) |
 | `Tools/xnuhook` (parser step) | 7/10 | independent reviewer agent, at `aba318d45b` | deterministic contract-v1 plan for the two byacc parsers with real-byacc tests; the output is never compiled, rv never runs the hook, and the pruned list repeats `VENDORS` |
@@ -249,9 +249,17 @@ has since changed, the entry says so and points at the evidence.
   `BSD-3-Clause OR GPL-2.0` passes) and lacks most ADR-24 licenses. The format gate skips
   `Boot/` though its message claims it, the Ravyn kexts, `Kernel/build` and `Tests`;
   clang-format is unpinned.
-- GAP-55 Open until CI shows it (owner decision: it closes only on a green run of
-  `rv bootstrap` and `rv bootstrap --verify` in CI). What its first report listed is
-  now done, with these checks:
+- GAP-55 Closed on CI evidence (owner decision: it closes only on a green run of
+  `rv bootstrap` and `rv bootstrap --verify` in CI): https://github.com/ayeed-xec/ravynos/actions/runs/46135178066. Job "rv
+  bootstrap" ran `rv bootstrap` from a cold cache, building the build tools and the
+  LLVM component (1 h 40 min) and saving both cache entries. Job "rv bootstrap
+  --verify" restored them, refetched llvm-project at `llvmorg-21.1.6`, rebuilt the
+  stage-1 LLVM tools into `.verify.3125` and printed `stage1 verify OK: d21131c5…`
+  (clang 21.1.6), which `stage1.sh` prints only when the rebuilt `tools.sha256` matches
+  the recorded one; the build tools printed "rebuild matches the recorded hashes". The
+  run is at `c0ef0d39b2`; `git diff c0ef0d39b2 9d8ea2e7ce -- Tools/toolchain/stage1.sh
+  Tools/toolchain/llvm` is empty, so the LLVM component it verified is the one in the
+  tree. What its first report listed is done, with these checks:
   - `--verify` rebuilds into a scratch directory and diffs `tools.sha256` against
     the recorded list, for both components (`stage1.sh`, `buildtools.sh`); host-tool
     tests tamper with the recorded hashes and with an installed tool and expect a
@@ -272,7 +280,7 @@ has since changed, the entry says so and points at the evidence.
     in, and the `fate:` lines use the section 2.5 values.
   - CI runs `rv bootstrap <component>` and `rv bootstrap --verify <component>` in
     `stage1-llvm.yml` and `stage1-buildtools.yml`, each cached under its own key.
-  The run that closes this gap is not recorded yet. Split out of GAP-55: GAP-61,
+  Split out of GAP-55: GAP-61,
   GAP-62, GAP-63, GAP-64; the musl and `.cargo/config.toml` items are under GAP-08.
 - GAP-61 libclang and `llvm-readtapi` are not in the LLVM component. They are added
   at the component's next rebuild, before W1; the owner decided not to rebuild LLVM
@@ -652,7 +660,7 @@ that backs it:
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; `Tools/ci/check-macho.sh` on both arches, https://github.com/ayeed-xec/ravynos/actions/runs/46139710547) |
 | W0: `libhello.dylib` is `MH_DYLIB` on both arches (S01 done-when 3) | closed (asserted in CI by `check-macho.sh`, https://github.com/ayeed-xec/ravynos/actions/runs/46139710547; the assertion runs in CI, not yet inside rv, GAP-65) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: both components build and `--verify` reproduces them; it closes on a green CI run of `rv bootstrap` and `--verify`, not recorded yet. GAP-61: libclang and `llvm-readtapi` come with the next LLVM rebuild) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | closed for what exists (GAP-55: `rv bootstrap` and `--verify` green in CI, https://github.com/ayeed-xec/ravynos/actions/runs/46135178066); open: libclang and `llvm-readtapi` come with the next LLVM rebuild (GAP-61), and S02 done-when (a) asks for the run inside the gate image (GAP-40 step 2) |
 | W0: every merged component scores at least 8/10 in review | open (independent scores at the top of this file: rv 4, stage-1 5, loader 3, mig 6, xnuhook 7, CI 4) |
 | W0: negative tests fail as designed in CI | open (GAP-65: the four cases in `Tests/rv/negative/run.sh` run in CI, but only two of the twelve S01 lists exist) |
 | W0: audit and host-tool gate cover the tree | open (GAP-10: the deny list lacks flex, sed, awk and perl; GAP-09: no crate scanning or fingerprinting) |
