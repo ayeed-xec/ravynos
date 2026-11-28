@@ -31,3 +31,8 @@ RUN for tool in clang clang++ clang-format ld.lld llvm-ar llvm-nm llvm-objcopy l
  && clang --version && ld.lld --version && ninja --version
 
 WORKDIR /src
+
+# The gates scan a bind-mounted checkout, which is owned by a different uid than
+# the container user; without this git refuses the mount and the gates would
+# report on an empty file list.
+RUN git config --system --add safe.directory /src
