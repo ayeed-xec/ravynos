@@ -204,11 +204,24 @@ test_xnu_parsers() {
 	expect_fail "gen-parsers refuses an unknown extra argument" bash "$ROOT/Kernel/build/gen-parsers.sh" "$out" extra
 }
 
+test_doc_paths() {
+	# GAP-32: the legacy design doc named paths that were never in the tree. The
+	# live documents must keep pointing at files that exist.
+	local stale live
+	for stale in 'Docs/rfc/' '.mlai/DECISIONS.md' 'Tools/license-audit.py'; do
+		if grep -qF -- "$stale" "$ROOT/Docs/DESIGN.md"; then bad "DESIGN.md still names $stale"; else ok; fi
+	done
+	for live in Docs/design/DECISIONS.md Tools/ci/check-spdx.sh Tools/ci/check-host-tools.sh; do
+		if [ -e "$ROOT/$live" ]; then ok; else bad "DESIGN.md points at missing $live"; fi
+	done
+}
+
 test_rvpatch
 test_mkfat
 test_elf2pe
 test_hash_tools
 test_xnu_parsers
+test_doc_paths
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

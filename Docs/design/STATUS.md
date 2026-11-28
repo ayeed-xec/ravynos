@@ -347,10 +347,13 @@ no code at all.)
 - GAP-31 Closed for xnu: `VENDORS` records the upstream, tag, commit and tree for it
   and for migcom, and `rv vendors check` verifies both against git in CI. `_PROVENANCE`
   files for other trees still need the same treatment (GAP-58).
-- GAP-32 Paths named in older documents that do not exist: `Docs/rfc/`,
-  `.mlai/DECISIONS.md`, `Tests/perf/`, `Tests/kpi/`,
-  `Tools/license-audit.py`. `Tests/apps/` now exists (WP0.0); top-level
-  `Libraries/`, `CoreServices/`, `BSD/`, `SysApps/` were removed with `Legacy/`.
+- GAP-32 Paths named in older documents that did not exist: `Docs/rfc/`,
+  `.mlai/DECISIONS.md`, `Tools/license-audit.py`. The legacy `Docs/DESIGN.md` now
+  points at `Docs/design/`, `Docs/design/DECISIONS.md`, `Tools/ci/check-spdx.sh` and
+  `rv audit licenses`, and `Tests/tools/run.sh` fails if any of the three returns.
+  `Tests/perf/` and `Tests/kpi/` are referenced only as planned W2 paths. `Tests/apps/`
+  exists (WP0.0); top-level `Libraries/`, `CoreServices/`, `BSD/`, `SysApps/` were
+  removed with `Legacy/`.
 - GAP-33 CI now runs `cargo test`, clippy with `-D warnings` and `rv vendors check`
   alongside the x86_64 build. Still open: arm64 and riscv64 builds, loader build, mig
   build, boot smokes, Mach-O assertion and negative tests.
@@ -459,9 +462,10 @@ that backs it:
   every commit since the restructure has a subject of 64 characters or fewer, and
   ROADMAP.md 1.4 now requires a merge commit to name its score. History before the
   restructure still mixes `Docs:` and `docs:` and carries one foreign author address.
-- GAP-32 **partial**: the RFC path now points at `Docs/design/`, the decision-log path at
-  `Docs/design/DECISIONS.md`; `Tests/perf/` and `Tests/kpi/` stay as planned paths that
-  arrive with W2.
+- GAP-32 **closed**: `Docs/DESIGN.md` names only files that exist (`Docs/design/`,
+  `Docs/design/DECISIONS.md`, `Tools/ci/check-spdx.sh`, `rv audit licenses`); four
+  host-tool cases fail if a retired path returns. `Tests/perf/` and `Tests/kpi/` are
+  marked planned-W2 where they appear.
 
 | Criterion (SYSTEM-DESIGN section 6) | State |
 |---|---|

@@ -16,7 +16,7 @@ Build a native macOS-compatible operating system that runs real Mac applications
 architected to Apple-parity standards, with a Mac software SDK of its own.
 
 Four constraints bind every decision in this document. None is waivable by an implementer;
-only a dated decision record in `.mlai/DECISIONS.md` can change one.
+only a dated decision record in `Docs/design/DECISIONS.md` can change one.
 
 1. **License purity.** No GPL, LGPL or AGPL code, and no GPL-derived tooling, anywhere in
    the tree — including build tools, scripts, and generated artifacts. Every vendored
@@ -329,7 +329,8 @@ for distribution.
   tag/commit, license, local modifications. The pattern already exists for xnu
   (`Kernel/_PROVENANCE/`); W0 extends it to all of `Libraries/`, `Frameworks/`, `BSD/`.
 - Every original file carries an SPDX header (`SPDX-License-Identifier: BSD-2-Clause`).
-- CI license gate (`Tools/license-audit.py`): scans SPDX tags + a filename/blocklist
+- CI license gate (`Tools/ci/check-spdx.sh` for headers, `rv audit licenses` for
+  manifests): scans SPDX tags + a filename/blocklist
   heuristic; a new file without an SPDX tag or matching a forbidden-license fingerprint
   fails the build. Content-level fingerprinting (n-gram match against known GPL sources)
   is a W1 addition so GPL-derived *rewrites* are caught too.
@@ -404,7 +405,7 @@ our kernel-adjacent work lives in `Kernel/build/`, `Kernel/port/`, and
 Real cases will exist (a missing export, a config that can't be set externally). The
 process:
 
-1. File an RFC in `Docs/rfc/` stating the gap, the alternatives exhausted
+1. File an RFC in `Docs/design/` stating the gap, the alternatives exhausted
    (config-include, shim, overlay symbol override), and the minimal in-tree change.
 2. Approve at wave level; implement as a patch in the quilt series
    `Kernel/patches/NNNN-<name>.patch` with a `MANIFEST` (purpose, upstream status).
@@ -485,7 +486,7 @@ records exist for every vendored tree.
   hooks); build scopes from one component to one bootable image (`rv build <component>`,
   `rv image`; the harness builds the whole system and any single part of it through the
   same graph — `Docs/design/05-build-system.md`, "Build scopes");
-  `Tools/license-audit.py` with content fingerprinting; `.clang-format` + style
+  `Tools/ci/check-spdx.sh` with content fingerprinting; `.clang-format` + style
   checker; CI pipeline (build matrix, license gate, perf smoke).
 - **E/F:** spec system seeded (`Docs/spec/` with the contract set of §2.5).
 - **F:** tier test apps built **by our own toolchain** (T0 static, T1 dynamic, T3 AppKit
