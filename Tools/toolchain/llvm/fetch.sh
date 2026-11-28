@@ -24,8 +24,25 @@ fi
 
 pin_line() {
     # pin_line <label>: read the value of a "* <label>: ..." line from _PROVENANCE
-    local label=$1
-    sed -n "s/^\\* ${label}: //p" "$PIN"
+    local label=$1 line value=""
+    while IFS= read -r line; do
+        case "$line" in
+        "* ${label}: "*)
+            value=${line#"* ${label}: "}
+            break
+            ;;
+        esac
+    done <"$PIN"
+    printf '%s\n' "$value"
+}
+
+# first_sha: the object id on the first line of a git ls-remote listing.
+first_sha() {
+    local line=""
+    while IFS= read -r line; do
+        break
+    done
+    printf '%s\n' "${line%%[[:space:]]*}"
 }
 
 URL="$(pin_line 'Upstream URL')"
@@ -42,9 +59,9 @@ verify_tag_against_commit() {
     # The peeled tag object must resolve to the pinned commit, so the tag in the
     # provenance file cannot silently drift from the commit it claims to name.
     local peeled
-    peeled=$(git ls-remote "$URL" "refs/tags/${TAG}^{}" | awk '/\^\{\}$/ {print $1; exit}')
+    peeled=$(git ls-remote "$URL" "refs/tags/${TAG}^{}" | first_sha)
     if [ -z "$peeled" ]; then
-        peeled=$(git ls-remote --tags --refs "$URL" "refs/tags/${TAG}" | awk '{print $1}')
+        peeled=$(git ls-remote --tags --refs "$URL" "refs/tags/${TAG}" | first_sha)
     fi
     if [ "$peeled" != "$COMMIT" ]; then
         echo "error: tag ${TAG} resolves to ${peeled:-<nothing>} upstream, not the pinned commit ${COMMIT}" >&2
@@ -69,7 +86,7 @@ if [ "${1:-}" = "--refetch" ]; then
 fi
 
 if verify_fetched; then
-    echo "llvm fetch: already at pinned commit ${COMMIT:0:12} in ${DEST#$TREE/}"
+    echo "llvm fetch: already at pinned commit ${COMMIT:0:12} in ${DEST#"$TREE"/}"
     exit 0
 fi
 
@@ -79,7 +96,7 @@ mkdir -p "$(dirname "$DEST")"
 echo "llvm fetch: verifying tag ${TAG} against pinned commit"
 verify_tag_against_commit
 
-echo "llvm fetch: shallow-cloning ${URL} at ${COMMIT:0:12} into ${DEST#$TREE/}"
+echo "llvm fetch: shallow-cloning ${URL} at ${COMMIT:0:12} into ${DEST#"$TREE"/}"
 git init -q "$DEST"
 git -C "$DEST" remote add origin "$URL"
 git -C "$DEST" fetch -q --depth 1 origin "$COMMIT"

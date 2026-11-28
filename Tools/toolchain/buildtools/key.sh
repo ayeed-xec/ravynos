@@ -17,6 +17,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 cd "$ROOT"
+
+first_line() {
+    local line="" text
+    while IFS= read -r text; do
+        line=$text
+        break
+    done < <("$1" --version 2>/dev/null)
+    printf '%s\n' "$line"
+}
+
 {
     # Whole directories, so a new patch or header cannot slip past the key.
     find Tools/toolchain/buildtools Tools/toolchain/buildtools.sh \
@@ -31,7 +41,7 @@ cd "$ROOT"
     printf 'host %s %s\n' "$(uname -sm)" "$(clang -dumpmachine 2>/dev/null || echo none)"
     for tool in clang ld.lld; do
         if command -v "$tool" >/dev/null 2>&1; then
-            printf '%s %s\n' "$tool" "$("$tool" --version 2>/dev/null | sed -n '1p')"
+            printf '%s %s\n' "$tool" "$(first_line "$tool")"
         else
             printf '%s missing\n' "$tool"
         fi

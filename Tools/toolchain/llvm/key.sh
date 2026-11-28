@@ -20,9 +20,15 @@ host_tools=(cmake ninja clang clang++)
 
 host_version() {
     if command -v "$1" >/dev/null 2>&1; then
-        # sed, not head: head exits early and pipefail turns the SIGPIPE into a
-        # failed key computation.
-        "$1" --version 2>/dev/null | sed -n '1p'
+        # Read the first line through a process substitution: it carries no
+        # pipeline status, so a tool that keeps writing cannot turn SIGPIPE
+        # into a failed key under pipefail.
+        local line="" text
+        while IFS= read -r text; do
+            line=$text
+            break
+        done < <("$1" --version 2>/dev/null)
+        printf '%s\n' "$line"
     else
         printf 'missing\n'
     fi
@@ -33,4 +39,4 @@ host_version() {
     for tool in "${host_tools[@]}"; do
         printf '%s %s\n' "$tool" "$(host_version "$tool")"
     done
-} | sha256sum | awk '{print $1}'
+} | sha256sum | cut -c1-64

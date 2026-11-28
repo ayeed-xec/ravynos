@@ -39,7 +39,9 @@ append_hits() {
     local file=$1 pattern=$2 out
     out=$(grep -HnE "$pattern" "$file" 2>/dev/null) || true
     [ -n "$out" ] || return 0
-    hits+=$(printf '%s\n' "$out" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#')$'\n'
+    out=$(printf '%s\n' "$out" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#') || true
+    [ -n "$out" ] || return 0
+    hits+=$out$'\n'
 }
 
 start='(^|[;&|]|\$\()[[:space:]]*(sudo[[:space:]]+)?'

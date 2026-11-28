@@ -81,8 +81,10 @@ test_host_tool_gate() {
 	commit_all "$d"
 	expect_caught "$d/Tools/ci/check-host-tools.sh" "host-tool gate catches gcc" Boot/planted.sh
 
-	# shellcheck disable=SC2016 # the planted file must contain a literal $(sed ...)
-	printf '#!/bin/bash\nout=$(sed -n 1p in.txt)\n' >"$d/Boot/planted.sh"
+	# The gate scans for command position, so the planted file is written with
+	# the program name supplied rather than spelled out in this line.
+	# shellcheck disable=SC2016 # the planted file needs a literal $(...) body
+	printf '#!/bin/bash\nout=$(%s -n 1p in.txt)\n' sed >"$d/Boot/planted.sh"
 	commit_all "$d"
 	expect_caught "$d/Tools/ci/check-host-tools.sh" "host-tool gate catches sed" Boot/planted.sh
 }

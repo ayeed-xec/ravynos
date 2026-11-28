@@ -48,7 +48,6 @@ HASH=$(bash "$SCRIPT_DIR/llvm/key.sh" "$SCRIPT_DIR")
 CACHE="$TREE/build/toolchain/$HASH"
 STAMP="$CACHE/.stage1-ok"
 BIN="$CACHE/bin"
-PROVENANCE="$CACHE/provenance"
 
 verify() {
     if [ ! -f "$STAMP" ]; then
@@ -125,11 +124,19 @@ else
     bash "$SCRIPT_DIR/llvm/build.sh" "$TREE/build/vendor/llvm-project" "$CACHE"
 fi
 
+pin_lines=""
+while IFS= read -r line; do
+    case "$line" in
+    "* Tag: "*) printf -v pin_lines '%s  Tag: %s' "$pin_lines" "${line#"* Tag: "}" ;;
+    "* Commit: "*) printf -v pin_lines '%s\n  Commit: %s' "$pin_lines" "${line#"* Commit: "}" ;;
+    esac
+done <"$SCRIPT_DIR/llvm/_PROVENANCE"
+
 {
     echo "stage1 $HASH"
     echo "commit: $(git -C "$TREE" rev-parse HEAD 2>/dev/null || echo none)"
     echo "date:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    echo "pin:    $(sed -n 's/^\* \(Tag\|Commit\): /  \1: /p' "$SCRIPT_DIR/llvm/_PROVENANCE")"
+    echo "pin:    $pin_lines"
 } >"$STAMP"
 
 verify
