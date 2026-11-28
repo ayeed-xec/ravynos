@@ -435,10 +435,15 @@ that backs it:
   directory. Checked on the two existing builds of `a72995bd…`: the recorded
   `tools.sha256` and the hash list of the independent `--verify` rebuild diff empty, so
   the stage-1 tools are byte-reproducible. Seven host-tool tests cover the helper
-  (`Tests/tools/run.sh`, 52 passed). The `--verify` run itself is in flight; stage-1
-  still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or elf2pe, and
-  its cache key omits the host cmake and ninja versions. BUG-28 was the reason the
-  earlier pass proved nothing about linking; ADR-31 changes the source tree.
+  (`Tests/tools/run.sh`, 52 passed). A second defect showed up on the next run: with a
+  cold cache the verify block went straight to the rebuild and reported a missing
+  `tools.sha256` as a hash mismatch, after ninety minutes of compiling; it now refuses
+  at once with "not built … run `rv bootstrap` first" (checked: exit 1 in under a
+  second, no rebuild), and `hash-tools.sh` is part of the cache key because it decides
+  what the recorded hashes cover. The `--verify` run under the new key `af8a5c44…` is
+  in flight; stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch,
+  mkfat or elf2pe, and its cache key omits the host cmake and ninja versions. BUG-28 was
+  the reason the earlier pass proved nothing about linking; ADR-31 changes the source tree.
 - GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
   every commit since the restructure has a subject of 64 characters or fewer, and
   ROADMAP.md 1.4 now requires a merge commit to name its score. History before the

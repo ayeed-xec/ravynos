@@ -43,7 +43,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 # The cache key: content hash over every file that determines what gets built.
-HASH_INPUTS=(stage1.sh llvm/_PROVENANCE llvm/fetch.sh llvm/build.sh)
+HASH_INPUTS=(stage1.sh llvm/_PROVENANCE llvm/fetch.sh llvm/build.sh llvm/hash-tools.sh)
 HASH=$(cd "$SCRIPT_DIR" && sha256sum "${HASH_INPUTS[@]}" | sha256sum | awk '{print $1}')
 CACHE="$TREE/build/toolchain/$HASH"
 STAMP="$CACHE/.stage1-ok"
@@ -83,6 +83,12 @@ if [ "$VERIFY" -eq 1 ]; then
     # GAP-55: verify must not trust what a previous run wrote. A real verify
     # rebuilds into a scratch dir with the same content hash and compares the
     # fresh tools.sha256 against the recorded one; only an exact match passes.
+    # It compares against a built cache entry, so say that instead of spending a
+    # full rebuild to report a missing file as a hash mismatch.
+    if [ ! -f "$CACHE/tools.sha256" ] || [ ! -f "$STAMP" ]; then
+        echo "error: stage-1 toolchain $HASH is not built (no $CACHE/tools.sha256); run 'rv bootstrap' first" >&2
+        exit 1
+    fi
     VERIFY_TMP="$CACHE/.verify.$$"
     bash "$SCRIPT_DIR/llvm/build.sh" build/vendor/llvm-project "$VERIFY_TMP" ${JOBS:+"$JOBS"} \
         || { echo "error: verify rebuild failed" >&2; exit 1; }
