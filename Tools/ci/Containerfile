@@ -2,9 +2,10 @@
 # Copyright (c) 2026 The ravynOS Authors
 #
 # The gate image (SYSTEM-DESIGN.md 2.2, 5.6, GAP-40). The base is pinned by
-# digest and every package comes from the Ubuntu archive as it stood at
-# SNAPSHOT (snapshot.ubuntu.com), so two builds of this file install the same
-# package versions. Changing either pin is a reviewed change to this file.
+# digest and every package but ca-certificates comes from the Ubuntu archive
+# as it stood at SNAPSHOT (snapshot.ubuntu.com), so two builds of this file
+# install the same package versions. Changing either pin is a reviewed change
+# to this file.
 ARG BASE=ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
 FROM ${BASE}
 ARG SNAPSHOT=20261127T000000Z
@@ -17,11 +18,14 @@ ARG RUSTUP_SHA256=b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# apt fetches the snapshot over plain http: the base image has no CA
-# certificates yet, and apt checks every index against the archive's signed
-# Release file regardless of transport.
-RUN printf 'APT::Snapshot "%s";\nAcquire::Snapshots::URI::Origin::Ubuntu "http://snapshot.ubuntu.com/@PATH@/@SNAPSHOTID@/";\n' \
-        "$SNAPSHOT" >/etc/apt/apt.conf.d/50snapshot
+# apt reaches snapshot.ubuntu.com over https, and the base image has no CA
+# certificates, so ca-certificates alone comes from the live archive (over
+# http, checked against the archive's signed Release file like every apt
+# download). Every other package comes from the snapshot.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && printf 'APT::Snapshot "%s";\n' "$SNAPSHOT" >/etc/apt/apt.conf.d/50snapshot
 
 # Stage 0: clang/lld/llvm for the builds, ninja for rv's output, QEMU with
 # firmware for the boot smokes, and shellcheck/git for the gates. byacc and the
