@@ -423,8 +423,13 @@ that backs it:
   `E-CYCLE`, `E-LAYER`, `E-DEP-UNKNOWN` and `E-ROOT`.
 - GAP-56 **closed**: licences match by exact SPDX id, case-insensitively, with `0BSD`
   accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
-- GAP-40 **partial**: `Tools/ci/Containerfile` pins the toolchain but has not been
-  built yet, so CI still runs on the runner image.
+- GAP-40 **open, blocked on the sandbox**: `Tools/ci/Containerfile` pins the toolchain
+  but has not been built. `ubuntu:24.04` pulled from Docker Hub, and the image build
+  stops at `apt-get update`: containers in this workspace cannot reach
+  `archive.ubuntu.com` at all — the host can (`apt-get update` exits 0) and the container
+  fails both on the default bridge and with `--network=host`, so it is the egress
+  allowlist, not the Containerfile. The image has to be built on a CI runner, where the
+  network is open; the Containerfile itself is unchanged.
 - BUG-28 **closed** (linker verified): the stage-1 toolchain was built from
   `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`, whose lld refuses every Mach-O input
   (`This version of lld does not support linking for platform macOS`, reproduced by
@@ -461,10 +466,10 @@ that backs it:
   `04c9139e…` is in flight. Stage-1 still does not build `libclang`, byacc, rvpatch,
   mkfat or elf2pe. BUG-28 was the reason the earlier pass proved nothing about
   linking; ADR-31 changes the source tree.
-- GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
-  every commit since the restructure has a subject of 64 characters or fewer, and
-  ROADMAP.md 1.4 now requires a merge commit to name its score. History before the
-  restructure still mixes `Docs:` and `docs:` and carries one foreign author address.
+- GAP-59 **closed** (ADR-32): the stray `Tools/mig-mvtmp/` and
+  `Apps/.tmp_bad_manifest` are gone, every commit since the restructure has a subject of
+  72 characters or fewer with a lowercase scope, and ROADMAP.md 1.4 requires a merge
+  commit to name its score. `Tools/ci/check-commit-subjects.sh` enforces the rules on the commits being offered, and three host-tool cases cover it.
 - GAP-32 **closed**: `Docs/DESIGN.md` names only files that exist (`Docs/design/`,
   `Docs/design/DECISIONS.md`, `Tools/ci/check-spdx.sh`, `rv audit licenses`); four
   host-tool cases fail if a retired path returns. `Tests/perf/` and `Tests/kpi/` are

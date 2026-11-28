@@ -314,3 +314,9 @@ The pin is `llvm/llvm-project` at `llvmorg-21.1.6`
 clang can target `riscv64-unknown-e`. Swift keeps its own pin (`swiftlang/swift`), which
 builds against this tree at W2; the fork choice there is unaffected. Unchanged: one LLVM
 tree for compiler and linker, fetched by pin, never committed (ADR-10).
+
+### ADR-32 — Commit subjects are checked from the restructure onward
+
+`Tools/ci/check-commit-subjects.sh` checks every commit after `5112c72bc`: a subject of
+72 characters or fewer with a lowercase scope. Commits up to `5112c72bc` predate the
+check and are not checked. GAP-59 is closed on that basis.

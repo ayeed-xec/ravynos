@@ -241,6 +241,33 @@ test_stage1_key() {
 	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$copy")" != "$(bash "$ROOT/Tools/toolchain/llvm/key.sh")" ]; then ok; else bad "stage1 key ignores changes to build.sh"; fi
 }
 
+test_commit_subjects() {
+	# GAP-59: subjects stay short and lowercase-scoped. The checker reads the
+	# repository it lives in, so run a copy inside a scratch repository.
+	local d="$WORK/commitrepo"
+	rm -rf "$d"
+	mkdir -p "$d/Tools/ci"
+	cp "$ROOT/Tools/ci/check-commit-subjects.sh" "$d/Tools/ci/"
+	git -C "$d" init -q
+	git -C "$d" config user.email test@example.invalid
+	git -C "$d" config user.name test
+	printf 'a\n' >"$d/a"
+	git -C "$d" add a
+	git -C "$d" commit -qm "rv: a good subject"
+
+	if bash "$d/Tools/ci/check-commit-subjects.sh" 'HEAD^..HEAD' >/dev/null 2>&1; then ok; else bad "commit-subjects rejects a good subject"; fi
+
+	printf 'b\n' >"$d/b"
+	git -C "$d" add b
+	git -C "$d" commit -qm "Docs: mixed case prefix"
+	expect_fail "commit-subjects rejects an uppercase scope" bash "$d/Tools/ci/check-commit-subjects.sh" 'HEAD^..HEAD'
+
+	printf 'c\n' >"$d/c"
+	git -C "$d" add c
+	git -C "$d" commit -qm "rv: $(printf 'x%.0s' $(seq 1 80))"
+	expect_fail "commit-subjects rejects an over-long subject" bash "$d/Tools/ci/check-commit-subjects.sh" 'HEAD^..HEAD'
+}
+
 test_rvpatch
 test_mkfat
 test_elf2pe
@@ -248,6 +275,7 @@ test_hash_tools
 test_xnu_parsers
 test_doc_paths
 test_stage1_key
+test_commit_subjects
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

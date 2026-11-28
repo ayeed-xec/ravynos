@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install toolchain
         run: |
@@ -32,9 +34,14 @@ jobs:
           shellcheck Tools/ci/check-format.sh
           bash -n Tools/ci/check-spdx.sh
           shellcheck Tools/ci/check-spdx.sh
+          bash -n Tools/ci/check-commit-subjects.sh
+          shellcheck Tools/ci/check-commit-subjects.sh
 
       - name: SPDX identifiers on every file we own
         run: Tools/ci/check-spdx.sh
+
+      - name: Commit subjects in this change
+        run: Tools/ci/check-commit-subjects.sh 'HEAD^..HEAD'
 
       - name: Host tool unit tests (rvpatch, mkfat, elf2pe)
         run: |
