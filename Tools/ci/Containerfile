@@ -15,7 +15,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # the gates. No GCC, binutils, bison, flex or GNU make (ADR-17, ADR-24).
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-        clang-18 lld-18 llvm-18 llvm-18-tools \
+        clang-18 clang-format-18 lld-18 llvm-18 llvm-18-tools \
+        cargo rustc rustfmt \
         byacc ninja-build cmake \
         qemu-system-x86 qemu-system-arm qemu-system-misc \
         ovmf qemu-efi-aarch64 opensbi \
@@ -23,7 +24,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # The unversioned names are what rv and the scripts invoke.
-RUN for tool in clang clang++ ld.lld llvm-ar llvm-nm llvm-objcopy llvm-strip; do \
+RUN for tool in clang clang++ clang-format ld.lld llvm-ar llvm-nm llvm-objcopy llvm-strip; do \
         target="/usr/local/bin/${tool}"; src=$(command -v "${tool}-18" || true); \
         if [ -n "${src}" ]; then ln -sfn "${src}" "${target}"; fi; \
     done \

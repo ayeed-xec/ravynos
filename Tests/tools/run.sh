@@ -231,8 +231,13 @@ test_stage1_key() {
 	if [ "$k1" != "$k2" ]; then ok; else bad "stage1 key ignores the host cmake version"; fi
 
 	# GAP-55: the stage-1 set carries the Mach-O inspection tools stage 2 needs.
+	# The list goes into a variable first: piping printf into `grep -q` lets
+	# grep exit early, and pipefail then reports the writer's SIGPIPE as a
+	# failure even though the tool was found.
+	local list
+	list=$(bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" --list)
 	for t in llvm-objdump llvm-lipo dsymutil; do
-		if bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" --list | grep -qx "$t"; then ok; else bad "hash-tools: $t is not in the stage-1 list"; fi
+		if grep -qx "$t" <<<"$list"; then ok; else bad "hash-tools: $t is not in the stage-1 list"; fi
 	done
 
 	# ... and the content of the scripts that build it.

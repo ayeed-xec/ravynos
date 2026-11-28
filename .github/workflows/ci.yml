@@ -95,6 +95,33 @@ jobs:
       - name: mig builds from the pinned tree plus its patches
         run: Tools/mig/build.sh
 
+  gates-image:
+    name: gates in the pinned image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Build the gate image
+        run: docker build -f Tools/ci/Containerfile -t ravynos-gates Tools/ci
+
+      - name: Run every gate inside it
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: /src
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            -e GIT_CONFIG_COUNT -e GIT_CONFIG_KEY_0 -e GIT_CONFIG_VALUE_0 \
+            ravynos-gates bash -eu -c '
+              Tools/ci/check-format.sh
+              Tools/ci/check-spdx.sh
+              Tools/ci/check-host-tools.sh
+              Tools/ci/check-commit-subjects.sh "HEAD^..HEAD"
+              Tests/tools/run.sh
+            '
+
   boot:
     name: boot smokes (QEMU TCG)
     runs-on: ubuntu-latest

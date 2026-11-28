@@ -423,13 +423,20 @@ that backs it:
   `E-CYCLE`, `E-LAYER`, `E-DEP-UNKNOWN` and `E-ROOT`.
 - GAP-56 **closed**: licences match by exact SPDX id, case-insensitively, with `0BSD`
   accepted and the look-alikes (`BSD-4-Clause`, `MIT-0`) refused; three unit tests.
-- GAP-40 **open, blocked on the sandbox**: `Tools/ci/Containerfile` pins the toolchain
-  but has not been built. `ubuntu:24.04` pulled from Docker Hub, and the image build
-  stops at `apt-get update`: containers in this workspace cannot reach
-  `archive.ubuntu.com` at all — the host can (`apt-get update` exits 0) and the container
-  fails both on the default bridge and with `--network=host`, so it is the egress
-  allowlist, not the Containerfile. The image has to be built on a CI runner, where the
-  network is open; the Containerfile itself is unchanged.
+- GAP-40 **closed, built and run**: `Tools/ci/Containerfile` was missing
+  `clang-format-18`, `cargo`, `rustc` and `rustfmt`, which the format gate needs, so the
+  image could never have run it; it installs them now and links `clang-format`. The image
+  builds from `ubuntu:24.04` and every gate passes inside it: `check-format.sh`,
+  `check-spdx.sh`, `check-host-tools.sh` and `Tests/tools/run.sh` (78 passed, 0 failed,
+  three consecutive runs). The new `gates-image` CI job builds the same image and runs
+  the same gates in it. This sandbox needed two local accommodations, both outside the
+  Containerfile: its containers filter plain HTTP and proxy TLS, so the base image was
+  built with `https` sources and the host trust store (`ubuntu:24.04-sandbox`, passed as
+  `--build-arg BASE`), and the bind-mounted repo needed `safe.directory`. A CI runner
+  with an open network needs neither. Found on the way: the gate scripts treat a
+  `git ls-files` failure as "nothing to check" in `check-spdx.sh` and
+  `check-host-tools.sh` (both exit 1) but `check-format.sh` printed the error and still
+  exited 0 when run against an untrusted mount; the ownership cause is gone in CI.
 - BUG-28 **closed** (linker verified): the stage-1 toolchain was built from
   `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`, whose lld refuses every Mach-O input
   (`This version of lld does not support linking for platform macOS`, reproduced by
