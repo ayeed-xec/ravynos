@@ -1,67 +1,104 @@
 #!/bin/bash
 # SPDX-License-Identifier: BSD-2-Clause
 # Copyright (c) 2026 The ravynOS Authors
+
+# Build mig and migcom from the pristine bootstrap_cmds tree plus the patch
+# series. byacc and rvpatch come from the stage-1 build tools (`rv bootstrap`),
+# never from the host's package manager.
+#
+# usage: build.sh [--out <dir>] [--smoke]
+#
+#   --out <dir>   where work/, bin/mig and libexec/migcom go (default: Tools/mig)
+#   --smoke       run mig over tests/trivial.defs after the build
+#
+# BYACC and RVPATCH name the tools when they are not on PATH; CFLAGS is added
+# to the migcom compile.
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RAVYNOS_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VENDORED="$RAVYNOS_ROOT/Tools/mig/upstream/migcom.tproj"
+ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+VENDORED="$SCRIPT_DIR/upstream/migcom.tproj"
 PATCHES="$SCRIPT_DIR/patches"
 SHIM="$SCRIPT_DIR/include"
-WORK="$SCRIPT_DIR/work"
-BIN="$SCRIPT_DIR/bin"
-LIBEXEC="$SCRIPT_DIR/libexec"
+BYACC=${BYACC:-byacc}
+RVPATCH=${RVPATCH:-rvpatch}
+
+usage() {
+    echo "usage: $0 [--out <dir>] [--smoke]" >&2
+    exit 2
+}
+
+OUT=$SCRIPT_DIR
+SMOKE=0
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --out)
+            [ "$#" -ge 2 ] || usage
+            mkdir -p "$2"
+            OUT="$(cd "$2" && pwd)"
+            shift
+            ;;
+        --smoke) SMOKE=1 ;;
+        *) usage ;;
+    esac
+    shift
+done
+WORK="$OUT/work"
+
+for tool in "$BYACC" "$RVPATCH" clang; do
+    command -v "$tool" >/dev/null 2>&1 || {
+        echo "error: $tool not found; build the stage-1 tools with 'rv bootstrap'" >&2
+        echo "       and put build/toolchain/buildtools-<key>/bin on PATH" >&2
+        exit 1
+    }
+done
 
 TAG=""
 while IFS= read -r line; do
     case "$line" in
         "* Tag: "*) TAG="${line#\* Tag: }" ;;
     esac
-done < "$RAVYNOS_ROOT/Tools/mig/_PROVENANCE"
+done <"$SCRIPT_DIR/_PROVENANCE"
 if [ -z "$TAG" ]; then
     echo "error: no 'Tag:' line in Tools/mig/_PROVENANCE" >&2
     exit 1
 fi
 
-need_pkg=()
-command -v byacc >/dev/null 2>&1 || need_pkg+=(byacc)
-command -v clang >/dev/null 2>&1 || need_pkg+=(clang)
-if [ ${#need_pkg[@]} -gt 0 ]; then
-    echo "installing missing toolchain packages: ${need_pkg[*]}"
-    sudo apt-get update -qq && sudo apt-get install -y -qq "${need_pkg[@]}"
-fi
-for tool in byacc clang; do
-    command -v "$tool" >/dev/null 2>&1 || {
-        echo "error: $tool still missing after apt-get install" >&2; exit 1; }
-done
-
-if [ "${1:-}" = "--regen-lexer" ]; then
-    echo "error: the lexer is hand-written; there is nothing to regenerate" >&2
-    exit 1
-fi
-
 rm -rf "$WORK"
-mkdir -p "$WORK" "$BIN"
-clang -fuse-ld=lld -O2 -std=gnu11 -Wall -Wextra -Werror -o "$BIN/rvpatch" "$SCRIPT_DIR/rvpatch.c"
+mkdir -p "$WORK" "$OUT/bin" "$OUT/libexec"
 cp -R "$VENDORED" "$WORK/migcom.tproj"
 
+# The series file is the order; a patch on disk that the series does not name
+# is never applied.
 cd "$WORK"
-for pf in "$PATCHES"/*.patch; do
-    [ -e "$pf" ] || { echo "error: no patches found in $PATCHES" >&2; exit 1; }
-    echo "== applying ${pf##*/}"
-    "$BIN/rvpatch" -p1 "$pf" || {
-        echo "error: hunk application FAILED for ${pf##*/}" >&2
-        echo "       (the series must apply cleanly onto pristine" >&2
-        echo "        sources; fix the series, not the vendored files)" >&2
+applied=0
+while IFS= read -r entry; do
+    case "$entry" in
+        "" | "#"*) continue ;;
+    esac
+    [ -f "$PATCHES/$entry" ] || {
+        echo "error: patches/series names $entry, which does not exist" >&2
         exit 1
     }
-done
+    echo "== applying $entry"
+    "$RVPATCH" -p1 "$PATCHES/$entry" || {
+        echo "error: $entry does not apply to the pristine tree; fix the series" >&2
+        exit 1
+    }
+    applied=$((applied + 1))
+done <"$PATCHES/series"
+[ "$applied" -gt 0 ] || {
+    echo "error: patches/series names no patch" >&2
+    exit 1
+}
 
 cd "$WORK/migcom.tproj"
-byacc -d -b y parser.y
+"$BYACC" -d -b y parser.y
 cp "$SCRIPT_DIR/generated/lexxer.c" lexxer.c
 
-clang -fuse-ld=lld -O2 -std=gnu11 -Wall \
+# shellcheck disable=SC2086 # CFLAGS is a flag list
+clang -fuse-ld=lld -O2 -g0 -std=gnu11 -Wall ${CFLAGS:-} \
     -I"$SHIM" \
     -DMIG_VERSION="\"$TAG\"" \
     -o "$WORK/migcom" \
@@ -69,27 +106,24 @@ clang -fuse-ld=lld -O2 -std=gnu11 -Wall \
     mig.c error.c global.c header.c routine.c server.c \
     statement.c string.c type.c user.c utils.c
 
-mkdir -p "$BIN" "$LIBEXEC"
-install -m 0755 "$WORK/migcom" "$LIBEXEC/migcom"
-install -m 0755 "$WORK/migcom.tproj/mig.sh" "$BIN/mig"
+install -m 0755 "$WORK/migcom" "$OUT/libexec/migcom"
+install -m 0755 "$WORK/migcom.tproj/mig.sh" "$OUT/bin/mig"
+echo "== installed: $OUT/bin/mig, $OUT/libexec/migcom"
 
-echo "== installed: $BIN/mig, $LIBEXEC/migcom"
-
-if [ "${1:-}" = "--smoke" ]; then
-    SMOKE="$SCRIPT_DIR/tests"
-    OUT="$WORK/smoke"
-    mkdir -p "$OUT"
-    "$BIN/mig" \
+if [ "$SMOKE" -eq 1 ]; then
+    mkdir -p "$WORK/smoke"
+    "$OUT/bin/mig" \
         -I"$SHIM" \
-        -I"$RAVYNOS_ROOT/Kernel/xnu/osfmk" \
-        -header "$OUT/trivial.h" \
-        -user "$OUT/trivialUser.c" \
-        -server "$OUT/trivialServer.c" \
-        "$SMOKE/trivial.defs"
-    if [ ! -s "$OUT/trivial.h" ]; then
-        echo "error: smoke test produced an empty header" >&2
-        exit 1
-    fi
-    echo "== smoke test OK:"
-    head -20 "$OUT/trivial.h"
+        -I"$ROOT/Kernel/xnu/osfmk" \
+        -header "$WORK/smoke/trivial.h" \
+        -user "$WORK/smoke/trivialUser.c" \
+        -server "$WORK/smoke/trivialServer.c" \
+        "$SCRIPT_DIR/tests/trivial.defs"
+    for f in trivial.h trivialUser.c trivialServer.c; do
+        [ -s "$WORK/smoke/$f" ] || {
+            echo "error: mig smoke produced an empty $f" >&2
+            exit 1
+        }
+    done
+    echo "== mig smoke OK: trivial.defs -> trivial.h, trivialUser.c, trivialServer.c"
 fi
