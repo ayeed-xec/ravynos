@@ -323,6 +323,39 @@ test_commit_subjects() {
 	if COMMIT_RULE_BASELINE=$baseline bash "$d/Tools/ci/check-commit-subjects.sh" HEAD >/dev/null 2>&1; then ok; else bad "commit-subjects ignores the accepted-history baseline"; fi
 }
 
+test_expect_probe() {
+	# BUG-26: a test kernel that panics for a real reason must fail the smoke.
+	local d="$WORK/probe" check="$ROOT/Boot/expect-probe.sh"
+	mkdir -p "$d"
+	probe_log_good() {
+		printf 'RVTEST boot\r\nRVTEST handoff-ok\r\nRVPANIC BEGIN magic=0x52564e50 rev=1\r\n'
+		printf 'RVPSTR probe-reached\r\nRVFRAME 0x200344\r\nRVPANIC END\r\n'
+	}
+	probe_log_good >"$d/good"
+	expect_ok "expect-probe accepts a CRLF log" bash "$check" "$d/good" t
+	tr -d '\r' <"$d/good" >"$d/lf"
+	expect_ok "expect-probe accepts an LF log" bash "$check" "$d/lf" t
+	{ printf 'BdsDxe: starting\r\n\033[0m\033[2J'; probe_log_good; } >"$d/esc"
+	expect_ok "expect-probe accepts firmware escapes before the kernel" bash "$check" "$d/esc" t
+
+	sed 's/probe-reached/bootargs-version-bad/' "$d/good" >"$d/reason"
+	expect_fail "expect-probe rejects another panic reason" bash "$check" "$d/reason" t
+	grep -v handoff-ok "$d/good" >"$d/nohandoff"
+	expect_fail "expect-probe rejects a log without the hand-off" bash "$check" "$d/nohandoff" t
+	{ probe_log_good; probe_log_good | tail -n 4; } >"$d/twice"
+	expect_fail "expect-probe rejects two panics" bash "$check" "$d/twice" t
+	grep -v 'RVPANIC END' "$d/good" >"$d/truncated"
+	expect_fail "expect-probe rejects a truncated panic block" bash "$check" "$d/truncated" t
+	tac "$d/good" >"$d/reversed"
+	expect_fail "expect-probe rejects the lines out of order" bash "$check" "$d/reversed" t
+	sed 's/^RVPSTR probe-reached/RVPSTR probe-reached-not/' "$d/good" >"$d/suffix"
+	expect_fail "expect-probe rejects a reason with a suffix" bash "$check" "$d/suffix" t
+	: >"$d/empty"
+	expect_fail "expect-probe rejects an empty log" bash "$check" "$d/empty" t
+	expect_fail "expect-probe rejects a missing log" bash "$check" "$d/none" t
+	expect_fail "expect-probe needs two arguments" bash "$check" "$d/good"
+}
+
 test_rvpatch
 test_mkfat
 test_elf2pe
@@ -332,6 +365,7 @@ test_doc_paths
 test_stage1_key
 test_buildtools_key
 test_commit_subjects
+test_expect_probe
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

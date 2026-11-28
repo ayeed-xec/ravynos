@@ -3,7 +3,7 @@ name: ci
 
 on:
   push:
-    branches: [main, darwin-clean]
+    branches: [main, darwin-clean, 'wp/**']
   pull_request:
     branches: [main, darwin-clean]
 
@@ -159,7 +159,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build clang lld llvm \
-            qemu-system-x86 qemu-system-arm qemu-system-misc ovmf qemu-efi-aarch64 opensbi
+            qemu-system-x86 qemu-system-arm qemu-system-misc qemu-system-riscv \
+            ovmf qemu-efi-aarch64 qemu-efi-riscv64 opensbi
 
       - name: x86_64 boot smoke
         run: Tests/boot/smoke.sh
