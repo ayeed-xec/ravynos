@@ -15,6 +15,11 @@ const BUNDLES: &[(&str, &str, &str)] = &[
     ("kext", ".kext", "kext"),
 ];
 
+/// The OS version Darwin-target components are built for (ADR-01: macOS
+/// 27.2.1): the `macosx<v>` triple of ADR-03 and the minos and SDK version in
+/// `LC_BUILD_VERSION` (S01 target table).
+const DEPLOYMENT: &str = "27.2";
+
 pub fn emit(manifests: &BTreeMap<String, Manifest>, order: &[String], target: &str) -> String {
     let sysroot = format!("../sysroot/{target}");
     let mut out = String::new();
@@ -383,10 +388,14 @@ fn compile_and_link_rules(target: &str, sysroot: &str) -> (String, String) {
         );
     }
     if is_macho_target(target) {
-        let platform = "-arch $arch -platform_version macos 11.0 11.0";
+        // Chained fixups are what Apple's linker emits for this deployment
+        // target, and binding through them needs no dyld_stub_binder from a
+        // libSystem that does not exist yet.
+        let platform =
+            format!("-arch $arch -platform_version macos {DEPLOYMENT} {DEPLOYMENT} -fixup_chains");
         return (
             format!(
-                "--target={}-apple-macos11 -ffreestanding -fno-builtin -nostdinc -isysroot {sysroot} ",
+                "--target={}-apple-macosx{DEPLOYMENT} -ffreestanding -fno-builtin -nostdinc -isysroot {sysroot} ",
                 macho_arch(target)
             ),
             format!(
@@ -638,6 +647,26 @@ mod tests {
             ninja.contains("build hello/hello: link hello/src_main.c.o -lhello"),
             "{ninja}"
         );
+    }
+
+    #[test]
+    fn darwin_targets_use_the_adr03_triple_and_os_version() {
+        let lib = manifest(
+            "name = \"tri\"\nlayer = \"foundation\"\nlicense = \"BSD-2-Clause\"\n\
+             state = \"working\"\nkind = \"dylib\"\nsources = [\"src/**.c\"]\n",
+        );
+        for (target, arch) in [("x86_64-ravynos", "x86_64"), ("arm64-ravynos", "arm64")] {
+            let ninja = build_ninja(std::slice::from_ref(&lib), target);
+            assert!(
+                ninja.contains(&format!("--target={arch}-apple-macosx27.2 ")),
+                "{target}: {ninja}"
+            );
+            assert!(
+                ninja.contains("-platform_version macos 27.2 27.2 -fixup_chains"),
+                "{target}: {ninja}"
+            );
+            assert!(!ninja.contains("macos11"), "{target} still names macOS 11");
+        }
     }
 
     #[test]
