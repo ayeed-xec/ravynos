@@ -1,0 +1,108 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+#
+# Stage 1 (SYSTEM-DESIGN.md S02): `rv bootstrap` builds the build tools and
+# LLVM into build/toolchain/, each cached under its own key, and
+# `rv bootstrap --verify` rebuilds both from source and compares hashes.
+# Runs when a stage-1 input changes and weekly.
+name: stage1
+
+on:
+  push:
+    branches: [main, darwin-clean, 'wp/**']
+    paths:
+      - 'Tools/toolchain/**'
+      - 'Tools/mig/**'
+      - 'Boot/mkfat/**'
+      - 'Boot/elf2pe/**'
+      - 'Tools/rv/src/bootstrap.rs'
+      - 'VENDORS'
+      - '.github/workflows/stage1.yml'
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    name: rv bootstrap
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    outputs:
+      llvm: ${{ steps.keys.outputs.llvm }}
+      buildtools: ${{ steps.keys.outputs.buildtools }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage 0 (host clang, lld, cmake, ninja)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld cmake ninja-build
+
+      - name: Cache keys
+        id: keys
+        run: |
+          echo "llvm=$(bash Tools/toolchain/llvm/key.sh)" >> "$GITHUB_OUTPUT"
+          echo "buildtools=$(bash Tools/toolchain/buildtools/key.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the LLVM component
+        uses: actions/cache@v4
+        with:
+          path: build/toolchain/${{ steps.keys.outputs.llvm }}
+          key: stage1-llvm-${{ steps.keys.outputs.llvm }}
+
+      - name: Restore the build-tools component
+        uses: actions/cache@v4
+        with:
+          path: build/toolchain/buildtools-${{ steps.keys.outputs.buildtools }}
+          key: stage1-buildtools-${{ steps.keys.outputs.buildtools }}
+
+      - name: rv bootstrap
+        run: cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap
+
+      - name: LLVM build log
+        if: failure()
+        run: tail -n 200 "build/toolchain/${{ steps.keys.outputs.llvm }}/build.log" || true
+
+      # The object tree is only needed during the build; leaving it would put
+      # several gigabytes into the cache entry.
+      - name: Drop the LLVM object tree before the cache is saved
+        run: rm -rf "build/toolchain/${{ steps.keys.outputs.llvm }}/obj"
+
+  verify:
+    name: rv bootstrap --verify
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage 0 (host clang, lld, cmake, ninja)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld cmake ninja-build
+
+      - name: The keys match the bootstrap job
+        run: |
+          test "$(bash Tools/toolchain/llvm/key.sh)" = "${{ needs.bootstrap.outputs.llvm }}"
+          test "$(bash Tools/toolchain/buildtools/key.sh)" = "${{ needs.bootstrap.outputs.buildtools }}"
+
+      - name: Restore the LLVM component
+        uses: actions/cache/restore@v4
+        with:
+          path: build/toolchain/${{ needs.bootstrap.outputs.llvm }}
+          key: stage1-llvm-${{ needs.bootstrap.outputs.llvm }}
+          fail-on-cache-miss: true
+
+      - name: Restore the build-tools component
+        uses: actions/cache/restore@v4
+        with:
+          path: build/toolchain/buildtools-${{ needs.bootstrap.outputs.buildtools }}
+          key: stage1-buildtools-${{ needs.bootstrap.outputs.buildtools }}
+          fail-on-cache-miss: true
+
+      - name: rv bootstrap --verify
+        run: cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap --verify
+
+      - name: LLVM rebuild log
+        if: failure()
+        run: tail -n 200 build/toolchain/${{ needs.bootstrap.outputs.llvm }}/.verify.*/build.log || true

@@ -10,14 +10,16 @@ FROM ${BASE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Toolchain: clang/lld/llvm for the builds, byacc for mig's parser, ninja for
-# rv's output, QEMU with firmware for the boot smokes, and shellcheck/git for
-# the gates. No GCC, binutils, bison, flex or GNU make (ADR-17, ADR-24).
+# Stage 0: clang/lld/llvm for the builds, ninja for rv's output, QEMU with
+# firmware for the boot smokes, and shellcheck/git for the gates. byacc and the
+# other stage-1 build tools are built from their pins by
+# Tools/toolchain/buildtools.sh, not installed from apt. No GCC, binutils,
+# bison, flex or GNU make (ADR-17, ADR-24).
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
         clang-18 clang-format-18 lld-18 llvm-18 llvm-18-tools \
         cargo rustc rustfmt \
-        byacc ninja-build cmake \
+        ninja-build cmake \
         qemu-system-x86 qemu-system-arm qemu-system-misc \
         ovmf qemu-efi-aarch64 opensbi \
         git curl ca-certificates python3 shellcheck file \
