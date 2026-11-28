@@ -32,7 +32,7 @@ fn usage() -> ! {
     eprintln!(
         "usage: rv [--root <tree>] <command>\n\
          usage: rv build [-t <target>] [<component>|<layer>...]\n\
-         usage: rv bootstrap [--verify] [--refetch] [-j <jobs>]\n\
+         usage: rv bootstrap [--verify] [--refetch] [-j <jobs>] [buildtools|llvm...]\n\
          usage: rv graph [--reverse] [--forbid]\n\
          usage: rv shell [<component>]\n\
          usage: rv sdk [-t <target>]\n\
