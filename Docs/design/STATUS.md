@@ -250,16 +250,28 @@ has since changed, the entry says so and points at the evidence.
   `Boot/` though its message claims it, the Ravyn kexts, `Kernel/build` and `Tests`;
   clang-format is unpinned.
 - GAP-55 Closed on CI evidence (owner decision: it closes only on a green run of
-  `rv bootstrap` and `rv bootstrap --verify` in CI): https://github.com/ayeed-xec/ravynos/actions/runs/46135178066. Job "rv
-  bootstrap" ran `rv bootstrap` from a cold cache, building the build tools and the
-  LLVM component (1 h 40 min) and saving both cache entries. Job "rv bootstrap
-  --verify" restored them, refetched llvm-project at `llvmorg-21.1.6`, rebuilt the
-  stage-1 LLVM tools into `.verify.3125` and printed `stage1 verify OK: d21131c5…`
-  (clang 21.1.6), which `stage1.sh` prints only when the rebuilt `tools.sha256` matches
-  the recorded one; the build tools printed "rebuild matches the recorded hashes". The
-  run is at `c0ef0d39b2`; `git diff c0ef0d39b2 9d8ea2e7ce -- Tools/toolchain/stage1.sh
-  Tools/toolchain/llvm` is empty, so the LLVM component it verified is the one in the
-  tree. What its first report listed is done, with these checks:
+  `rv bootstrap` and `rv bootstrap --verify` in CI), in run 46135178066 of the
+  `stage1.yml` workflow, since replaced by `stage1-llvm.yml` and
+  `stage1-buildtools.yml`:
+  https://github.com/ayeed-xec/ravynos/actions/runs/46135178066
+  - Job "rv bootstrap" ran `rv bootstrap` from a cold cache and built both
+    components (LLVM in 1 h 40 min). Its save of the LLVM entry failed because
+    run 46137001716 (same LLVM key) was saving it at the same time; that run's
+    job 140954419109 built LLVM independently and saved the entry at 11:58.
+  - Job "rv bootstrap --verify" restored that LLVM entry and this run's build-tools
+    entry, refetched llvm-project at `llvmorg-21.1.6`, rebuilt the stage-1 LLVM
+    tools into `.verify.3125` and printed `stage1 verify OK: d21131c5…` (clang
+    21.1.6). Under `--verify`, `stage1.sh` prints that only when the rebuilt
+    `tools.sha256` matches the recorded one, so two separate CI builds of LLVM
+    produced the same hashes. The build tools printed "rebuild matches the
+    recorded hashes".
+  - The run is at `c0ef0d39b2`; `git diff c0ef0d39b2 9d8ea2e7ce --
+    Tools/toolchain/stage1.sh Tools/toolchain/llvm` is empty, so the LLVM component
+    it verified is the one in the tree. The build tools changed after that commit;
+    as they are in the tree (only `VENDORS` differs among their inputs), bootstrap
+    and `--verify` went green in stage1-buildtools run 46138089251.
+  - `stage1-llvm.yml` itself has no completed run yet.
+  What its first report listed is done, with these checks:
   - `--verify` rebuilds into a scratch directory and diffs `tools.sha256` against
     the recorded list, for both components (`stage1.sh`, `buildtools.sh`); host-tool
     tests tamper with the recorded hashes and with an installed tool and expect a
@@ -280,8 +292,8 @@ has since changed, the entry says so and points at the evidence.
     in, and the `fate:` lines use the section 2.5 values.
   - CI runs `rv bootstrap <component>` and `rv bootstrap --verify <component>` in
     `stage1-llvm.yml` and `stage1-buildtools.yml`, each cached under its own key.
-  Split out of GAP-55: GAP-61,
-  GAP-62, GAP-63, GAP-64; the musl and `.cargo/config.toml` items are under GAP-08.
+  Split out of GAP-55: GAP-61, GAP-62, GAP-63, GAP-64; the musl and `.cargo/config.toml`
+  items are under GAP-08.
 - GAP-61 libclang and `llvm-readtapi` are not in the LLVM component. They are added
   at the component's next rebuild, before W1; the owner decided not to rebuild LLVM
   for them alone.
