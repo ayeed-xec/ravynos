@@ -31,9 +31,12 @@ jobs:
         env:
           BEFORE: ${{ github.event.before }}
           BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          # A pull request checks out GitHub's synthetic merge commit; the range
+          # ends at the branch head so that commit is not judged.
           if [ -n "$BASE" ]; then
-            range="$BASE..HEAD"
+            range="$BASE..$HEAD_SHA"
           elif [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] \
               && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             range="$BEFORE..HEAD"
