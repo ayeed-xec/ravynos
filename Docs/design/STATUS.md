@@ -188,6 +188,8 @@ has since changed, the entry says so and points at the evidence.
   output with `Tools/ci/check-macho.sh` (magic, CPU, file type, `LC_BUILD_VERSION`
   platform macos, minos 27.2). It emitted `--target=<arch>-apple-macos11` and
   `macos 11.0 11.0` until this change, against ADR-01 and the S01 target table.
+  Evidence: https://github.com/ayeed-xec/ravynos/actions/runs/46139710547, step "Linked outputs pass the S02 Mach-O
+  assertion" in "rv gates" and the same check inside the pinned image.
 - GAP-02 Closed (see "Gap closure after P4").
 - GAP-03 Closed (see "Gap closure after P4").
 - GAP-04 Closed (see "Gap closure after P4").
@@ -209,7 +211,7 @@ has since changed, the entry says so and points at the evidence.
   `-t arm64-ravynos` must produce `libhello.dylib` of file type `MH_DYLIB`.
   `Foundation/libhello` is now `kind = "dylib"` with install name
   `/usr/lib/libhello.dylib`, `hello-cli` links it, and CI asserts `MH_DYLIB` on both
-  arches. libhello and hello-cli dropped `riscv64-ravynos`: a riscv64 dylib needs
+  arches (https://github.com/ayeed-xec/ravynos/actions/runs/46139710547). libhello and hello-cli dropped `riscv64-ravynos`: a riscv64 dylib needs
   the Mach-O target of ADR-03. Also fixed: `rv build` checked `targets` on every
   manifest instead of the selected ones (S01); unit tests in `Tools/rv/src/main.rs`.
 
@@ -433,7 +435,9 @@ no code at all.)
   own container (SYSTEM-DESIGN 2.2, 5.6). `Tools/ci/Containerfile` is that container:
   base `ubuntu:24.04` pinned by digest, apt pinned to the 2026-11-27 archive snapshot,
   Rust 1.97.0 from a checksum-pinned rustup (matching `rust-toolchain.toml`, checked
-  in the job), and the image build fails if bison, flex or m4 is present. The
+  in the job), and the image build fails if bison, flex or m4 is present.
+  `ca-certificates` alone comes from the live archive, to reach the snapshot over
+  https. Evidence: https://github.com/ayeed-xec/ravynos/actions/runs/46139710547, job "gates in the pinned image". The
   "gates in the pinned image" job builds it and runs, inside it, the stage-1 build
   tools, the format, SPDX, host-tool and commit-subject gates, `Tests/tools/run.sh`,
   rv's and xnuhook's tests and clippy, `rv build` for both Darwin targets and the
@@ -635,7 +639,8 @@ that backs it:
 |---|---|
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
-| W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
+| W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; `Tools/ci/check-macho.sh` on both arches, https://github.com/ayeed-xec/ravynos/actions/runs/46139710547) |
+| W0: `libhello.dylib` is `MH_DYLIB` on both arches (S01 done-when 3) | closed (asserted in CI by `check-macho.sh`, https://github.com/ayeed-xec/ravynos/actions/runs/46139710547; the assertion runs in CI, not yet inside rv, GAP-65) |
 | W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: both components build and `--verify` reproduces them; it closes on a green CI run of `rv bootstrap` and `--verify`, not recorded yet. GAP-61: libclang and `llvm-readtapi` come with the next LLVM rebuild) |
 | W0: every merged component scores at least 8/10 in review | open (independent scores at the top of this file: rv 4, stage-1 5, loader 3, mig 6, xnuhook 7, CI 4) |
 | W0: negative tests fail as designed in CI | open (GAP-65: the four cases in `Tests/rv/negative/run.sh` run in CI, but only two of the twelve S01 lists exist) |
