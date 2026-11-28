@@ -246,6 +246,50 @@ test_stage1_key() {
 	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$copy")" != "$(bash "$ROOT/Tools/toolchain/llvm/key.sh")" ]; then ok; else bad "stage1 key ignores changes to build.sh"; fi
 }
 
+test_buildtools_key() {
+	# The build tools and LLVM are separate stage-1 components: a change to one
+	# must not move the other's cache key (GAP-55), or a byacc fix would cost a
+	# full LLVM rebuild.
+	local t="$WORK/bt-tree" bt llvm
+	mkdir -p "$t/Tools" "$t/Boot"
+	cp -a "$ROOT/Tools/toolchain" "$ROOT/Tools/mig" "$t/Tools/"
+	cp -a "$ROOT/Boot/mkfat" "$ROOT/Boot/elf2pe" "$t/Boot/"
+	cp "$ROOT/VENDORS" "$t/"
+
+	bt=$(bash "$t/Tools/toolchain/buildtools/key.sh")
+	llvm=$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")
+	if [[ $bt =~ ^[0-9a-f]{64}$ ]]; then ok; else bad "buildtools key is not a sha256: $bt"; fi
+	if [ "$bt" = "$(bash "$ROOT/Tools/toolchain/buildtools/key.sh")" ]; then ok; else bad "buildtools key depends on the checkout path"; fi
+
+	printf '\n# a change to an LLVM input\n' >>"$t/Tools/toolchain/llvm/build.sh"
+	if [ "$(bash "$t/Tools/toolchain/buildtools/key.sh")" = "$bt" ]; then ok; else bad "an LLVM change moved the buildtools key"; fi
+	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")" != "$llvm" ]; then ok; else bad "llvm key ignores llvm/build.sh"; fi
+	llvm=$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")
+
+	local input
+	for input in Tools/toolchain/buildtools/build.sh Tools/mig/patches/series Boot/mkfat/mkfat.c VENDORS; do
+		if [ "$input" = VENDORS ]; then
+			sed -i 's/"t20260126"/"t20251214"/' "$t/VENDORS"
+		else
+			printf '\n' >>"$t/$input"
+		fi
+		if [ "$(bash "$t/Tools/toolchain/buildtools/key.sh")" != "$bt" ]; then ok; else bad "buildtools key ignores $input"; fi
+		bt=$(bash "$t/Tools/toolchain/buildtools/key.sh")
+		if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")" = "$llvm" ]; then ok; else bad "a change to $input moved the llvm key"; fi
+	done
+	# Only the byacc and unifdef pins are keyed, not the rest of VENDORS.
+	printf '\n# unrelated\n' >>"$t/VENDORS"
+	if [ "$(bash "$t/Tools/toolchain/buildtools/key.sh")" = "$bt" ]; then ok; else bad "an unrelated VENDORS edit moved the buildtools key"; fi
+
+	expect_ok "vendor-pin reads a fetched pin" bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" byacc
+	if [[ $(wc -l <"$WORK/out") -eq 3 ]] && grep -qx '[0-9a-f]\{40\}' "$WORK/out"; then ok; else bad "vendor-pin output is not upstream, tag, commit"; fi
+	expect_fail "vendor-pin refuses a committed tree" bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" xnu
+	expect_fail "vendor-pin refuses an unknown name" bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" no-such-tree
+	expect_fail "buildtools --verify refuses a cold cache" bash "$t/Tools/toolchain/buildtools.sh" --verify
+	if grep -q "not built" "$WORK/out"; then ok; else bad "buildtools --verify did not say the cache is cold"; fi
+	expect_fail "buildtools rejects an unknown flag" bash "$ROOT/Tools/toolchain/buildtools.sh" --fast
+}
+
 test_commit_subjects() {
 	# GAP-59: subjects stay short and lowercase-scoped. The checker reads the
 	# repository it lives in, so run a copy inside a scratch repository.
@@ -286,6 +330,7 @@ test_hash_tools
 test_xnu_parsers
 test_doc_paths
 test_stage1_key
+test_buildtools_key
 test_commit_subjects
 
 echo "host tool tests: $passed passed, $failed failed"
