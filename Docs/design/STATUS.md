@@ -123,9 +123,22 @@ What exists, and whether it is a real implementation:
   `EfiRuntimeServicesData` outside the range `ksize` covers; `SetVirtualAddressMap` is
   never called; `boot_args` `Revision` is 0 and the command line is the placeholder
   `rvynos`.
-- **BUG-26** The boot smokes (`Boot/smoke/*`) pass on any panic message, so a kernel
-  that panics at once is reported as a success; the ESP paths they write do not match
-  where the loader looks.
+- BUG-26 Closed. The boot smokes passed on any panic block, so a test kernel that
+  panicked on bad `boot_args` was reported as a success: with the version check
+  forced to fail, `Boot/run.sh` printed "structured panic block captured" and
+  exited 0 on a log reading `RVPSTR bootargs-version-bad`. `Boot/expect-probe.sh`
+  now requires exactly the lines `RVTEST boot`, `RVTEST handoff-ok`, one panic
+  block and `RVPSTR probe-reached`, in that order, and all three runners use it;
+  the same forced failure now exits 1. Twelve fake-log cases in
+  `Tests/tools/run.sh` cover it (wrong reason, no hand-off, two panics,
+  truncated, reversed, CRLF, firmware escapes). The ESP-path half did not hold
+  for the current tree: `Boot/image.sh` writes `KERNEL.ELF` at the ESP root and
+  the loader looks for `\kernel.elf` (`Boot/loader/main.c:208`), the same name on
+  FAT, and every smoke reaches `RVTEST handoff-ok`, which needs the loaded
+  kernel. Evidence: all four smokes green under the new check in
+  https://github.com/ayeed-xec/ravynos/actions/runs/46135899021 (job "boot smokes
+  (QEMU TCG)", each step printing "hand-off validated, deliberate probe panic
+  captured").
 - BUG-27 Partly fixed in `rv`: a manifest `name` must be one path component (no `/`,
   `\`, `..` or leading `.`), so it can no longer resolve outside `build/`; manifest
   discovery skips symbolic links; duplicate names are covered by a negative fixture.
@@ -181,9 +194,10 @@ What exists, and whether it is a real implementation:
 **S03 SDK** — GAP-29: not started. No `VENDORS` file at the root (the old
 `Legacy/VENDORS` was removed with WP0.0; no xnu pin).
 
-**S04 bootloader** — BUG-02 to BUG-06, BUG-13, BUG-24 to BUG-26. The source uses tabs
-against `.clang-format`. CI does not build the loader or run the
-boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT target.
+**S04 bootloader** — BUG-02 to BUG-06, BUG-13, BUG-24, BUG-25. The source uses tabs
+against `.clang-format`. CI builds the loader and runs the x86_64, Mach-O, arm64 and
+riscv64 smokes, each as its own step (run 46135899021). The arm64 smoke uses
+`cortex-a57`, which cannot run the RVVIRT target.
 
 **S05 kernel build**
 - GAP-12 Closed: `Kernel/build/` was removed with WP0.0; the kernel build outside
@@ -501,7 +515,7 @@ that backs it:
 | W0: SPDX on every file we own | closed (GAP-45, GAP-57; 15 remaining files fixed, `Tools/ci/check-spdx.sh` in CI) |
 | W0: every section 5.6 gate runs in CI | open (GAP-40: all gates wired except the `Tools/ci/Containerfile` build) |
 | W1: kernel links with no stubs, both arches | open (GAP-12–GAP-16, GAP-41) |
-| W1: loader boots XNU to its banner, both arches | open (BUG-02–BUG-06, BUG-24–BUG-26, GAP-39) |
+| W1: loader boots XNU to its banner, both arches | open (BUG-02–BUG-06, BUG-24, BUG-25, GAP-39) |
 | W1: T0 passes on both arches | open (GAP-07) |
 | W1: P2, P9, P10 recorded | open |
 | W0: GRUB rig and `Kernel/build/` removed | closed (GAP-17) |

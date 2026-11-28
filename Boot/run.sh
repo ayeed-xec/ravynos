@@ -80,17 +80,4 @@ if [[ $STATUS -ne 0 && $STATUS -ne 124 ]]; then
 	exit "$STATUS"
 fi
 
-if ! grep -q "RVPANIC BEGIN" "$LOG"; then
-	echo "run.sh: no structured panic block in serial log (qemu status $STATUS)" >&2
-	echo "---- captured serial ----" >&2
-	cat "$LOG" >&2
-	exit 1
-fi
-if ! grep -q "RVPANIC END" "$LOG"; then
-	echo "run.sh: panic block truncated in serial log" >&2
-	cat "$LOG" >&2
-	exit 1
-fi
-
-echo "run.sh: structured panic block captured in $LOG"
-exit 0
+bash "$ROOT/expect-probe.sh" "$LOG" "run.sh (qemu status $STATUS)"

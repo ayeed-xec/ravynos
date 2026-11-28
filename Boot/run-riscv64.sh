@@ -47,6 +47,10 @@ command -v qemu-system-riscv64 >/dev/null || {
 	echo "run-riscv64.sh: edk2 riscv64 firmware not found at $RISCV_CODE" >&2
 	exit 1
 }
+[[ -f "$RISCV_VARS" ]] || {
+	echo "run-riscv64.sh: edk2 riscv64 variable store not found at $RISCV_VARS" >&2
+	exit 1
+}
 [[ -f "$OPENBSI_FW" ]] || {
 	echo "run-riscv64.sh: OpenSBI firmware not found at $OPENBSI_FW (apt-get install opensbi)" >&2
 	exit 1
@@ -55,6 +59,10 @@ command -v qemu-system-riscv64 >/dev/null || {
 	echo "run-riscv64.sh: disk image not found at $IMAGE" >&2
 	exit 1
 }
+
+# The firmware writes its variable store; give it a copy, not the system file.
+VARS="$BUILD/riscv-vars.fd"
+cp "$RISCV_VARS" "$VARS"
 
 : >"$LOG"
 STATUS=0
@@ -70,15 +78,8 @@ timeout --foreground "$TIMEOUT" qemu-system-riscv64 \
 	-serial "file:$LOG" \
 	-bios "$OPENBSI_FW" \
 	-drive "if=pflash,format=raw,readonly=on,file=$RISCV_CODE" \
-	-drive "if=pflash,format=raw,file=$RISCV_VARS" \
+	-drive "if=pflash,format=raw,file=$VARS" \
 	-drive "if=none,file=$IMAGE,format=raw,id=hd0" \
 	-device virtio-blk-pci,drive=hd0 >/dev/null 2>&1 || STATUS=$?
 
-if ! grep -q "RVPANIC BEGIN" "$LOG"; then
-	echo "run-riscv64.sh: no structured panic block in serial log (qemu status $STATUS)" >&2
-	exit 1
-fi
-if ! grep -q "RVPANIC END" "$LOG"; then
-	echo "run-riscv64.sh: panic block truncated in serial log (qemu status $STATUS)" >&2
-	exit 1
-fi
+bash "$ROOT/expect-probe.sh" "$LOG" "run-riscv64.sh (qemu status $STATUS)"
