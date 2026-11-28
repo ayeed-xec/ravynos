@@ -10,17 +10,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "strdefs.h"
-#include "type.h"
-#include <sys/types.h>
-#include <mach/message.h>
-#include <mach/std_types.h>
-#include "statement.h"
+#include "error.h"
 #include "global.h"
-#include "y.tab.h"
 #include "lexxer.h"
 #include "mig_machine.h"
-#include "error.h"
+#include "statement.h"
+#include "strdefs.h"
+#include "type.h"
+#include "y.tab.h"
+#include <mach/message.h>
+#include <mach/std_types.h>
+#include <sys/types.h>
 
 #define PortSize (sizeof(mach_port_t) * NBBY)
 
@@ -52,13 +52,26 @@ struct keyword {
 
 #define RV_STR2(x) #x
 #define RV_STR(x) RV_STR2(x)
-#define K(text, tok) { text, tok, KW_RETURN, 0, 0, 0, NULL, NULL, 0, 1 }
-#define KS(text, tok) { text, tok, KW_RETURN, 0, 0, 0, NULL, NULL, 0, 0 }
-#define FL(text, val) { text, syIPCFlag, KW_FLAG, 0, 0, 0, NULL, NULL, val, 1 }
-#define TP(text, inn, out, sz) \
-    { text, sySymbolicType, KW_TP, inn, out, sz, RV_STR(inn), RV_STR(out), 0, 1 }
-#define TR(text, type, sz) \
-    { text, sySymbolicType, KW_TP, type, type, sz, RV_STR(type), RV_STR(type), 0, 1 }
+#define K(text, tok)                                                                               \
+    {                                                                                              \
+        text, tok, KW_RETURN, 0, 0, 0, NULL, NULL, 0, 1                                            \
+    }
+#define KS(text, tok)                                                                              \
+    {                                                                                              \
+        text, tok, KW_RETURN, 0, 0, 0, NULL, NULL, 0, 0                                            \
+    }
+#define FL(text, val)                                                                              \
+    {                                                                                              \
+        text, syIPCFlag, KW_FLAG, 0, 0, 0, NULL, NULL, val, 1                                      \
+    }
+#define TP(text, inn, out, sz)                                                                     \
+    {                                                                                              \
+        text, sySymbolicType, KW_TP, inn, out, sz, RV_STR(inn), RV_STR(out), 0, 1                  \
+    }
+#define TR(text, type, sz)                                                                         \
+    {                                                                                              \
+        text, sySymbolicType, KW_TP, type, type, sz, RV_STR(type), RV_STR(type), 0, 1              \
+    }
 
 static const struct keyword keywords[] = {
     K("ROUTINE", syRoutine),
@@ -138,16 +151,21 @@ static const struct keyword keywords[] = {
     TR("MACH_MSG_TYPE_REAL_64", MACH_MSG_TYPE_REAL_64, 64),
     TR("MACH_MSG_TYPE_CHAR", MACH_MSG_TYPE_CHAR, 8),
     TR("MACH_MSG_TYPE_BYTE", MACH_MSG_TYPE_BYTE, 8),
-    TP("MACH_MSG_TYPE_MOVE_RECEIVE", MACH_MSG_TYPE_MOVE_RECEIVE, MACH_MSG_TYPE_PORT_RECEIVE, PortSize),
+    TP("MACH_MSG_TYPE_MOVE_RECEIVE", MACH_MSG_TYPE_MOVE_RECEIVE, MACH_MSG_TYPE_PORT_RECEIVE,
+       PortSize),
     TP("MACH_MSG_TYPE_COPY_SEND", MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_PORT_SEND, PortSize),
     TP("MACH_MSG_TYPE_MAKE_SEND", MACH_MSG_TYPE_MAKE_SEND, MACH_MSG_TYPE_PORT_SEND, PortSize),
     TP("MACH_MSG_TYPE_MOVE_SEND", MACH_MSG_TYPE_MOVE_SEND, MACH_MSG_TYPE_PORT_SEND, PortSize),
-    TP("MACH_MSG_TYPE_MAKE_SEND_ONCE", MACH_MSG_TYPE_MAKE_SEND_ONCE, MACH_MSG_TYPE_PORT_SEND_ONCE, PortSize),
-    TP("MACH_MSG_TYPE_MOVE_SEND_ONCE", MACH_MSG_TYPE_MOVE_SEND_ONCE, MACH_MSG_TYPE_PORT_SEND_ONCE, PortSize),
+    TP("MACH_MSG_TYPE_MAKE_SEND_ONCE", MACH_MSG_TYPE_MAKE_SEND_ONCE, MACH_MSG_TYPE_PORT_SEND_ONCE,
+       PortSize),
+    TP("MACH_MSG_TYPE_MOVE_SEND_ONCE", MACH_MSG_TYPE_MOVE_SEND_ONCE, MACH_MSG_TYPE_PORT_SEND_ONCE,
+       PortSize),
     TR("MACH_MSG_TYPE_PORT_NAME", MACH_MSG_TYPE_PORT_NAME, PortSize),
-    TP("MACH_MSG_TYPE_PORT_RECEIVE", MACH_MSG_TYPE_POLYMORPHIC, MACH_MSG_TYPE_PORT_RECEIVE, PortSize),
+    TP("MACH_MSG_TYPE_PORT_RECEIVE", MACH_MSG_TYPE_POLYMORPHIC, MACH_MSG_TYPE_PORT_RECEIVE,
+       PortSize),
     TP("MACH_MSG_TYPE_PORT_SEND", MACH_MSG_TYPE_POLYMORPHIC, MACH_MSG_TYPE_PORT_SEND, PortSize),
-    TP("MACH_MSG_TYPE_PORT_SEND_ONCE", MACH_MSG_TYPE_POLYMORPHIC, MACH_MSG_TYPE_PORT_SEND_ONCE, PortSize),
+    TP("MACH_MSG_TYPE_PORT_SEND_ONCE", MACH_MSG_TYPE_POLYMORPHIC, MACH_MSG_TYPE_PORT_SEND_ONCE,
+       PortSize),
     TP("MACH_MSG_TYPE_POLYMORPHIC", MACH_MSG_TYPE_POLYMORPHIC, MACH_MSG_TYPE_POLYMORPHIC, PortSize),
     KS(":", syColon),
     KS(";", sySemi),
@@ -414,8 +432,7 @@ int yylex(void)
         if (state == ST_STRING) {
             if (string_char((unsigned char)c)) {
                 len = 1;
-                while (len < avail &&
-                       string_char((unsigned char)input[input_pos + len]))
+                while (len < avail && string_char((unsigned char)input[input_pos + len]))
                     len++;
                 yylval.string = text_at(input_pos, len);
                 input_pos += len;
@@ -474,7 +491,8 @@ int yylex(void)
                     len = m;
                     kind = 2;
                 }
-            } else if (ascii_digit((unsigned char)c)) {
+            }
+            else if (ascii_digit((unsigned char)c)) {
                 size_t m = 1;
                 while (m < avail && ascii_digit((unsigned char)input[input_pos + m]))
                     m++;

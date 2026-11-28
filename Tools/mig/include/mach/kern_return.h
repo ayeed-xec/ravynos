@@ -4,6 +4,6 @@
 #ifndef _MACH_KERN_RETURN_H_SHIM_
 #define _MACH_KERN_RETURN_H_SHIM_
 
-typedef int             kern_return_t;
+typedef int kern_return_t;
 
 #endif /* _MACH_KERN_RETURN_H_SHIM_ */

@@ -5,13 +5,13 @@
 #ifndef _MACH_BOOLEAN_H_SHIM_
 #define _MACH_BOOLEAN_H_SHIM_
 
-typedef unsigned int    boolean_t;
+typedef unsigned int boolean_t;
 
 #ifndef TRUE
-#define TRUE    1
+#define TRUE 1
 #endif
 #ifndef FALSE
-#define FALSE   0
+#define FALSE 0
 #endif
 
 #endif /* _MACH_BOOLEAN_H_SHIM_ */

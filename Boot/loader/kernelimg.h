@@ -7,25 +7,22 @@
 
 #define RV_MAX_SEGMENTS 32
 
-enum rv_kernel_kind {
-	RV_KERNEL_ELF = 1,
-	RV_KERNEL_MACHO = 2
-};
+enum rv_kernel_kind { RV_KERNEL_ELF = 1, RV_KERNEL_MACHO = 2 };
 
 struct rv_segment {
-	uint64_t paddr;
-	uint64_t file_offset;
-	uint64_t file_size;
-	uint64_t mem_size;
+    uint64_t paddr;
+    uint64_t file_offset;
+    uint64_t file_size;
+    uint64_t mem_size;
 };
 
 struct rv_kernel_image {
-	int kind;
-	uint64_t entry_paddr;
-	uint64_t base_paddr;
-	uint64_t end_paddr;
-	uint32_t segment_count;
-	struct rv_segment segments[RV_MAX_SEGMENTS];
+    int kind;
+    uint64_t entry_paddr;
+    uint64_t base_paddr;
+    uint64_t end_paddr;
+    uint32_t segment_count;
+    struct rv_segment segments[RV_MAX_SEGMENTS];
 };
 
 int rv_parse_elf(const uint8_t *data, uint64_t size, struct rv_kernel_image *image);
