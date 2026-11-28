@@ -24,7 +24,9 @@ jobs:
 
       - name: Stage-1 build tools cache key
         id: buildtools
-        run: echo "key=$(bash Tools/toolchain/buildtools/key.sh)" >> "$GITHUB_OUTPUT"
+        run: |
+          key=$(bash Tools/toolchain/buildtools/key.sh)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
 
       - name: Restore the stage-1 build tools
         uses: actions/cache@v4
