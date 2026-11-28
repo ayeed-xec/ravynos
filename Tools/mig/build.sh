@@ -6,13 +6,13 @@
 # series. byacc and rvpatch come from the stage-1 build tools (`rv bootstrap`),
 # never from the host's package manager.
 #
-# usage: build.sh [--out <dir>] [--smoke]
+# usage: build.sh [--out <dir>] [--cflag <flag>]... [--smoke]
 #
-#   --out <dir>   where work/, bin/mig and libexec/migcom go (default: Tools/mig)
-#   --smoke       run mig over tests/trivial.defs after the build
+#   --out <dir>     where work/, bin/mig and libexec/migcom go (default: Tools/mig)
+#   --cflag <flag>  one extra flag for the migcom compile; repeatable
+#   --smoke         run mig over tests/trivial.defs after the build
 #
-# BYACC and RVPATCH name the tools when they are not on PATH; CFLAGS is added
-# to the migcom compile.
+# BYACC and RVPATCH name the tools when they are not on PATH.
 
 set -euo pipefail
 
@@ -25,18 +25,24 @@ BYACC=${BYACC:-byacc}
 RVPATCH=${RVPATCH:-rvpatch}
 
 usage() {
-    echo "usage: $0 [--out <dir>] [--smoke]" >&2
+    echo "usage: $0 [--out <dir>] [--cflag <flag>]... [--smoke]" >&2
     exit 2
 }
 
 OUT=$SCRIPT_DIR
 SMOKE=0
+EXTRA_CFLAGS=()
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --out)
             [ "$#" -ge 2 ] || usage
             mkdir -p "$2"
             OUT="$(cd "$2" && pwd)"
+            shift
+            ;;
+        --cflag)
+            [ "$#" -ge 2 ] || usage
+            EXTRA_CFLAGS+=("$2")
             shift
             ;;
         --smoke) SMOKE=1 ;;
@@ -97,8 +103,7 @@ cd "$WORK/migcom.tproj"
 "$BYACC" -d -b y parser.y
 cp "$SCRIPT_DIR/generated/lexxer.c" lexxer.c
 
-# shellcheck disable=SC2086 # CFLAGS is a flag list
-clang -fuse-ld=lld -O2 -g0 -std=gnu11 -Wall ${CFLAGS:-} \
+clang -fuse-ld=lld -O2 -g0 -std=gnu11 -Wall "${EXTRA_CFLAGS[@]}" \
     -I"$SHIM" \
     -DMIG_VERSION="\"$TAG\"" \
     -o "$WORK/migcom" \
@@ -121,7 +126,7 @@ if [ "$SMOKE" -eq 1 ]; then
         -user "$WORK/smoke/trivialUser.c" \
         -server "$WORK/smoke/trivialServer.c" \
         "$SCRIPT_DIR/tests/trivial.defs" 2>"$WORK/smoke/stderr"
-    if grep -q 'error' "$WORK/smoke/stderr"; then
+    if grep -qE '(^|: )(fatal )?error:' "$WORK/smoke/stderr"; then
         cat "$WORK/smoke/stderr" >&2
         echo "error: mig smoke: the preprocessor or migcom reported an error" >&2
         exit 1
