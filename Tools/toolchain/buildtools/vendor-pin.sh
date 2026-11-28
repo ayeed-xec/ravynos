@@ -22,7 +22,7 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 want=$1
-current="" upstream="" tag="" commit="" fetch=""
+current="" upstream="" tag="" commit="" fetch="" seen=""
 found=0
 lineno=0
 
@@ -49,7 +49,7 @@ while IFS= read -r line || [ -n "$line" ]; do
         "" | "#"*) continue ;;
         "[[vendor]]")
             finish
-            current="" upstream="" tag="" commit="" fetch=""
+            current="" upstream="" tag="" commit="" fetch="" seen=""
             in_entry=1
             continue
             ;;
@@ -58,6 +58,10 @@ while IFS= read -r line || [ -n "$line" ]; do
     [[ $line =~ $pair_re ]] || die "cannot read: $line"
     key=${BASH_REMATCH[1]}
     value=${BASH_REMATCH[3]:-${BASH_REMATCH[2]}}
+    case " $seen " in
+        *" $key "*) die "$key is set twice in one entry" ;;
+    esac
+    seen="$seen $key"
     case $key in
         name) current=$value ;;
         upstream) upstream=$value ;;

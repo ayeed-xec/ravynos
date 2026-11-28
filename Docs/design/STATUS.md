@@ -170,7 +170,8 @@ What exists, and whether it is a real implementation:
 **S02 toolchain**
 - GAP-07 No Darwin program exists; the test programs use Linux system calls.
 - GAP-08 No stage-1 toolchain; CI uses the distribution's clang, unpinned; no
-  `rust-toolchain.toml`; `cargo` not run with `--locked`; `rv` is dynamically linked.
+  `rust-toolchain.toml`; `cargo` not run with `--locked`; `rv` is dynamically linked
+  (no musl target); `.cargo/config.toml` forces `linker=clang` for every target.
 - GAP-09 Closed for licensing: the audit now walks the whole tree instead of only the
   manifested directories. A file is accepted when it carries an SPDX header, sits in a
   tree pinned by `VENDORS` (whose entry states the license), or is a generated or tool
@@ -223,6 +224,11 @@ What exists, and whether it is a real implementation:
   serves a branch only its own caches and the default branch's. Until the stage-1
   workflows are on `darwin`, the weekly verify does not run and each branch builds
   LLVM from a cold cache once.
+  The stage-1 jobs also run on the bare `ubuntu-latest` runner rather than in the
+  `Tools/ci/Containerfile` image (S02 done-when a), because the image's Ubuntu cargo
+  1.75 cannot read the version-4 `Cargo.lock`; the image needs a pinned Rust first.
+  Until then a runner-image update that changes cmake, ninja or clang moves the LLVM
+  key and costs a full rebuild.
 - GAP-11 Closed. The mig lexer is hand-written (`Tools/mig/generated/lexxer.c`; GAP-46),
   and `Tools/mig/build.sh` no longer installs anything: it takes byacc and rvpatch
   from the stage-1 build tools and stops with "build the stage-1 tools" without
@@ -231,6 +237,16 @@ What exists, and whether it is a real implementation:
   from the pinned tree plus its patches"). The smoke also fails now on a
   preprocessor error, which it used to pass over (`tests/trivial.defs` had a `#`
   SPDX line).
+
+**S03 SDK** — GAP-29: not started. No `VENDORS` file at the root (the old
+`Legacy/VENDORS` was removed with WP0.0; no xnu pin).
+
+**S04 bootloader** — BUG-02 to BUG-06, BUG-13, BUG-24, BUG-25. The source uses tabs
+against `.clang-format`. CI builds the loader and runs the x86_64, Mach-O, arm64 and
+riscv64 smokes, each as its own step (run 46135899021). The arm64 smoke uses
+`cortex-a57`, which cannot run the RVVIRT target.
+
+**S05 kernel build**
 - GAP-12 Closed: `Kernel/build/` was removed with WP0.0; the kernel build outside
   `rv` no longer exists in the tree. Rebuilding it inside `rv` is the W1 kernel
   work (GAP-12's original scope moves to W1).

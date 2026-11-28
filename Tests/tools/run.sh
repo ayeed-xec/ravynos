@@ -316,6 +316,7 @@ test_buildtools_verify() {
 	printf '\n' >>"$bin/unifdef"
 	expect_fail "buildtools refuses a tampered installed tool" bash "$t/Tools/toolchain/buildtools.sh"
 	if grep -q "do not match tools.sha256" "$WORK/out"; then ok; else bad "buildtools did not name the hash mismatch"; fi
+	expect_fail "buildtools --verify refuses a tampered installed tool" bash "$t/Tools/toolchain/buildtools.sh" --verify
 
 	touch "$t/build/vendor/byacc/stray.h"
 	expect_fail "fetch refuses a pinned tree with an untracked file" bash "$t/Tools/toolchain/buildtools/fetch.sh" byacc
@@ -346,12 +347,14 @@ test_fetch_pin() {
 test_llvm_pin_agrees() {
 	# The LLVM pin is written twice until llvm/fetch.sh reads VENDORS (which
 	# would move the LLVM key): VENDORS and llvm/_PROVENANCE must agree.
-	local pin prov_tag prov_commit
+	local pin prov_url prov_tag prov_commit
 	mapfile -t pin < <(bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" llvm-project)
+	prov_url=$(sed -n 's/^\* Upstream URL: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
 	prov_tag=$(sed -n 's/^\* Tag: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
 	prov_commit=$(sed -n 's/^\* Commit: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
-	if [ "${pin[1]:-}" = "$prov_tag" ] && [ "${pin[2]:-}" = "$prov_commit" ]; then ok; else
-		bad "VENDORS llvm-project (${pin[1]:-} ${pin[2]:-}) disagrees with llvm/_PROVENANCE ($prov_tag $prov_commit)"
+	if [ "${pin[0]:-}" = "$prov_url" ] && [ "${pin[1]:-}" = "$prov_tag" ] &&
+		[ "${pin[2]:-}" = "$prov_commit" ]; then ok; else
+		bad "VENDORS llvm-project (${pin[*]:-}) disagrees with llvm/_PROVENANCE ($prov_url $prov_tag $prov_commit)"
 	fi
 }
 

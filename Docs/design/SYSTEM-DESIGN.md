@@ -722,7 +722,8 @@ Apple install names, ad hoc signatures on arm64.
     `lld-link`), `llvm-ar`, `llvm-objdump`, `llvm-readtapi`, `llvm-lipo`, `dsymutil`,
     `llvm-nm`, `llvm-strip`, libclang. Also the build tools: `byacc` (public domain),
     `unifdef` (BSD-2-Clause), `migcom` from `Tools/mig/` (APSL) with a hand-written
-    lexer (GAP-11), the XNU host tools (below), `rvpatch`, `mkfat`, `elf2pe`.
+    lexer (GAP-11), `rvpatch`, `mkfat`, `elf2pe`; and the XNU host tools (below),
+    which nothing builds yet.
   - LLVM and the build tools are two components with separate cache keys:
     `llvm` (`Tools/toolchain/stage1.sh`, `build/toolchain/<key>/`) and `buildtools`
     (`Tools/toolchain/buildtools.sh`, `build/toolchain/buildtools-<key>/`). Neither

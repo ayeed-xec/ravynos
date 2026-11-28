@@ -6,7 +6,8 @@
 # `rv bootstrap --verify llvm` rebuilds them from source in a second job and
 # compares hashes. It runs only when an LLVM input changes, weekly, or by hand,
 # never for a build-tools change (stage1-buildtools.yml), because a rebuild
-# takes hours.
+# takes hours. Tools/rv/src/bootstrap.rs is an input because it drives the LLVM
+# build, so an edit there also costs a full build and verify.
 #
 # Actions caches are branch-scoped: a branch reads its own entries and those
 # of the default branch (darwin). The weekly schedule also runs only on the
