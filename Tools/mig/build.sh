@@ -112,13 +112,20 @@ echo "== installed: $OUT/bin/mig, $OUT/libexec/migcom"
 
 if [ "$SMOKE" -eq 1 ]; then
     mkdir -p "$WORK/smoke"
+    # mig.sh pipes the preprocessor into migcom without pipefail, so a
+    # preprocessor error still yields output; its diagnostics are the signal.
     "$OUT/bin/mig" \
         -I"$SHIM" \
         -I"$ROOT/Kernel/xnu/osfmk" \
         -header "$WORK/smoke/trivial.h" \
         -user "$WORK/smoke/trivialUser.c" \
         -server "$WORK/smoke/trivialServer.c" \
-        "$SCRIPT_DIR/tests/trivial.defs"
+        "$SCRIPT_DIR/tests/trivial.defs" 2>"$WORK/smoke/stderr"
+    if grep -q 'error' "$WORK/smoke/stderr"; then
+        cat "$WORK/smoke/stderr" >&2
+        echo "error: mig smoke: the preprocessor or migcom reported an error" >&2
+        exit 1
+    fi
     for f in trivial.h trivialUser.c trivialServer.c; do
         [ -s "$WORK/smoke/$f" ] || {
             echo "error: mig smoke produced an empty $f" >&2
