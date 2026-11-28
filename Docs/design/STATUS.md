@@ -453,8 +453,8 @@ that backs it:
   `sha256sum ./*` from inside `bin/`, so the fresh list carried the `./` prefix and
   four extra files (`clang-21`, `clang-cl`, `clang-cpp`, `llvm-objcopy`). The first real
   run failed on that alone. Both sides now call `Tools/toolchain/llvm/hash-tools.sh`,
-  which owns the tool list; its output is 11 lines and does not depend on the working
-  directory. Checked on the two existing builds of `a72995bd…`: the recorded
+  which owns the tool list; it prints one line per tool and does not depend on the
+  working directory. Checked on the two existing builds of `a72995bd…`: the recorded
   `tools.sha256` and the hash list of the independent `--verify` rebuild diff empty, so
   the stage-1 tools are byte-reproducible. Seven host-tool tests cover the helper
   (`Tests/tools/run.sh`, 52 passed). A second defect showed up on the next run: with a
@@ -469,10 +469,13 @@ that backs it:
   `stage1-build-verify`, exit 0, `stage1 verify OK: af8a5c44…`, clang 21.1.6).
   Since then the key moved to `llvm/key.sh`, which hashes the host cmake, ninja and
   clang versions along with the scripts, and the tool set gained `llvm-objdump`,
-  `llvm-lipo` and `dsymutil` with `-ffile-prefix-map`. The rebuild of key
-  `04c9139e…` is in flight. Stage-1 still does not build `libclang`, byacc, rvpatch,
-  mkfat or elf2pe. BUG-28 was the reason the earlier pass proved nothing about
-  linking; ADR-31 changes the source tree.
+  `llvm-lipo` and `dsymutil` with `-ffile-prefix-map`. Key `04c9139e…` then reproduced
+  the same way under the 14-tool list: the install built and stamped the key,
+  `--verify` rebuilt it into `build/toolchain/04c9139e…/.verify.<pid>`, the two
+  `tools.sha256` lists diffed empty, and the rebuilt tools re-hashed clean (job
+  `stage1-key04`, exit 0, `stage1 verify OK: 04c9139e…`, clang 21.1.6). Stage-1 still
+  does not build `libclang`, byacc, rvpatch, mkfat or elf2pe. BUG-28 was the reason the
+  earlier pass proved nothing about linking; ADR-31 changes the source tree.
 - GAP-59 **closed** (ADR-32): the stray `Tools/mig-mvtmp/` and
   `Apps/.tmp_bad_manifest` are gone, every commit since the restructure has a subject of
   72 characters or fewer with a lowercase scope, and ROADMAP.md 1.4 requires a merge
@@ -488,7 +491,7 @@ that backs it:
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55 residue: the upstream ADR-31 install builds, installs and links Mach-O, and `--verify` reproduced key `af8a5c44…` end to end with an empty hash diff; the missing `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe keep it open) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55 residue: the upstream ADR-31 install builds, installs and links Mach-O, and `--verify` reproduced keys `af8a5c44…` (11 tools) and `04c9139e…` (14 tools) end to end with empty hash diffs; the missing `libclang`, byacc, rvpatch, mkfat and elf2pe keep it open) |
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 7/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
