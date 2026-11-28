@@ -2,10 +2,9 @@
 # Copyright (c) 2026 The ravynOS Authors
 #
 # The gate image (SYSTEM-DESIGN.md 2.2, 5.6, GAP-40). The base is pinned by
-# digest and every package but ca-certificates comes from the Ubuntu archive
-# as it stood at SNAPSHOT (snapshot.ubuntu.com), so two builds of this file
-# install the same package versions. Changing either pin is a reviewed change
-# to this file.
+# digest and every installed package is the version the Ubuntu archive had at
+# SNAPSHOT (snapshot.ubuntu.com); the build fails otherwise. Changing either
+# pin is a reviewed change to this file.
 ARG BASE=ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
 FROM ${BASE}
 ARG SNAPSHOT=20261127T000000Z
@@ -18,14 +17,19 @@ ARG RUSTUP_SHA256=b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# apt reaches snapshot.ubuntu.com over https, and the base image has no CA
-# certificates, so ca-certificates alone comes from the live archive (over
-# http, checked against the archive's signed Release file like every apt
-# download). Every other package comes from the snapshot.
+# The base image has no CA certificates and apt reaches snapshot.ubuntu.com
+# over https, so ca-certificates (with openssl) comes from the live archive
+# first, over http, checked against the archive's signed Release file. Then the
+# live archive is dropped: the snapshot is the only source, pinned above
+# anything installed, and the next step brings those two packages back to
+# their snapshot versions.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && printf 'APT::Snapshot "%s";\n' "$SNAPSHOT" >/etc/apt/apt.conf.d/50snapshot
+ && printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s/\nSuites: noble noble-updates noble-security\nComponents: main universe\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' \
+        "$SNAPSHOT" >/etc/apt/sources.list.d/ubuntu.sources \
+ && printf 'Package: *\nPin: origin "snapshot.ubuntu.com"\nPin-Priority: 1001\n' \
+        >/etc/apt/preferences.d/snapshot
 
 # Stage 0: clang/lld/llvm for the builds, ninja for rv's output, QEMU with
 # firmware for the boot smokes, and shellcheck/git for the gates. byacc and the
@@ -40,9 +44,15 @@ RUN apt-get update \
         qemu-system-x86 qemu-system-arm qemu-system-misc \
         ovmf qemu-efi-aarch64 qemu-efi-riscv64 opensbi \
         git curl ca-certificates python3 shellcheck file \
+ && apt-get install -y --allow-downgrades ca-certificates openssl \
+ && apt-get -y --allow-downgrades dist-upgrade \
+ && if apt-get -s --allow-downgrades dist-upgrade | grep '^Inst'; then \
+        echo "installed packages differ from snapshot $SNAPSHOT"; exit 1; fi \
  && rm -rf /var/lib/apt/lists/*
 
-ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
+# No auto-install: a checkout whose rust-toolchain.toml names another version
+# fails instead of quietly downloading it.
+ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo RUSTUP_AUTO_INSTALL=0
 ENV PATH=/usr/local/cargo/bin:$PATH
 RUN curl --proto '=https' -sSf -o /tmp/rustup-init \
         "https://static.rust-lang.org/rustup/archive/${RUSTUP}/x86_64-unknown-linux-gnu/rustup-init" \
@@ -54,8 +64,8 @@ RUN curl --proto '=https' -sSf -o /tmp/rustup-init \
  && rustc --version
 
 # The unversioned names are what rv and the scripts invoke.
-RUN for tool in clang clang++ clang-format ld.lld ld64.lld llvm-ar llvm-nm llvm-objcopy \
-        llvm-objdump llvm-strip; do \
+RUN for tool in clang clang++ clang-format ld.lld ld64.lld lld-link llvm-ar llvm-nm \
+        llvm-objcopy llvm-objdump llvm-strip llvm-symbolizer; do \
         src=$(command -v "${tool}-18" || echo "/usr/lib/llvm-18/bin/${tool}"); \
         [ -x "${src}" ] || { echo "missing ${tool}"; exit 1; }; \
         ln -sfn "${src}" "/usr/local/bin/${tool}"; \
