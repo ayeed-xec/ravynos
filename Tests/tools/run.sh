@@ -154,9 +154,35 @@ test_elf2pe() {
 	expect_fail "elf2pe rejects unknown machine" "$WORK/elf2pe" "$d/badmach.elf" "$d/x.efi"
 }
 
+test_hash_tools() {
+	local d=$WORK/t-hash
+	mkdir -p "$d/bin"
+	local tool
+	while read -r tool; do
+		printf 'tool %s\n' "$tool" >"$d/bin/$tool"
+	done < <(bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" --list)
+	# Files outside the tool list must not enter the hash: an earlier verify
+	# hashed `bin/*` and could never match the recorded list.
+	printf 'extra\n' >"$d/bin/clang-21"
+	printf 'extra\n' >"$d/bin/llvm-objcopy"
+
+	if bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" "$d/bin" >"$d/a" 2>&1; then ok; else bad "hash-tools: hashed a complete bin dir"; fi
+	# Same output regardless of the caller's working directory: the recorded
+	# file says "clang", never "./clang".
+	if ( cd "$d/bin" && bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" . ) >"$d/b" 2>&1; then ok; else bad "hash-tools: ran from another cwd"; fi
+	if cmp -s "$d/a" "$d/b"; then ok; else bad "hash-tools: output depends on cwd"; fi
+	if grep -q 'clang-21\|llvm-objcopy' "$d/a"; then bad "hash-tools: hashed a tool outside the list"; else ok; fi
+	if [[ $(wc -l <"$d/a") -eq $(bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" --list | wc -l) ]]; then ok; else bad "hash-tools: line count differs from the tool list"; fi
+
+	rm -f "$d/bin/ld64.lld"
+	expect_fail "hash-tools reports a missing tool" bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" "$d/bin"
+	expect_fail "hash-tools rejects a non-directory" bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" "$d/nope"
+}
+
 test_rvpatch
 test_mkfat
 test_elf2pe
+test_hash_tools
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

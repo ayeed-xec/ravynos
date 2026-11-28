@@ -86,7 +86,7 @@ if [ "$VERIFY" -eq 1 ]; then
     VERIFY_TMP="$CACHE/.verify.$$"
     bash "$SCRIPT_DIR/llvm/build.sh" build/vendor/llvm-project "$VERIFY_TMP" ${JOBS:+"$JOBS"} \
         || { echo "error: verify rebuild failed" >&2; exit 1; }
-    ( cd "$VERIFY_TMP/bin" && sha256sum ./* ) >"$VERIFY_TMP/tools.sha256"
+    bash "$SCRIPT_DIR/llvm/hash-tools.sh" "$VERIFY_TMP/bin" >"$VERIFY_TMP/tools.sha256"
     if ! diff -q "$VERIFY_TMP/tools.sha256" "$CACHE/tools.sha256" >/dev/null; then
         echo "error: verify: fresh build hash differs from the recorded tools.sha256" >&2
         diff "$CACHE/tools.sha256" "$VERIFY_TMP/tools.sha256" | head -10 >&2

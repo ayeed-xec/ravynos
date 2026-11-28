@@ -425,12 +425,20 @@ that backs it:
   compiles. The full upstream stage-1 install then completed (`stage1 verify OK:
   a72995bd…c4c77f`, clang 21.1.6, exit 0): its `bin/clang -print-targets` lists
   `riscv64`, `riscv32`, `aarch64` and `x86-64`, and its `bin/ld64.lld` links an x86_64
-  Mach-O executable (exit 0). The `--verify` rebuild of that install is still running.
-- GAP-55 **partial** (corrected): the verify pass now rebuilds and compares hashes, and
-  it passed on 2026-11-27 (`stage1 verify OK: ece9693de…b5c6378`, clang 21.1.6), but
-  stage-1 still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or
-  elf2pe, and its cache key omits the host cmake and ninja versions. BUG-28 was the
-  reason that pass proved nothing about linking; ADR-31 changes the source tree.
+  Mach-O executable (exit 0).
+- GAP-55 **partial** (verify defect fixed). `stage1.sh --verify` could never pass: the
+  build recorded `sha256sum clang clang++ …` (11 names) while verify recomputed
+  `sha256sum ./*` from inside `bin/`, so the fresh list carried the `./` prefix and
+  four extra files (`clang-21`, `clang-cl`, `clang-cpp`, `llvm-objcopy`). The first real
+  run failed on that alone. Both sides now call `Tools/toolchain/llvm/hash-tools.sh`,
+  which owns the tool list; its output is 11 lines and does not depend on the working
+  directory. Checked on the two existing builds of `a72995bd…`: the recorded
+  `tools.sha256` and the hash list of the independent `--verify` rebuild diff empty, so
+  the stage-1 tools are byte-reproducible. Seven host-tool tests cover the helper
+  (`Tests/tools/run.sh`, 52 passed). The `--verify` run itself is in flight; stage-1
+  still does not build `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat or elf2pe, and
+  its cache key omits the host cmake and ninja versions. BUG-28 was the reason the
+  earlier pass proved nothing about linking; ADR-31 changes the source tree.
 - GAP-59 **partial**: the stray `Tools/mig-mvtmp/` and `Apps/.tmp_bad_manifest` are gone,
   every commit since the restructure has a subject of 64 characters or fewer, and
   ROADMAP.md 1.4 now requires a merge commit to name its score. History before the
@@ -444,7 +452,7 @@ that backs it:
 | W0: the tree holds only the section 3.2 layout | closed (GAP-60) |
 | W0: `rv` builds the tree with no duplicate names | closed (BUG-27; E-DUP-NAME fixture in `Tests/rv/negative/run.sh`) |
 | W0: `rv` produces Mach-O for x86_64 and arm64 | closed (GAP-01; both arches checked with `file` and asserted in CI) |
-| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: verify implemented, passed on the Swift pin and running on the ADR-31 upstream install, whose tools now build, install and link Mach-O; stage-1 still lacks `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe) |
+| W0: stage-1 toolchain builds and `--verify` reproduces it | open (GAP-55: the upstream ADR-31 install builds, installs and links Mach-O, and its two independent builds hash identically after the verify defect was fixed; the `--verify` run and the missing `llvm-objdump`, `libclang`, byacc, rvpatch, mkfat and elf2pe keep it open) |
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 7/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |

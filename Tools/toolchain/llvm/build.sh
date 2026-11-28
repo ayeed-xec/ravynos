@@ -21,6 +21,7 @@ if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
     exit 2
 fi
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SRC=$(cd "$1" && pwd)
 mkdir -p "$2"
 INSTALL_DIR=$(cd "$2" && pwd -P)
@@ -33,7 +34,9 @@ fi
 # The stage-1 tool set. These targets are what stage 2 and the rv build need;
 # building exactly these keeps the build small and the provenance tight.
 TARGETS=(clang lld llvm-ar llvm-nm llvm-symbolizer llvm-strip)
-INSTALLED=(clang clang++ lld ld.lld ld64.lld lld-link wasm-ld llvm-ar llvm-nm llvm-symbolizer llvm-strip)
+# The installed names come from hash-tools.sh, the one list the recorded hashes
+# and the `--verify` comparison both use.
+mapfile -t INSTALLED < <(bash "$SCRIPT_DIR/hash-tools.sh" --list)
 
 for tool in cmake ninja clang clang++; do
     if ! command -v "$tool" >/dev/null 2>&1; then
