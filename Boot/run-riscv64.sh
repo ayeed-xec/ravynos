@@ -56,6 +56,10 @@ command -v qemu-system-riscv64 >/dev/null || {
 	exit 1
 }
 
+# The firmware writes its variable store; give it a copy, not the system file.
+VARS="$BUILD/riscv-vars.fd"
+cp "$RISCV_VARS" "$VARS"
+
 : >"$LOG"
 STATUS=0
 timeout --foreground "$TIMEOUT" qemu-system-riscv64 \
@@ -70,7 +74,7 @@ timeout --foreground "$TIMEOUT" qemu-system-riscv64 \
 	-serial "file:$LOG" \
 	-bios "$OPENBSI_FW" \
 	-drive "if=pflash,format=raw,readonly=on,file=$RISCV_CODE" \
-	-drive "if=pflash,format=raw,file=$RISCV_VARS" \
+	-drive "if=pflash,format=raw,file=$VARS" \
 	-drive "if=none,file=$IMAGE,format=raw,id=hd0" \
 	-device virtio-blk-pci,drive=hd0 >/dev/null 2>&1 || STATUS=$?
 
