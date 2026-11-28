@@ -256,7 +256,7 @@ merge commit message.
 not obvious, in one line where possible; no comment that restates the code, no banners,
 no preambles on obvious functions. No over-defensive checks, no speculative abstraction,
 no generic names (`data`, `info`, `handler`, `manager`, `utils`). Each file matches the
-style of the code around it. Commit subjects are imperative, at most 50 characters, and
+style of the code around it. Commit subjects are imperative, at most 72 characters (ADR-32), and
 name the subsystem; the body says why, in plain sentences.
 
 **Commit identity.** Every commit in this repository is authored and committed under the
