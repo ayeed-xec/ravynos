@@ -8,6 +8,8 @@
 # `prune` lists paths, relative to `path`, that are deliberately absent because
 # the upstream tree ships generator output no license rule accepts (ADR-17).
 # The pin covers the pruned tree; a listed path that reappears fails the check.
+# Pruned parsers are rebuild outputs: Tools/xnuhook plans their byacc
+# regeneration for the xnu build (S05).
 # `fetch = true` trees are downloaded to `build/vendor/<name>` and verified by
 # `commit`; they are never committed, so they carry no `tree`.
 
