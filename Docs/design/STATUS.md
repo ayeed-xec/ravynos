@@ -469,7 +469,8 @@ that backs it:
 - GAP-59 **closed** (ADR-32): the stray `Tools/mig-mvtmp/` and
   `Apps/.tmp_bad_manifest` are gone, every commit since the restructure has a subject of
   72 characters or fewer with a lowercase scope, and ROADMAP.md 1.4 requires a merge
-  commit to name its score. `Tools/ci/check-commit-subjects.sh` enforces the rules on the commits being offered, and three host-tool cases cover it.
+  commit to name its score. `Tools/ci/check-commit-subjects.sh` enforces the rules on every commit after the baseline `5112c72bc` and skips what came
+  before, and four host-tool cases cover it.
 - GAP-32 **closed**: `Docs/DESIGN.md` names only files that exist (`Docs/design/`,
   `Docs/design/DECISIONS.md`, `Tools/ci/check-spdx.sh`, `rv audit licenses`); four
   host-tool cases fail if a retired path returns. `Tests/perf/` and `Tests/kpi/` are

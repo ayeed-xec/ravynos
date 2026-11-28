@@ -23,6 +23,15 @@ else
     RANGE='HEAD^..HEAD'
 fi
 
+# ADR-32: everything up to the restructure baseline predates the rule and is not
+# rewritten, so no range may pull it in — `HEAD` alone would otherwise walk the
+# whole imported history and fail on commits that are closed decisions.
+BASELINE=${COMMIT_RULE_BASELINE:-5112c72bc}
+exclude=()
+if git -C "$ROOT" rev-parse --verify --quiet "$BASELINE^{commit}" >/dev/null; then
+    exclude=(--not "$BASELINE")
+fi
+
 fail=0
 while IFS= read -r line; do
     sha=${line%% *}
@@ -39,7 +48,7 @@ while IFS= read -r line; do
             fail=1
             ;;
     esac
-done < <(git -C "$ROOT" log --format='%H %s' "$RANGE")
+done < <(git -C "$ROOT" log --format='%H %s' "$RANGE" "${exclude[@]}")
 
 if [ $fail -eq 0 ]; then
     printf 'commit subjects OK: %s\n' "$RANGE"

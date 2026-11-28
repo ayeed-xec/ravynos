@@ -266,6 +266,12 @@ test_commit_subjects() {
 	git -C "$d" add c
 	git -C "$d" commit -qm "rv: $(printf 'x%.0s' $(seq 1 80))"
 	expect_fail "commit-subjects rejects an over-long subject" bash "$d/Tools/ci/check-commit-subjects.sh" 'HEAD^..HEAD'
+
+	# ADR-32: commits at or before the accepted-history baseline are skipped,
+	# so a whole-history range does not fail on decisions already taken.
+	local baseline
+	baseline=$(git -C "$d" rev-parse HEAD)
+	if COMMIT_RULE_BASELINE=$baseline bash "$d/Tools/ci/check-commit-subjects.sh" HEAD >/dev/null 2>&1; then ok; else bad "commit-subjects ignores the accepted-history baseline"; fi
 }
 
 test_rvpatch
