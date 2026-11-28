@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+#
+# The Rust that builds rv and the Rust host tools (SYSTEM-DESIGN.md S02,
+# stage 0). Tools/ci/Containerfile installs the same version; CI checks that
+# the two agree.
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
