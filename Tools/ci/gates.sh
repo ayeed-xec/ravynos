@@ -23,7 +23,15 @@ cd "$ROOT"
 step() { printf '\n== %s\n' "$*"; }
 
 step "Rust is the version rust-toolchain.toml names"
-want=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+want=$(while IFS= read -r line; do
+    case "$line" in
+        'channel = "'*)
+            line=${line#channel = \"}
+            printf '%s\n' "${line%\"}"
+            break
+            ;;
+    esac
+done <rust-toolchain.toml)
 have=$(rustc --version)
 case "$have" in
     "rustc $want "*) echo "$have" ;;
@@ -54,6 +62,7 @@ step "host-tool, SPDX, format and commit-subject gates"
 Tools/ci/check-host-tools.sh
 Tools/ci/check-spdx.sh
 Tools/ci/check-format.sh
+Tools/ci/check-crate-licenses.sh
 Tools/ci/check-commit-subjects.sh "$RANGE"
 
 step "host-tool tests"
