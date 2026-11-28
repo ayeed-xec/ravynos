@@ -90,9 +90,8 @@ What exists, and whether it is a real implementation:
 - **BUG-06** The arm64 loader path passes the x86 `boot_args` and leaves the MMU and
   caches on at hand-off.
 - **BUG-07** Moot in the tree: `Kernel/port/arm64/` was removed with WP0.0, and the
-  rule stands for its rewrite (S07). `Kernel/port/arm64/pmap.c` consisted of functions that ignore their arguments
-  of functions that ignored their arguments and returned success — stubs, which the
-  design forbids.
+  rule stands for its rewrite (S07). `Kernel/port/arm64/pmap.c` consisted of functions
+  that ignored their arguments and returned success — stubs, which the design forbids.
 - **BUG-08** Moot in the tree: `Kernel/build/` was removed with WP0.0; the W1 kernel
   build in `Tools/xnuhook` must not repeat it. `Kernel/build/driver/compile.sh` defined
   `__i386__` for x86_64, selecting 32-bit paths in XNU headers.
@@ -228,9 +227,8 @@ has since changed, the entry says so and points at the evidence.
   Mach-O assertion and not Darwin programs. `libhello` makes no system call. The first
   Darwin program is the T0 program of W1.
 - GAP-08 Partly closed. `rust-toolchain.toml` pins Rust 1.97.0 with rustfmt and clippy,
-  and CI calls cargo with `--locked`. Still open: the rv gates job builds with the
-  runner's apt clang, lld and llvm (unpinned) instead of stage 1 and the pinned image
-  (the switch is planned under GAP-40 below); `rv` is dynamically linked against glibc
+  and CI calls cargo with `--locked`. Still open: the gates build with the gate image's
+  pinned clang-18, not yet with stage 1 (GAP-40 step 2); `rv` is dynamically linked against glibc
   (no musl target); `.cargo/config.toml` forces `linker=clang` for every target.
 - GAP-09 Closed for licensing: the audit now walks the whole tree instead of only the
   manifested directories. A file is accepted when it carries an SPDX header, sits in a
@@ -308,7 +306,8 @@ GAP-31.)
 
 **S04 bootloader** — BUG-02 to BUG-06, BUG-13, BUG-24, BUG-25. The source uses tabs
 against `.clang-format`. CI builds the loader and runs the x86_64, Mach-O, arm64 and
-riscv64 smokes, each as its own step (run 46135899021). The arm64 smoke uses
+riscv64 smokes inside the pinned gate image
+(https://github.com/ayeed-xec/ravynos/actions/runs/46141609223, job "boot smokes"). The arm64 smoke uses
 `cortex-a57`, which cannot run the RVVIRT target.
 
 **S05 kernel build**
