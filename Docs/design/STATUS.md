@@ -19,7 +19,7 @@ lists diffed empty.
 | Area | Score | Verdict |
 |---|---|---|
 | `Tools/rv` (WP0.1–WP0.3) | 9/10 | passes: Mach-O for x86_64 and arm64 (checked with `file`), every S01 output kind (framework, app, xpc-service, dext, plugin, bundle, kext), `-isysroot` and stub linking, `rv test` and `rv image`, errors returned instead of `process::exit`, E-DUP-NAME with a fixture, 61 unit tests |
-| Stage-1 bootstrap (WP0.4) | 7/10 | upstream `llvmorg-21.1.6` builds and installs on the host: `bin/clang -print-targets` lists riscv64, aarch64 and x86-64, and `bin/ld64.lld` links an x86_64 Mach-O executable (BUG-28, ADR-31); `--verify` rebuilds and compares hashes (GAP-55); not in CI |
+| Stage-1 bootstrap (WP0.4) | 7/10 | upstream `llvmorg-21.1.6` builds and installs on the host: `bin/clang -print-targets` lists riscv64, aarch64 and x86-64, and `bin/ld64.lld` links an x86_64 Mach-O executable (BUG-29, ADR-31); `--verify` rebuilds and compares hashes (GAP-55); not in CI |
 | `Boot/loader` (WP0.9) | 6/10 | three-arch boot smokes green; device tree still missing (W1) |
 | `Tools/mig` | 8/10 | passes: byacc-generated parser, three-patch rvpatch series, corrected `--regen-lexer` paths, `_PROVENANCE` repaired |
 | CI and gates | 7/10 | arm64 build, Mach-O assertion, SPDX gate, boot smokes, license audit and whole-tree host-tool gate all wired; still on `ubuntu-latest` with no `Tools/ci/Containerfile` (GAP-40 remainder) |
@@ -133,6 +133,11 @@ What exists, and whether it is a real implementation:
   library code calls `process::exit` and `unwrap`.
 - **BUG-28** `Kernel/Extensions/hfs/core/BTreeMiscOps.c:181-201` was edited in place to
   relax `VerifyHeader`, so corrupt B-tree headers are accepted.
+- BUG-29 Closed. The stage-1 `ld64.lld` built from `swiftlang/llvm-project` at
+  `swift-6.4.3-RELEASE` refused every Mach-O input, so stage 1 could not link a
+  ravynOS target; fixed by ADR-31 (details under "Gap closure after P4"). This
+  entry was also numbered BUG-28 until the numbers were made unique; BUG-28 is
+  the hfs edit.
 
 ## Gaps by subsystem
 
@@ -437,7 +442,7 @@ that backs it:
   `git ls-files` failure as "nothing to check" in `check-spdx.sh` and
   `check-host-tools.sh` (both exit 1) but `check-format.sh` printed the error and still
   exited 0 when run against an untrusted mount; the ownership cause is gone in CI.
-- BUG-28 **closed** (linker verified): the stage-1 toolchain was built from
+- BUG-29 **closed** (linker verified): the stage-1 toolchain was built from
   `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`, whose lld refuses every Mach-O input
   (`This version of lld does not support linking for platform macOS`, reproduced by
   linking one object with that `ld64.lld`), so stage 1 could not link a ravynOS target.
@@ -474,7 +479,7 @@ that backs it:
   `--verify` rebuilt it into `build/toolchain/04c9139e…/.verify.<pid>`, the two
   `tools.sha256` lists diffed empty, and the rebuilt tools re-hashed clean (job
   `stage1-key04`, exit 0, `stage1 verify OK: 04c9139e…`, clang 21.1.6). Stage-1 still
-  does not build `libclang`, byacc, rvpatch, mkfat or elf2pe. BUG-28 was the reason the
+  does not build `libclang`, byacc, rvpatch, mkfat or elf2pe. BUG-29 was the reason the
   earlier pass proved nothing about linking; ADR-31 changes the source tree.
 - GAP-59 **closed** (ADR-32): the stray `Tools/mig-mvtmp/` and
   `Apps/.tmp_bad_manifest` are gone, every commit since the restructure has a subject of

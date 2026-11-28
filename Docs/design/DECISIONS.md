@@ -304,7 +304,7 @@ is not rewritten again, so the reference stays valid.
 The stage-1 toolchain fetched `swiftlang/llvm-project` at `swift-6.4.3-RELEASE`. That
 fork carries a downstream patch in its lld that makes `ld64.lld` refuse every Mach-O
 input with `This version of lld does not support linking for platform macOS`, on every
-host, so the built stage 1 could not link a single ravynOS target (BUG-28, reproduced by
+host, so the built stage 1 could not link a single ravynOS target (BUG-29, reproduced by
 linking one object with that `ld64.lld`). Upstream `llvm/llvm-project` at
 `llvmorg-21.1.6` — the LLVM release that Swift tag is built from — links the same object,
 as the Ubuntu package of that release does.
