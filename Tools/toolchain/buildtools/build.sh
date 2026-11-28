@@ -69,8 +69,9 @@ OURS=(-std=gnu11 -Wall -Wextra -Werror)
 
 echo "buildtools: mig"
 BYACC="$OUT/bin/byacc" RVPATCH="$OUT/bin/rvpatch" \
-    CFLAGS="-ffile-prefix-map=$ROOT=/src -ffile-prefix-map=$OUT=/out" \
-    bash "$ROOT/Tools/mig/build.sh" --out "$OUT/obj/mig" >"$OUT/obj/mig.log" 2>&1 || {
+    bash "$ROOT/Tools/mig/build.sh" --out "$OUT/obj/mig" \
+    --cflag "-ffile-prefix-map=$ROOT=/src" --cflag "-ffile-prefix-map=$OUT=/out" \
+    >"$OUT/obj/mig.log" 2>&1 || {
     cat "$OUT/obj/mig.log" >&2
     exit 1
 }

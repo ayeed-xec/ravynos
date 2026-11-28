@@ -5,8 +5,8 @@
 # Stage-1 build tools: byacc, unifdef, rvpatch, mkfat, elf2pe, mig and migcom,
 # cached in build/toolchain/buildtools-<key>/ under their own key
 # (buildtools/key.sh). This is a separate component from LLVM (stage1.sh):
-# the two keys share no input, so either can change without rebuilding the
-# other.
+# the two keys share no repository input, so either can change without
+# rebuilding the other (both include the stage-0 compiler version).
 #
 # usage: buildtools.sh [--verify] [--refetch] [--print-bin]
 #

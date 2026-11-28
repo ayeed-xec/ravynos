@@ -4,9 +4,10 @@
 
 # Print the cache key of the stage-1 build tools: a hash over every file that
 # decides what build.sh produces, the byacc and unifdef pins, and the host
-# compiler that builds them. Nothing here is an LLVM input and llvm/key.sh
-# reads nothing here, so a change to these tools never invalidates the LLVM
-# cache entry, and an LLVM change never rebuilds these.
+# compiler that builds them. The two keys share no repository input, so a
+# change to these tools never moves the LLVM key and an LLVM change never
+# rebuilds these; both include the stage-0 compiler version, so upgrading the
+# host clang moves both.
 #
 # usage: key.sh
 
@@ -25,6 +26,9 @@ cd "$ROOT"
         LC_ALL=C sort -z | xargs -0 sha256sum
     bash "$SCRIPT_DIR/vendor-pin.sh" byacc
     bash "$SCRIPT_DIR/vendor-pin.sh" unifdef
+    # The first line of `clang --version` is the same on x86_64 and arm64
+    # hosts; the target triple and machine tell the binaries apart.
+    printf 'host %s %s\n' "$(uname -sm)" "$(clang -dumpmachine 2>/dev/null || echo none)"
     for tool in clang ld.lld; do
         if command -v "$tool" >/dev/null 2>&1; then
             printf '%s %s\n' "$tool" "$("$tool" --version 2>/dev/null | sed -n '1p')"

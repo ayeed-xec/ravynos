@@ -33,8 +33,10 @@ if [ "${2:-}" = "--refetch" ]; then
 fi
 
 if at_pin; then
-    if ! git -C "$DEST" diff --quiet HEAD --; then
-        echo "error: ${DEST#"$ROOT"/} has local modifications; refusing to build from it" >&2
+    # Untracked and ignored files count too: a header dropped into the tree
+    # would change the build without changing the commit.
+    if [ -n "$(git -C "$DEST" status --porcelain --ignored)" ]; then
+        echo "error: ${DEST#"$ROOT"/} has local changes; refusing to build from it (--refetch)" >&2
         exit 1
     fi
     echo "fetch $NAME: already at ${COMMIT:0:12}"

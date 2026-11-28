@@ -3,8 +3,13 @@
 # Copyright (c) 2026 The ravynOS Authors
 
 # Print the VENDORS pin of one fetched tree as three lines: upstream, tag and
-# commit. VENDORS is the one place a pin is written (SYSTEM-DESIGN.md S01); the
-# fetch and the cache key both read it through this script.
+# commit. The build-tools fetch and cache key read their pins through this
+# script. (The LLVM pin is also written in Tools/toolchain/llvm/_PROVENANCE,
+# which llvm/fetch.sh reads; Tests/tools/run.sh checks that the two agree.)
+#
+# VENDORS is TOML, and rv parses it as such. This reader accepts only the
+# subset the file uses: comments, blank lines, [[vendor]] headers and one-line
+# `key = value` pairs. Anything else is an error rather than a line skipped.
 #
 # usage: vendor-pin.sh <name>
 
@@ -19,40 +24,53 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 want=$1
 current="" upstream="" tag="" commit="" fetch=""
 found=0
+lineno=0
+
+die() {
+    echo "error: VENDORS:$lineno: $1" >&2
+    exit 1
+}
 
 finish() {
     [ "$current" = "$want" ] || return 0
+    [ "$found" -eq 0 ] || die "two entries are named $want"
     found=1
-    if [ "$fetch" != "true" ]; then
-        echo "error: VENDORS entry $want is not fetch = true" >&2
-        exit 1
-    fi
-    if [ -z "$upstream" ] || [ -z "$tag" ] || [ ${#commit} -ne 40 ]; then
-        echo "error: VENDORS entry $want needs upstream, tag and a 40-hex commit" >&2
-        exit 1
-    fi
-    printf '%s\n%s\n%s\n' "$upstream" "$tag" "$commit"
+    [ "$fetch" = "true" ] || die "entry $want is not fetch = true"
+    if [ -z "$upstream" ] || [ -z "$tag" ]; then die "entry $want needs upstream and tag"; fi
+    [[ $commit =~ ^[0-9a-f]{40}$ ]] || die "entry $want: commit '$commit' is not 40 hex digits"
+    pin=("$upstream" "$tag" "$commit")
 }
 
-value_re='^([a-z]+)[[:space:]]*=[[:space:]]*"?([^"]*)"?[[:space:]]*$'
+pair_re='^([a-z_]+)[[:space:]]*=[[:space:]]*("([^"]*)"|true|false|\[[^]]*\])[[:space:]]*$'
+in_entry=0
 while IFS= read -r line || [ -n "$line" ]; do
-    if [ "$line" = "[[vendor]]" ]; then
-        finish
-        current="" upstream="" tag="" commit="" fetch=""
-        continue
-    fi
-    [[ $line =~ $value_re ]] || continue
-    case ${BASH_REMATCH[1]} in
-        name) current=${BASH_REMATCH[2]} ;;
-        upstream) upstream=${BASH_REMATCH[2]} ;;
-        tag) tag=${BASH_REMATCH[2]} ;;
-        commit) commit=${BASH_REMATCH[2]} ;;
-        fetch) fetch=${BASH_REMATCH[2]} ;;
+    lineno=$((lineno + 1))
+    case "$line" in
+        "" | "#"*) continue ;;
+        "[[vendor]]")
+            finish
+            current="" upstream="" tag="" commit="" fetch=""
+            in_entry=1
+            continue
+            ;;
+    esac
+    [ "$in_entry" -eq 1 ] || die "unexpected line before the first [[vendor]]: $line"
+    [[ $line =~ $pair_re ]] || die "cannot read: $line"
+    key=${BASH_REMATCH[1]}
+    value=${BASH_REMATCH[3]:-${BASH_REMATCH[2]}}
+    case $key in
+        name) current=$value ;;
+        upstream) upstream=$value ;;
+        tag) tag=$value ;;
+        commit) commit=$value ;;
+        fetch) fetch=$value ;;
     esac
 done <"$ROOT/VENDORS"
+lineno=$((lineno + 1))
 finish
 
-if [ "$found" -eq 0 ]; then
+[ "$found" -eq 1 ] || {
     echo "error: no VENDORS entry named $want" >&2
     exit 1
-fi
+}
+printf '%s\n' "${pin[@]}"
