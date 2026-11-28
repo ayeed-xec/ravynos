@@ -47,6 +47,10 @@ command -v qemu-system-riscv64 >/dev/null || {
 	echo "run-riscv64.sh: edk2 riscv64 firmware not found at $RISCV_CODE" >&2
 	exit 1
 }
+[[ -f "$RISCV_VARS" ]] || {
+	echo "run-riscv64.sh: edk2 riscv64 variable store not found at $RISCV_VARS" >&2
+	exit 1
+}
 [[ -f "$OPENBSI_FW" ]] || {
 	echo "run-riscv64.sh: OpenSBI firmware not found at $OPENBSI_FW (apt-get install opensbi)" >&2
 	exit 1

@@ -283,22 +283,22 @@ test_expect_probe() {
 	# BUG-26: a test kernel that panics for a real reason must fail the smoke.
 	local d="$WORK/probe" check="$ROOT/Boot/expect-probe.sh"
 	mkdir -p "$d"
-	good() {
+	probe_log_good() {
 		printf 'RVTEST boot\r\nRVTEST handoff-ok\r\nRVPANIC BEGIN magic=0x52564e50 rev=1\r\n'
 		printf 'RVPSTR probe-reached\r\nRVFRAME 0x200344\r\nRVPANIC END\r\n'
 	}
-	good >"$d/good"
+	probe_log_good >"$d/good"
 	expect_ok "expect-probe accepts a CRLF log" bash "$check" "$d/good" t
 	tr -d '\r' <"$d/good" >"$d/lf"
 	expect_ok "expect-probe accepts an LF log" bash "$check" "$d/lf" t
-	{ printf 'BdsDxe: starting\r\n\033[0m\033[2J'; good; } >"$d/esc"
+	{ printf 'BdsDxe: starting\r\n\033[0m\033[2J'; probe_log_good; } >"$d/esc"
 	expect_ok "expect-probe accepts firmware escapes before the kernel" bash "$check" "$d/esc" t
 
 	sed 's/probe-reached/bootargs-version-bad/' "$d/good" >"$d/reason"
 	expect_fail "expect-probe rejects another panic reason" bash "$check" "$d/reason" t
 	grep -v handoff-ok "$d/good" >"$d/nohandoff"
 	expect_fail "expect-probe rejects a log without the hand-off" bash "$check" "$d/nohandoff" t
-	{ good; good | tail -n 4; } >"$d/twice"
+	{ probe_log_good; probe_log_good | tail -n 4; } >"$d/twice"
 	expect_fail "expect-probe rejects two panics" bash "$check" "$d/twice" t
 	grep -v 'RVPANIC END' "$d/good" >"$d/truncated"
 	expect_fail "expect-probe rejects a truncated panic block" bash "$check" "$d/truncated" t

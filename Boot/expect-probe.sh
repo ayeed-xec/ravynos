@@ -30,7 +30,7 @@ WHO=$2
 esc=$'\033'
 events=$(tr -d '\r' <"$LOG" |
 	sed "s/${esc}\[[0-9;?]*[A-Za-z]//g" |
-	grep -E '^(RVTEST|RVPANIC|RVPSTR) ' |
+	grep -aE '^(RVTEST|RVPANIC|RVPSTR) ' |
 	sed -E 's/^RVPANIC (BEGIN|END)( .*)?$/RVPANIC \1/') || true
 
 expected="RVTEST boot
@@ -46,6 +46,8 @@ if [[ "$events" != "$expected" ]]; then
 	echo "$expected" >&2
 	echo "---- kernel lines in $LOG ----" >&2
 	echo "${events:-<none>}" >&2
+	echo "---- full serial log ----" >&2
+	cat "$LOG" >&2
 	exit 1
 fi
 
