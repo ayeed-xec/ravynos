@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+
+name    = "xnuhook"
+layer   = "build-toolchain"
+license = "BSD-2-Clause"
+state   = "incomplete"
+kind    = "host-tool"
+cargo   = "Cargo.toml"
+sources = ["src/**.rs"]

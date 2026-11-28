@@ -5,7 +5,7 @@ name    = "libhello"
 layer   = "foundation"
 license = "BSD-2-Clause"
 state   = "working"
-kind    = "static-lib"
+kind    = "dylib"
 
 sources = [
     "src/**.c",
@@ -13,10 +13,15 @@ sources = [
     "include/**.h",
 ]
 
+install_name          = "/usr/lib/libhello.dylib"
+current_version       = "1.0.0"
+compatibility_version = "1.0.0"
+
 deps.internal = []
 
-targets = ["x86_64-ravynos", "arm64-ravynos", "riscv64-ravynos"]
+# No riscv64: its Mach-O target needs the LLVM patch of ADR-03 first.
+targets = ["x86_64-ravynos", "arm64-ravynos"]
 
 [exports]
 headers = ["include/**.h"]
-libs    = ["libhello.a"]
+libs    = ["libhello.dylib"]

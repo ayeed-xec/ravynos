@@ -4,8 +4,9 @@
 # Stage 1, build-tools component (SYSTEM-DESIGN.md S02): `rv bootstrap
 # buildtools` builds byacc, unifdef, rvpatch, mkfat, elf2pe and mig into
 # build/toolchain/buildtools-<key>/, and `rv bootstrap --verify buildtools`
-# rebuilds them in a second job and compares hashes. It never touches LLVM.
-# Caches are branch-scoped (see stage1-llvm.yml).
+# rebuilds them in a second job and compares hashes. Both run inside the image
+# built from Tools/ci/Containerfile, so the key hashes the image's pinned
+# clang. It never touches LLVM. Caches are branch-scoped (see stage1-llvm.yml).
 name: stage1-buildtools
 
 on:
@@ -18,6 +19,7 @@ on:
       - 'Boot/mkfat/**'
       - 'Boot/elf2pe/**'
       - 'Tools/rv/src/bootstrap.rs'
+      - 'Tools/ci/Containerfile'
       - 'VENDORS'
       - '.github/workflows/stage1-buildtools.yml'
   schedule:
@@ -33,15 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Stage 0 (host clang and lld)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang lld
+      - name: Build the gate image
+        run: docker build -f Tools/ci/Containerfile -t ravynos-gates Tools/ci
 
       - name: Cache key
         id: key
         run: |
-          key=$(bash Tools/toolchain/buildtools/key.sh)
+          key=$(docker run --rm -v "$PWD:/src" -w /src ravynos-gates bash Tools/toolchain/buildtools/key.sh)
           echo "key=$key" >> "$GITHUB_OUTPUT"
 
       - name: Restore the build-tools component
@@ -51,7 +51,15 @@ jobs:
           key: stage1-buildtools-${{ steps.key.outputs.key }}
 
       - name: rv bootstrap buildtools
-        run: cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap buildtools
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src \
+            ravynos-gates cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap buildtools
+
+      # The container runs as root; the cache step on the runner must be able
+      # to read what it wrote.
+      - name: Hand the build tree back to the runner user
+        run: sudo chown -R "$(id -u):$(id -g)" build
 
   verify:
     name: rv bootstrap --verify buildtools
@@ -60,13 +68,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Stage 0 (host clang and lld)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang lld
+      - name: Build the gate image
+        run: docker build -f Tools/ci/Containerfile -t ravynos-gates Tools/ci
 
       - name: The key matches the bootstrap job
-        run: test "$(bash Tools/toolchain/buildtools/key.sh)" = "${{ needs.bootstrap.outputs.key }}"
+        run: |
+          key=$(docker run --rm -v "$PWD:/src" -w /src ravynos-gates bash Tools/toolchain/buildtools/key.sh)
+          test "$key" = "${{ needs.bootstrap.outputs.key }}"
 
       - name: Restore the build-tools component
         uses: actions/cache/restore@v4
@@ -76,4 +84,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: rv bootstrap --verify buildtools
-        run: cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap --verify buildtools
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src \
+            ravynos-gates cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap --verify buildtools

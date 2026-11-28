@@ -1,4 +1,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) 2026 The ravynOS Authors
+#
+# Every gate runs inside the image built from Tools/ci/Containerfile
+# (SYSTEM-DESIGN.md 2.2, 5.6): its base, packages and Rust are pinned, and it
+# holds no bison, flex or m4. Nothing here installs from the runner's apt.
 name: ci
 
 on:
@@ -9,184 +14,57 @@ on:
 
 jobs:
   gates:
-    name: rv gates
+    name: gates in the pinned image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install toolchain
+      - name: Build the gate image
+        run: docker build -f Tools/ci/Containerfile -t ravynos-gates Tools/ci
+
+      # Every commit the push brings is checked, not only the last one. A new
+      # branch has no "before"; its commits are the ones darwin-clean lacks.
+      - name: Commit range of this push
+        id: range
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build clang lld llvm
-          rustup component add rustfmt
+          # A pull request checks out GitHub's synthetic merge commit; the range
+          # ends at the branch head so that commit is not judged.
+          if [ -n "$BASE" ]; then
+            range="$BASE..$HEAD_SHA"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ] \
+              && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            range="$BEFORE..HEAD"
+          else
+            range="origin/darwin-clean..HEAD"
+          fi
+          echo "range=$range" >> "$GITHUB_OUTPUT"
 
-      - name: Stage-1 build tools cache key
-        id: buildtools
+      - name: Run every gate inside it
         run: |
-          key=$(bash Tools/toolchain/buildtools/key.sh)
-          echo "key=$key" >> "$GITHUB_OUTPUT"
+          docker run --rm -v "$PWD:/src" -w /src \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/src \
+            ravynos-gates Tools/ci/gates.sh "${{ steps.range.outputs.range }}"
 
-      - name: Restore the stage-1 build tools
-        uses: actions/cache@v4
-        with:
-          path: build/toolchain/buildtools-${{ steps.buildtools.outputs.key }}
-          key: stage1-buildtools-${{ steps.buildtools.outputs.key }}
-
-      - name: Stage-1 build tools (byacc, unifdef, rvpatch, mkfat, elf2pe, mig)
-        run: |
-          cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap buildtools
-          Tools/toolchain/buildtools.sh --print-bin >> "$GITHUB_PATH"
-
-      - name: byacc and rvpatch resolve to stage 1, not the host
-        run: |
-          bin=$(Tools/toolchain/buildtools.sh --print-bin)
-          for tool in byacc unifdef rvpatch mig; do
-            [ "$(command -v "$tool")" = "$bin/$tool" ] || {
-              echo "$tool resolves to $(command -v "$tool"), expected $bin/$tool"
-              exit 1
-            }
-          done
-
-      - name: Host tool gate (no GPL program in the build)
-        run: |
-          bash -n Tools/ci/check-host-tools.sh
-          shellcheck Tools/ci/check-host-tools.sh
-          Tools/ci/check-host-tools.sh
-
-      - name: Lint the CI scripts
-        run: |
-          bash -n Tools/ci/check-format.sh
-          shellcheck Tools/ci/check-format.sh
-          bash -n Tools/ci/check-spdx.sh
-          shellcheck Tools/ci/check-spdx.sh
-          bash -n Tools/ci/check-commit-subjects.sh
-          shellcheck Tools/ci/check-commit-subjects.sh
-
-      - name: SPDX identifiers on every file we own
-        run: Tools/ci/check-spdx.sh
-
-      - name: Commit subjects in this change
-        run: Tools/ci/check-commit-subjects.sh 'HEAD^..HEAD'
-
-      - name: Host tool unit tests (rvpatch, mkfat, elf2pe)
-        run: |
-          shellcheck Tests/tools/run.sh
-          Tests/tools/run.sh
-
-      - name: Build the rv harness
-        run: cargo build --manifest-path Tools/rv/Cargo.toml
-
-      - name: rv unit tests
-        run: cargo test --manifest-path Tools/rv/Cargo.toml
-
-      - name: rv lints
-        run: cargo clippy --manifest-path Tools/rv/Cargo.toml --all-targets -- -D warnings
-
-      - name: rv test (runs every Tests/**/test.toml)
-        run: cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- test
-
-      - name: Commands whose tool is not built yet exit 3
-        run: |
-          for cmd in kernelcache codesign symbolicate; do
-            code=0
-            Tools/rv/target/debug/rv "$cmd" || code=$?
-            if [ "$code" -ne 3 ]; then
-              echo "$cmd exited $code, expected 3 (E-NOT-BUILT)"
-              exit 1
-            fi
-          done
-
-      - name: Vendored trees match their pins
-        run: cargo run --manifest-path Tools/rv/Cargo.toml -- vendors check
-
-      - name: rv build (discovers components from their manifests)
-        run: |
-          cargo run --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
-          cargo run --manifest-path Tools/rv/Cargo.toml -- build -t arm64-ravynos
-
-      - name: Linked user-space output is Mach-O for its target
-        run: |
-          file "build/x86_64-ravynos/hello/hello" | grep -q "Mach-O 64-bit x86_64"
-          file "build/arm64-ravynos/hello/hello" | grep -q "Mach-O 64-bit arm64"
-          echo "Mach-O assertion: OK"
-
-      - name: rv audit license
-        run: cargo run --manifest-path Tools/rv/Cargo.toml -- audit license
-
-      - name: Negative fixtures fail as designed
-        run: |
-          RV="$PWD/Tools/rv/target/debug/rv" bash Tests/rv/negative/run.sh
-
-      - name: mig builds from the pinned tree plus its patches
-        run: Tools/mig/build.sh --out "$RUNNER_TEMP/mig" --smoke
-
-  gates-image:
-    name: gates in the pinned image
+  boot:
+    name: boot smokes in the pinned image (QEMU TCG)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: Build the gate image
         run: docker build -f Tools/ci/Containerfile -t ravynos-gates Tools/ci
 
-      - name: Run every gate inside it
-        env:
-          GIT_CONFIG_COUNT: 1
-          GIT_CONFIG_KEY_0: safe.directory
-          GIT_CONFIG_VALUE_0: /src
+      - name: x86_64, Mach-O, arm64 and riscv64 smokes
         run: |
-          docker run --rm -v "$PWD:/src" -w /src \
-            -e GIT_CONFIG_COUNT -e GIT_CONFIG_KEY_0 -e GIT_CONFIG_VALUE_0 \
-            ravynos-gates bash -eu -c '
-              Tools/toolchain/buildtools.sh
-              PATH="$(Tools/toolchain/buildtools.sh --print-bin):$PATH"
-              Tools/ci/check-format.sh
-              Tools/ci/check-spdx.sh
-              Tools/ci/check-host-tools.sh
-              Tools/ci/check-commit-subjects.sh "HEAD^..HEAD"
-              Tests/tools/run.sh
-            '
-
-  boot:
-    name: boot smokes (QEMU TCG)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install QEMU and firmware
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build clang lld llvm \
-            qemu-system-x86 qemu-system-arm qemu-system-misc qemu-system-riscv \
-            ovmf qemu-efi-aarch64 qemu-efi-riscv64 opensbi
-
-      - name: x86_64 boot smoke
-        run: Tests/boot/smoke.sh
-
-      - name: Mach-O loader smoke
-        run: Tests/boot/smoke-macho.sh
-
-      - name: arm64 boot smoke
-        run: Tests/boot/smoke-arm64.sh
-
-      - name: riscv64 boot smoke
-        run: Tests/boot/smoke-riscv64.sh
-
-  format:
-    name: clang-format / rustfmt gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format
-          rustup component add rustfmt
-
-      - name: Check formatting
-        run: Tools/ci/check-format.sh
+          docker run --rm -v "$PWD:/src" -w /src ravynos-gates bash -eu -c '
+            Tests/boot/smoke.sh
+            Tests/boot/smoke-macho.sh
+            Tests/boot/smoke-arm64.sh
+            Tests/boot/smoke-riscv64.sh
+          '

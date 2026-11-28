@@ -261,16 +261,36 @@ fn select(
     Ok(order)
 }
 
-fn build(
-    tree: &std::path::Path,
+fn supports(m: &manifest::Manifest, target: &str) -> bool {
+    m.targets.is_empty() || m.targets.iter().any(|t| t == target)
+}
+
+/// The build order for `target` (S01: `targets` is checked only for what the
+/// command selects). With no names, every component that supports the target
+/// is selected; a named component, or anything it depends on, that does not
+/// support the target is an error.
+fn select_for_target(
     manifests: &BTreeMap<String, manifest::Manifest>,
     deps: &BTreeMap<String, Vec<String>>,
-    target: &str,
     names: &[String],
-) -> Result<(), String> {
-    audit::license(tree, manifests)?;
-    for m in manifests.values() {
-        if !m.targets.is_empty() && !m.targets.iter().any(|t| t == target) {
+    target: &str,
+) -> Result<Vec<String>, String> {
+    let names: Vec<String> = if names.is_empty() {
+        manifests
+            .values()
+            .filter(|m| supports(m, target))
+            .map(|m| m.name.clone())
+            .collect()
+    } else {
+        names.to_vec()
+    };
+    if names.is_empty() {
+        return Ok(Vec::new());
+    }
+    let order = select(manifests, deps, &names)?;
+    for name in &order {
+        let m = &manifests[name];
+        if !supports(m, target) {
             return Err(format!(
                 "error: {} does not support target {target}\n       targets: {}",
                 m.name,
@@ -278,7 +298,23 @@ fn build(
             ));
         }
     }
-    let order = select(manifests, deps, names)?;
+    Ok(order)
+}
+
+fn build(
+    tree: &std::path::Path,
+    manifests: &BTreeMap<String, manifest::Manifest>,
+    deps: &BTreeMap<String, Vec<String>>,
+    target: &str,
+    names: &[String],
+) -> Result<(), String> {
+    if target == "riscv64-ravynos" {
+        // ADR-03: riscv64 user space needs the LLVM patch that adds a Mach-O
+        // riscv64 target; clang would otherwise emit ELF for an unknown OS.
+        return not_built("S08", "the riscv64 Mach-O target (ADR-03)");
+    }
+    audit::license(tree, manifests)?;
+    let order = select_for_target(manifests, deps, names, target)?;
     let build_dir = tree.join("build").join(target);
     std::fs::create_dir_all(&build_dir).map_err(|e| format!("error: create build dir: {e}"))?;
     let ninja_file = build_dir.join("build.ninja");
@@ -455,4 +491,55 @@ fn audit_size(tree: &std::path::Path, target: &str) -> Result<(), String> {
     }
     println!("{total:>10}  total ({target})");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tree(specs: &[(&str, &str, &[&str])]) -> BTreeMap<String, manifest::Manifest> {
+        let mut manifests = BTreeMap::new();
+        for (name, targets, deps) in specs {
+            let deps: Vec<String> = deps.iter().map(|d| format!("\"{d}\"")).collect();
+            let text = format!(
+                "name = \"{name}\"\nlayer = \"foundation\"\nlicense = \"BSD-2-Clause\"\n\
+                 state = \"working\"\nkind = \"dylib\"\nsources = []\ntargets = [{targets}]\n\
+                 deps.internal = [{}]\n",
+                deps.join(", ")
+            );
+            let m = manifest::parse(&text).expect("fixture manifest parses");
+            manifests.insert(m.name.clone(), m);
+        }
+        manifests
+    }
+
+    #[test]
+    fn unnamed_build_skips_components_without_the_target() {
+        let m = tree(&[
+            ("both", "\"x86_64-ravynos\", \"riscv64-ravynos\"", &[]),
+            ("x86only", "\"x86_64-ravynos\"", &[]),
+            ("any", "", &[]),
+        ]);
+        let deps = graph::resolve(&m).expect("graph resolves");
+        let order = select_for_target(&m, &deps, &[], "riscv64-ravynos").expect("selects");
+        assert_eq!(order, vec!["any".to_string(), "both".to_string()]);
+    }
+
+    #[test]
+    fn named_component_or_dep_without_the_target_is_an_error() {
+        let m = tree(&[
+            ("lib", "\"x86_64-ravynos\"", &[]),
+            ("app", "\"x86_64-ravynos\", \"riscv64-ravynos\"", &["lib"]),
+        ]);
+        let deps = graph::resolve(&m).expect("graph resolves");
+        let err = select_for_target(&m, &deps, &["app".to_string()], "riscv64-ravynos")
+            .expect_err("lib cannot build for riscv64");
+        assert!(
+            err.contains("lib does not support target riscv64-ravynos"),
+            "{err}"
+        );
+        let order = select_for_target(&m, &deps, &["app".to_string()], "x86_64-ravynos")
+            .expect("both support x86_64");
+        assert_eq!(order, vec!["lib".to_string(), "app".to_string()]);
+    }
 }

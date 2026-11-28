@@ -21,13 +21,13 @@ fi
 
 bash "$BOOT/build.sh" >/dev/null
 
-M64=(-target x86_64-apple-macosx -ffreestanding -fno-builtin -fno-pie -mgeneral-regs-only -O2 -Wall -Wextra "-I$BOOT/include" "-I$BOOT/loader")
+M64=(-target x86_64-apple-macosx27.2 -ffreestanding -fno-builtin -fno-pie -mgeneral-regs-only -O2 -Wall -Wextra "-I$BOOT/include" "-I$BOOT/loader")
 clang "${M64[@]}" -c "$BOOT/testkernel/kernel.c" -o "$BUILD/tk-macho-kernel.o"
 clang "${M64[@]}" -c "$BOOT/loader/util.c" -o "$BUILD/tk-macho-util.o"
-clang -target x86_64-apple-macosx -c "$BOOT/testkernel/start-macho.S" -o "$BUILD/tk-macho-start.o"
+clang -target x86_64-apple-macosx27.2 -c "$BOOT/testkernel/start-macho.S" -o "$BUILD/tk-macho-start.o"
 
 ld64.lld -arch x86_64 -e _start -pagezero_size 0x400000 \
-	-platform_version macOS 11.0 11.0 \
+	-platform_version macos 27.2 27.2 -no_fixup_chains -no_pie \
 	-o "$BUILD/testkernel-macho" \
 	"$BUILD/tk-macho-start.o" "$BUILD/tk-macho-kernel.o" "$BUILD/tk-macho-util.o"
 

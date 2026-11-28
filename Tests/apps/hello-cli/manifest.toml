@@ -11,7 +11,8 @@ sources = ["hello.c"]
 
 deps.internal = ["libhello"]
 
-targets = ["x86_64-ravynos", "arm64-ravynos", "riscv64-ravynos"]
+# riscv64 is dropped with libhello, which needs a Mach-O riscv64 target (ADR-03).
+targets = ["x86_64-ravynos", "arm64-ravynos"]
 
 [exports]
 headers = []

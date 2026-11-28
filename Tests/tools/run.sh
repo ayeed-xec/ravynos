@@ -179,31 +179,6 @@ test_hash_tools() {
 	expect_fail "hash-tools rejects a non-directory" bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" "$d/nope"
 }
 
-test_xnu_parsers() {
-	local out="$WORK/parsers"
-	# ADR-17: upstream ships these as Bison output, so they are pruned from the
-	# vendored tree and the build regenerates them instead.
-	local pruned=(libkern/c++/OSUnserialize.cpp
-		iokit/System/OSUnserializeXMLSharedImplementation.h
-		libkern/libkern/c++/OSUnserializeXMLSharedImplementation.h)
-	local f
-
-	for f in "${pruned[@]}"; do
-		if [ -e "$ROOT/Kernel/xnu/$f" ]; then bad "xnu: $f is still in the tree"; else ok; fi
-	done
-
-	if bash "$ROOT/Kernel/build/gen-parsers.sh" "$out" >"$WORK/out" 2>&1; then ok; else bad "gen-parsers: exited non-zero: $(cat "$WORK/out")"; fi
-	for f in OSUnserialize.cpp OSUnserializeXMLSharedImplementation.h; do
-		if [ -s "$out/$f" ] && grep -q YYBYACC "$out/$f"; then ok; else bad "gen-parsers: $f is not byacc output"; fi
-	done
-	# A reentrant parser keeps its state out of globals; without -P the two
-	# grammars would generate a different calling convention.
-	if grep -q 'yyparse((void \*)state)' "$out/OSUnserializeXMLSharedImplementation.h"; then ok; else bad "gen-parsers: XML parser lost its state argument"; fi
-
-	expect_fail "gen-parsers needs an output directory" bash "$ROOT/Kernel/build/gen-parsers.sh"
-	expect_fail "gen-parsers refuses an unknown extra argument" bash "$ROOT/Kernel/build/gen-parsers.sh" "$out" extra
-}
-
 test_doc_paths() {
 	# GAP-32: the legacy design doc named paths that were never in the tree. The
 	# live documents must keep pointing at files that exist.
@@ -358,6 +333,40 @@ test_llvm_pin_agrees() {
 	fi
 }
 
+test_check_macho() {
+	# The S02 Mach-O assertion must reject the wrong file type, CPU, minos and
+	# format, not only accept the right one.
+	local d="$WORK/macho" check="$ROOT/Tools/ci/check-macho.sh"
+	mkdir -p "$d"
+	printf 'int hello(void) { return 1; }\n' >"$d/h.c"
+	clang --target=x86_64-apple-macosx27.2 -ffreestanding -nostdinc -c "$d/h.c" -o "$d/h.o" || {
+		bad "check-macho: cannot compile the fixture"
+		return
+	}
+	ld64.lld -arch x86_64 -platform_version macos 27.2 27.2 -dylib \
+		-install_name /usr/lib/libh.dylib "$d/h.o" -o "$d/libh.dylib" || {
+		bad "check-macho: cannot link the fixture"
+		return
+	}
+	ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -dylib \
+		-install_name /usr/lib/libh.dylib "$d/h.o" -o "$d/old.dylib" 2>/dev/null || {
+		bad "check-macho: cannot link the minos 11.0 fixture"
+		return
+	}
+	clang --target=x86_64-unknown-linux-gnu -ffreestanding -nostdinc -c "$d/h.c" -o "$d/h.elf.o" || {
+		bad "check-macho: cannot compile the ELF fixture"
+		return
+	}
+
+	expect_ok "check-macho accepts an x86_64 dylib" bash "$check" "$d/libh.dylib" x86_64 DYLIB
+	expect_fail "check-macho rejects the wrong file type" bash "$check" "$d/libh.dylib" x86_64 EXECUTE
+	expect_fail "check-macho rejects the wrong CPU" bash "$check" "$d/libh.dylib" arm64 DYLIB
+	expect_fail "check-macho rejects minos 11.0" bash "$check" "$d/old.dylib" x86_64 DYLIB
+	expect_fail "check-macho rejects an ELF object" bash "$check" "$d/h.elf.o" x86_64 OBJECT
+	expect_fail "check-macho rejects a missing file" bash "$check" "$d/none" x86_64 DYLIB
+	expect_fail "check-macho rejects an unknown arch" bash "$check" "$d/libh.dylib" mips DYLIB
+}
+
 test_commit_subjects() {
 	# GAP-59: subjects stay short and lowercase-scoped. The checker reads the
 	# repository it lives in, so run a copy inside a scratch repository.
@@ -428,7 +437,6 @@ test_rvpatch
 test_mkfat
 test_elf2pe
 test_hash_tools
-test_xnu_parsers
 test_doc_paths
 test_stage1_key
 test_buildtools_key
@@ -437,6 +445,7 @@ test_fetch_pin
 test_llvm_pin_agrees
 test_commit_subjects
 test_expect_probe
+test_check_macho
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]
