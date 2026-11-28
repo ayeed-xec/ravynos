@@ -36,6 +36,14 @@ expect_fail() {
 	if "$@" >"$WORK/out" 2>&1; then bad "$name: accepted bad input"; else ok; fi
 }
 
+# rewrite <file> <old> <new>: replace every literal occurrence, in place.
+rewrite() {
+	local file=$1 old=$2 new=$3 content
+	content=$(cat "$file" && printf x)
+	content=${content%x}
+	printf '%s' "${content//"$old"/"$new"}" >"$file"
+}
+
 le16() {
 	od -An -tu2 -j"$2" -N2 "$1" | tr -d ' '
 }
@@ -62,11 +70,15 @@ EOF
 
 	(cd "$d/tree" && expect_fail "rvpatch rejects reapply" "$WORK/rvpatch" -p1 "$d/good.patch")
 
-	sed 's|a/src/a.txt|a/../escape.txt|; s|b/src/a.txt|b/../escape.txt|' "$d/good.patch" >"$d/dotdot.patch"
+	cp "$d/good.patch" "$d/dotdot.patch"
+	rewrite "$d/dotdot.patch" 'a/src/a.txt' 'a/../escape.txt'
+	rewrite "$d/dotdot.patch" 'b/src/a.txt' 'b/../escape.txt'
 	(cd "$d/tree" && expect_fail "rvpatch rejects .." "$WORK/rvpatch" -p1 "$d/dotdot.patch")
 	if [[ ! -e "$d/escape.txt" ]]; then ok; else bad "rvpatch wrote outside the tree"; fi
 
-	sed 's|a/src/a.txt|/etc/passwd|; s|b/src/a.txt|/etc/passwd|' "$d/good.patch" >"$d/abs.patch"
+	cp "$d/good.patch" "$d/abs.patch"
+	rewrite "$d/abs.patch" 'a/src/a.txt' '/etc/passwd'
+	rewrite "$d/abs.patch" 'b/src/a.txt' '/etc/passwd'
 	(cd "$d/tree" && expect_fail "rvpatch rejects absolute path" "$WORK/rvpatch" -p0 "$d/abs.patch")
 
 	(cd "$d/tree" && expect_fail "rvpatch rejects -p junk" "$WORK/rvpatch" -p1x "$d/good.patch")
@@ -244,7 +256,7 @@ test_buildtools_key() {
 	local input
 	for input in Tools/toolchain/buildtools/build.sh Tools/mig/patches/series Boot/mkfat/mkfat.c VENDORS; do
 		if [ "$input" = VENDORS ]; then
-			sed -i 's/"t20260126"/"t20251214"/' "$t/VENDORS"
+			rewrite "$t/VENDORS" '"t20260126"' '"t20251214"'
 		else
 			printf '\n' >>"$t/$input"
 		fi
@@ -283,7 +295,12 @@ test_buildtools_verify() {
 	expect_ok "buildtools --verify passes on an honest cache" bash "$t/Tools/toolchain/buildtools.sh" --verify
 
 	cp "$bin/../tools.sha256" "$WORK/tools.sha256.good"
-	sed -i '1s/^[0-9a-f]\{8\}/deadbeef/' "$bin/../tools.sha256"
+	{
+		IFS= read -r first
+		printf 'deadbeef%s\n' "${first:8}"
+		cat
+	} <"$bin/../tools.sha256" >"$WORK/tools.sha256.tampered"
+	cp "$WORK/tools.sha256.tampered" "$bin/../tools.sha256"
 	if cmp -s "$bin/../tools.sha256" "$WORK/tools.sha256.good"; then bad "the tamper left tools.sha256 unchanged"; else ok; fi
 	expect_fail "buildtools --verify refuses a tampered tools.sha256" bash "$t/Tools/toolchain/buildtools.sh" --verify
 	cp "$WORK/tools.sha256.good" "$bin/../tools.sha256"
@@ -314,7 +331,7 @@ test_fetch_pin() {
 	expect_fail "fetch refuses a tag that names another commit" bash "$t/Tools/toolchain/buildtools/fetch.sh" demo
 	if grep -q "VENDORS pins $first" "$WORK/out"; then ok; else bad "fetch did not report the pin mismatch"; fi
 
-	sed -i "s/$first/$second/" "$t/VENDORS"
+	rewrite "$t/VENDORS" "$first" "$second"
 	expect_ok "fetch takes a tag that names the pinned commit" bash "$t/Tools/toolchain/buildtools/fetch.sh" demo
 	if [ "$(git -C "$t/build/vendor/demo" rev-parse HEAD)" = "$second" ]; then ok; else bad "fetch checked out the wrong commit"; fi
 }
@@ -324,9 +341,16 @@ test_llvm_pin_agrees() {
 	# would move the LLVM key): VENDORS and llvm/_PROVENANCE must agree.
 	local pin prov_url prov_tag prov_commit
 	mapfile -t pin < <(bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" llvm-project)
-	prov_url=$(sed -n 's/^\* Upstream URL: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
-	prov_tag=$(sed -n 's/^\* Tag: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
-	prov_commit=$(sed -n 's/^\* Commit: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
+	prov_url=""
+	prov_tag=""
+	prov_commit=""
+	while IFS= read -r line; do
+		case "$line" in
+		"* Upstream URL: "*) prov_url=${line#\* Upstream URL: } ;;
+		"* Tag: "*) prov_tag=${line#\* Tag: } ;;
+		"* Commit: "*) prov_commit=${line#\* Commit: } ;;
+		esac
+	done <"$ROOT/Tools/toolchain/llvm/_PROVENANCE"
 	if [ "${pin[0]:-}" = "$prov_url" ] && [ "${pin[1]:-}" = "$prov_tag" ] &&
 		[ "${pin[2]:-}" = "$prov_commit" ]; then ok; else
 		bad "VENDORS llvm-project (${pin[*]:-}) disagrees with llvm/_PROVENANCE ($prov_url $prov_tag $prov_commit)"
@@ -415,7 +439,8 @@ test_expect_probe() {
 	{ printf 'BdsDxe: starting\r\n\033[0m\033[2J'; probe_log_good; } >"$d/esc"
 	expect_ok "expect-probe accepts firmware escapes before the kernel" bash "$check" "$d/esc" t
 
-	sed 's/probe-reached/bootargs-version-bad/' "$d/good" >"$d/reason"
+	cp "$d/good" "$d/reason"
+	rewrite "$d/reason" probe-reached bootargs-version-bad
 	expect_fail "expect-probe rejects another panic reason" bash "$check" "$d/reason" t
 	grep -v handoff-ok "$d/good" >"$d/nohandoff"
 	expect_fail "expect-probe rejects a log without the hand-off" bash "$check" "$d/nohandoff" t
@@ -425,7 +450,8 @@ test_expect_probe() {
 	expect_fail "expect-probe rejects a truncated panic block" bash "$check" "$d/truncated" t
 	tac "$d/good" >"$d/reversed"
 	expect_fail "expect-probe rejects the lines out of order" bash "$check" "$d/reversed" t
-	sed 's/^RVPSTR probe-reached/RVPSTR probe-reached-not/' "$d/good" >"$d/suffix"
+	cp "$d/good" "$d/suffix"
+	rewrite "$d/suffix" 'RVPSTR probe-reached' 'RVPSTR probe-reached-not'
 	expect_fail "expect-probe rejects a reason with a suffix" bash "$check" "$d/suffix" t
 	: >"$d/empty"
 	expect_fail "expect-probe rejects an empty log" bash "$check" "$d/empty" t
@@ -446,6 +472,8 @@ test_llvm_pin_agrees
 test_commit_subjects
 test_expect_probe
 test_check_macho
+
+if bash "$ROOT/Tests/gates/planted.sh"; then ok "planted gate tests"; else bad "planted gate tests"; fi
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

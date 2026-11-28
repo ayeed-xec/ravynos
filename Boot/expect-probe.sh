@@ -28,10 +28,27 @@ WHO=$2
 # shares with the first kernel line. Only whole kernel lines count, and the
 # BEGIN line's magic and revision fields are dropped.
 esc=$'\033'
-events=$(tr -d '\r' <"$LOG" |
-	sed "s/${esc}\[[0-9;?]*[A-Za-z]//g" |
-	grep -aE '^(RVTEST|RVPANIC|RVPSTR) ' |
-	sed -E 's/^RVPANIC (BEGIN|END)( .*)?$/RVPANIC \1/') || true
+events=""
+while IFS= read -r raw; do
+	line=${raw//$'\r'/}
+	while [[ $line == *"${esc}["* ]]; do
+		head=${line%%"${esc}["*}
+		tail=${line#*"${esc}["}
+		while [[ -n $tail && ${tail:0:1} != [A-Za-z] ]]; do
+			tail=${tail:1}
+		done
+		line=${head}${tail:1}
+	done
+	case "$line" in
+	RVTEST\ * | RVPSTR\ * | RVPANIC\ *) ;;
+	*) continue ;;
+	esac
+	case "$line" in
+	"RVPANIC BEGIN"*) line="RVPANIC BEGIN" ;;
+	"RVPANIC END"*) line="RVPANIC END" ;;
+	esac
+	events+="${events:+$'\n'}${line}"
+done <"$LOG"
 
 expected="RVTEST boot
 RVTEST handoff-ok
@@ -40,7 +57,12 @@ RVPSTR probe-reached
 RVPANIC END"
 
 if [[ "$events" != "$expected" ]]; then
-	reasons=$(sed -n 's/^RVPSTR //p' <<<"$events" | tr '\n' ' ')
+	reasons=""
+	while IFS= read -r line; do
+		case "$line" in
+		"RVPSTR "*) reasons+="${line#RVPSTR } " ;;
+		esac
+	done <<<"$events"
 	echo "$WHO: not a passing boot (panic reason: ${reasons:-none})" >&2
 	echo "---- expected kernel lines ----" >&2
 	echo "$expected" >&2

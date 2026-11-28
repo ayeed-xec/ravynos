@@ -45,16 +45,27 @@ if command -v llvm-symbolizer >/dev/null 2>&1; then
 	SYMBOLIZER=$(command -v llvm-symbolizer)
 fi
 
-llvm-nm -n "$ELF" | awk '$2 ~ /[tTdrRbB]/ && $3 !~ /^\.L/ && $3 != "" { print $1, $3 }' | sort -u > "$ROOT/build/symbols.sorted"
+llvm-nm -n "$ELF" | while read -r addr type name; do
+	case "$type" in
+	[tTdrRbB]) ;;
+	*) continue ;;
+	esac
+	[[ -n $name && $name != .L* ]] || continue
+	printf '%s %s\n' "$addr" "$name"
+done | sort -u >"$ROOT/build/symbols.sorted"
 
 symbolicate() {
 	local addr=$1
-	local dec=$(( 16#${addr#0x} ))
-	local line
-	line=$(awk -v a="$dec" 'function h(x){v=0; for(i=1;i<=length(x);i++){c=tolower(substr(x,i,1)); p=index("0123456789abcdef",c); if(p==0) continue; v=v*16+p-1} return v} {v=h($1); if(v<=a){s=v; n=$2}} END {print n, s}' "$ROOT/build/symbols.sorted")
-	local sym
-	sym=${line%% *}
+	local dec=$((16#${addr#0x}))
+	local line=""
+	local symaddr sym
+	while read -r symaddr sym; do
+		local a=$((16#${symaddr#0x}))
+		[[ $a -le $dec ]] || break
+		line="$sym $a"
+	done <"$ROOT/build/symbols.sorted"
 	local base
+	sym=${line%% *}
 	base=${line##* }
 	if [[ -z "$sym" ]]; then
 		echo "?+$addr"
