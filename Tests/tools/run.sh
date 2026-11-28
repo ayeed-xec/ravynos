@@ -179,10 +179,36 @@ test_hash_tools() {
 	expect_fail "hash-tools rejects a non-directory" bash "$ROOT/Tools/toolchain/llvm/hash-tools.sh" "$d/nope"
 }
 
+test_xnu_parsers() {
+	local out="$WORK/parsers"
+	# ADR-17: upstream ships these as Bison output, so they are pruned from the
+	# vendored tree and the build regenerates them instead.
+	local pruned=(libkern/c++/OSUnserialize.cpp
+		iokit/System/OSUnserializeXMLSharedImplementation.h
+		libkern/libkern/c++/OSUnserializeXMLSharedImplementation.h)
+	local f
+
+	for f in "${pruned[@]}"; do
+		if [ -e "$ROOT/Kernel/xnu/$f" ]; then bad "xnu: $f is still in the tree"; else ok; fi
+	done
+
+	if bash "$ROOT/Kernel/build/gen-parsers.sh" "$out" >"$WORK/out" 2>&1; then ok; else bad "gen-parsers: exited non-zero: $(cat "$WORK/out")"; fi
+	for f in OSUnserialize.cpp OSUnserializeXMLSharedImplementation.h; do
+		if [ -s "$out/$f" ] && grep -q YYBYACC "$out/$f"; then ok; else bad "gen-parsers: $f is not byacc output"; fi
+	done
+	# A reentrant parser keeps its state out of globals; without -P the two
+	# grammars would generate a different calling convention.
+	if grep -q 'yyparse((void \*)state)' "$out/OSUnserializeXMLSharedImplementation.h"; then ok; else bad "gen-parsers: XML parser lost its state argument"; fi
+
+	expect_fail "gen-parsers needs an output directory" bash "$ROOT/Kernel/build/gen-parsers.sh"
+	expect_fail "gen-parsers refuses an unknown extra argument" bash "$ROOT/Kernel/build/gen-parsers.sh" "$out" extra
+}
+
 test_rvpatch
 test_mkfat
 test_elf2pe
 test_hash_tools
+test_xnu_parsers
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]

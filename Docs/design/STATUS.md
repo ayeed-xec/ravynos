@@ -236,13 +236,14 @@ boot smokes. The arm64 smoke uses `cortex-a57`, which cannot run the RVVIRT targ
   under `prune`, so `rv vendors check` fails if either reappears. The build
   parses with byacc and uses the hand-written scanner at
   `Tools/mig/generated/lexxer.c`; no flex or bison output remains in mig.
-  Partial: the pinned XNU tree still ships bison-generated
-  `Kernel/xnu/libkern/c++/OSUnserialize.cpp`,
-  `Kernel/xnu/iokit/System/OSUnserializeXMLSharedImplementation.h` and
-  `Kernel/xnu/libkern/libkern/c++/OSUnserializeXMLSharedImplementation.h`.
-  Closing that needs an xnu prune and a new pin; S01 keeps xnu byte-identical
-  for now. The `IOPCIFamily` pciutils patches and `iig_shims.h` named in older
-  text are no longer in the tree.
+  Closed for XNU the same way: the three Bison-generated files
+  (`libkern/c++/OSUnserialize.cpp` and both
+  `OSUnserializeXMLSharedImplementation.h` copies) are removed from the tree,
+  listed under `VENDORS.prune`, and the pin is updated to the pruned tree
+  (`c35cb043…`). `Kernel/build/gen-parsers.sh` regenerates both parsers with
+  byacc `-P` into a build directory and refuses to run if a pruned copy is back;
+  the W1 kernel build compiles that output. The `IOPCIFamily` pciutils patches
+  and `iig_shims.h` named in older text are no longer in the tree.
 - GAP-52 Several kexts use `com.ravynos.*` bundle IDs where the macOS family's bundle ID
   is required for matching.
 
@@ -339,11 +340,10 @@ no code at all.)
 - GAP-30 Closed. `Legacy/` — with its GPL/LGPL/AGPL material: autotools
   `config.guess`/`config.sub` and m4 files, GCC dump files under
   `Legacy/BSD/lib/ncurses/obj_s`, LGPL `dtrace_ctf`, NSS-derived tri-licensed files
-  in Security, and the URW fonts — was removed with WP0.0. The remaining open GPL
-  item is GAP-46. Vendored generated output still in the tree:
-  `Kernel/xnu/libkern/c++/OSUnserialize.cpp` and the `OSUnserializeXML`
-  headers; the migcom parser and scanner are pruned from the vendored tree and
-  covered by `VENDORS.prune`.
+  in Security, and the URW fonts — was removed with WP0.0. GAP-46, the last GPL
+  item, is now closed: the migcom parser and scanner and XNU's two Bison outputs
+  are pruned from the vendored trees, listed under `VENDORS.prune`, and
+  regenerated with byacc by the build.
 - GAP-31 Closed for xnu: `VENDORS` records the upstream, tag, commit and tree for it
   and for migcom, and `rv vendors check` verifies both against git in CI. `_PROVENANCE`
   files for other trees still need the same treatment (GAP-58).
@@ -389,6 +389,10 @@ rebuild, which P2 left unproven, was observed end to end afterwards under cache 
 The entries above record the tree at `b1746b5ce`. What changed since, with the check
 that backs it:
 
+- GAP-46 **closed**: XNU's `libkern/c++/OSUnserialize.cpp` and both
+  `OSUnserializeXMLSharedImplementation.h` copies are removed and listed under
+  `VENDORS.prune`; the pin is the pruned tree `c35cb043…`; `Kernel/build/gen-parsers.sh`
+  regenerates both parsers with byacc `-P` and five host-tool cases cover it.
 - GAP-02 **closed**: compile rules carry `-MMD -MF $out.d` with `depfile`/`deps = gcc`;
   touching `Foundation/libhello/include/hello.h` recompiles and relinks.
 - GAP-03 **closed**: `.c`, `.m`, `.mm`, `.cpp`/`.cc`/`.cxx` and `.S`/`.s` have rules,
@@ -468,7 +472,7 @@ that backs it:
 | W0: every merged component scores at least 8/10 in review | open (`Tools/rv` and `Tools/mig` at 8/10; stage-1 7/10, loader 6/10, CI 7/10) |
 | W0: negative tests fail as designed in CI | closed (GAP-33: `Tests/rv/negative/run.sh`) |
 | W0: audit and host-tool gate cover the tree | closed (GAP-10 whole-tree scan; GAP-09 licence audit over every manifest) |
-| W0: no GPL material in the repository | open (GAP-46: migcom's bison/flex output pruned and enforced by `VENDORS.prune`; XNU's bison-generated `OSUnserialize*` files remain, ADR-17) |
+| W0: no GPL material in the repository | closed (GAP-46: migcom's bison/flex output and XNU's Bison outputs pruned and enforced by `VENDORS.prune`; `Kernel/build/gen-parsers.sh` regenerates the XNU parsers with byacc) |
 | W0: `VENDORS` at the root | closed (GAP-14, GAP-31; `rv vendors check` in CI) |
 | W0: correct `_PROVENANCE` everywhere | closed (GAP-31, GAP-58; xnu and migcom in `VENDORS`, mig `_PROVENANCE` paths repaired) |
 | W0: SPDX on every file we own | closed (GAP-45, GAP-57; 15 remaining files fixed, `Tools/ci/check-spdx.sh` in CI) |
