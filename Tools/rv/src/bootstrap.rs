@@ -90,12 +90,23 @@ fn steps(plan: &Plan, component: Component) -> Vec<(&'static str, Vec<String>)> 
             // does not fetch it, so a verify on a fresh checkout with a
             // restored cache needs the source first.
             if plan.verify {
-                steps.push(("Tools/toolchain/llvm/fetch.sh", Vec::new()));
+                let fetch_flags = if plan.refetch {
+                    vec!["--refetch".to_string()]
+                } else {
+                    Vec::new()
+                };
+                steps.push(("Tools/toolchain/llvm/fetch.sh", fetch_flags));
             }
             steps.push(("Tools/toolchain/stage1.sh", flags));
             steps
         }
     }
+}
+
+/// Whether `args` form a valid `rv bootstrap` command line, so the caller can
+/// print the usage and exit 2 before any work starts.
+pub fn args_valid(args: &[String]) -> bool {
+    parse(args).is_ok()
 }
 
 pub fn run(tree: &Path, args: &[String]) -> Result<(), String> {
@@ -156,6 +167,14 @@ mod tests {
         assert_eq!(steps[0].0, "Tools/toolchain/llvm/fetch.sh");
         assert_eq!(steps[1].0, "Tools/toolchain/stage1.sh");
         assert_eq!(steps[1].1, args(&["--verify", "-j", "8"]));
+    }
+
+    #[test]
+    fn refetch_reaches_the_llvm_fetch_before_a_verify() {
+        let plan = parse(&args(&["--verify", "--refetch", "llvm"])).expect("valid");
+        let steps = steps(&plan, Component::Llvm);
+        assert_eq!(steps[0].1, args(&["--refetch"]));
+        assert_eq!(steps[1].1, args(&["--verify", "--refetch"]));
     }
 
     #[test]

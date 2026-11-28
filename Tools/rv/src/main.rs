@@ -106,7 +106,12 @@ fn main() {
             }
             Cmd::Graph
         }
-        "bootstrap" => Cmd::Bootstrap,
+        "bootstrap" => {
+            if !bootstrap::args_valid(&args) {
+                usage();
+            }
+            Cmd::Bootstrap
+        }
         "sdk" => {
             if let Some(t) = args.iter().position(|a| a == "-t") {
                 target = args.get(t + 1).cloned().unwrap_or_else(|| usage());
