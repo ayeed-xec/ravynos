@@ -190,7 +190,7 @@ if [[ "$r64_needs_link" == 1 ]]; then
 	"$BUILD/elf2pe" "$BUILD/r64-loader.elf" "$BUILD/BOOTRISCV64.EFI"
 fi
 
-R64_KTARGET=riscv64-ravynos
+R64_KTARGET=riscv64-unknown-elf
 R64_K_CFLAGS=(--target="$R64_KTARGET"
 	-fno-pic
 	-mcmodel=medany

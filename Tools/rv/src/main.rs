@@ -308,6 +308,11 @@ fn build(
     target: &str,
     names: &[String],
 ) -> Result<(), String> {
+    if target == "riscv64-ravynos" {
+        // ADR-03: riscv64 user space needs the LLVM patch that adds a Mach-O
+        // riscv64 target; clang would otherwise emit ELF for an unknown OS.
+        return not_built("S08", "the riscv64 Mach-O target (ADR-03)");
+    }
     audit::license(tree, manifests)?;
     let order = select_for_target(manifests, deps, names, target)?;
     let build_dir = tree.join("build").join(target);
