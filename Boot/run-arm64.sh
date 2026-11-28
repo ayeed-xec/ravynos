@@ -72,11 +72,4 @@ timeout --foreground "$TIMEOUT" qemu-system-aarch64 \
 	-drive "if=none,file=$IMAGE,format=raw,id=hd0" \
 	-device virtio-blk-pci,drive=hd0 >/dev/null 2>&1 || STATUS=$?
 
-if ! grep -q "RVPANIC BEGIN" "$LOG"; then
-	echo "run-arm64.sh: no structured panic block in serial log (qemu status $STATUS)" >&2
-	exit 1
-fi
-if ! grep -q "RVPANIC END" "$LOG"; then
-	echo "run-arm64.sh: panic block truncated in serial log (qemu status $STATUS)" >&2
-	exit 1
-fi
+bash "$ROOT/expect-probe.sh" "$LOG" "run-arm64.sh (qemu status $STATUS)"
