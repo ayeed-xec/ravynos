@@ -36,7 +36,7 @@ jobs:
 
       - name: Stage-1 build tools (byacc, unifdef, rvpatch, mkfat, elf2pe, mig)
         run: |
-          cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap buildtools
+          cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap buildtools
           Tools/toolchain/buildtools.sh --print-bin >> "$GITHUB_PATH"
 
       - name: byacc and rvpatch resolve to stage 1, not the host
@@ -63,6 +63,8 @@ jobs:
           shellcheck Tools/ci/check-spdx.sh
           bash -n Tools/ci/check-commit-subjects.sh
           shellcheck Tools/ci/check-commit-subjects.sh
+          bash -n Tools/ci/check-macho.sh
+          shellcheck Tools/ci/check-macho.sh
 
       - name: SPDX identifiers on every file we own
         run: Tools/ci/check-spdx.sh
@@ -76,16 +78,16 @@ jobs:
           Tests/tools/run.sh
 
       - name: Build the rv harness
-        run: cargo build --manifest-path Tools/rv/Cargo.toml
+        run: cargo build --locked --manifest-path Tools/rv/Cargo.toml
 
       - name: rv unit tests
-        run: cargo test --manifest-path Tools/rv/Cargo.toml
+        run: cargo test --locked --manifest-path Tools/rv/Cargo.toml
 
       - name: rv lints
-        run: cargo clippy --manifest-path Tools/rv/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --locked --manifest-path Tools/rv/Cargo.toml --all-targets -- -D warnings
 
       - name: rv test (runs every Tests/**/test.toml)
-        run: cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- test
+        run: cargo run --locked --quiet --manifest-path Tools/rv/Cargo.toml -- test
 
       - name: Commands whose tool is not built yet exit 3
         run: |
@@ -99,21 +101,25 @@ jobs:
           done
 
       - name: Vendored trees match their pins
-        run: cargo run --manifest-path Tools/rv/Cargo.toml -- vendors check
+        run: cargo run --locked --manifest-path Tools/rv/Cargo.toml -- vendors check
 
       - name: rv build (discovers components from their manifests)
         run: |
-          cargo run --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
-          cargo run --manifest-path Tools/rv/Cargo.toml -- build -t arm64-ravynos
+          cargo run --locked --manifest-path Tools/rv/Cargo.toml -- build -t x86_64-ravynos
+          cargo run --locked --manifest-path Tools/rv/Cargo.toml -- build -t arm64-ravynos
 
-      - name: Linked user-space output is Mach-O for its target
+      # A format check only: hello and hello-cli are Mach-O files that make Linux
+      # system calls, not Darwin programs (GAP-07).
+      - name: Linked outputs pass the S02 Mach-O assertion
         run: |
-          file "build/x86_64-ravynos/hello/hello" | grep -q "Mach-O 64-bit x86_64"
-          file "build/arm64-ravynos/hello/hello" | grep -q "Mach-O 64-bit arm64"
-          echo "Mach-O assertion: OK"
+          for arch in x86_64 arm64; do
+            Tools/ci/check-macho.sh "build/$arch-ravynos/libhello/libhello.dylib" "$arch" DYLIB
+            Tools/ci/check-macho.sh "build/$arch-ravynos/hello/hello" "$arch" EXECUTE
+            Tools/ci/check-macho.sh "build/$arch-ravynos/hello-cli/hello-cli" "$arch" EXECUTE
+          done
 
       - name: rv audit license
-        run: cargo run --manifest-path Tools/rv/Cargo.toml -- audit license
+        run: cargo run --locked --manifest-path Tools/rv/Cargo.toml -- audit license
 
       - name: Negative fixtures fail as designed
         run: |
@@ -121,6 +127,11 @@ jobs:
 
       - name: mig builds from the pinned tree plus its patches
         run: Tools/mig/build.sh --out "$RUNNER_TEMP/mig" --smoke
+
+      - name: xnuhook plans the byacc parsers (S05)
+        run: |
+          cargo test --locked --manifest-path Tools/xnuhook/Cargo.toml
+          cargo clippy --locked --manifest-path Tools/xnuhook/Cargo.toml --all-targets -- -D warnings
 
   gates-image:
     name: gates in the pinned image
@@ -142,6 +153,9 @@ jobs:
           docker run --rm -v "$PWD:/src" -w /src \
             -e GIT_CONFIG_COUNT -e GIT_CONFIG_KEY_0 -e GIT_CONFIG_VALUE_0 \
             ravynos-gates bash -eu -c '
+              want=$(sed -n "s/^channel = \"\(.*\)\"/\1/p" rust-toolchain.toml)
+              rustc --version | grep -q "^rustc $want " || {
+                echo "image rustc $(rustc --version) is not rust-toolchain.toml $want"; exit 1; }
               Tools/toolchain/buildtools.sh
               PATH="$(Tools/toolchain/buildtools.sh --print-bin):$PATH"
               Tools/ci/check-format.sh
@@ -149,6 +163,17 @@ jobs:
               Tools/ci/check-host-tools.sh
               Tools/ci/check-commit-subjects.sh "HEAD^..HEAD"
               Tests/tools/run.sh
+              cargo build --locked --manifest-path Tools/rv/Cargo.toml
+              cargo test --locked --manifest-path Tools/rv/Cargo.toml
+              cargo clippy --locked --manifest-path Tools/rv/Cargo.toml --all-targets -- -D warnings
+              cargo test --locked --manifest-path Tools/xnuhook/Cargo.toml
+              for t in x86_64-ravynos arm64-ravynos; do
+                Tools/rv/target/debug/rv build -t "$t"
+              done
+              for arch in x86_64 arm64; do
+                Tools/ci/check-macho.sh "build/$arch-ravynos/libhello/libhello.dylib" "$arch" DYLIB
+                Tools/ci/check-macho.sh "build/$arch-ravynos/hello-cli/hello-cli" "$arch" EXECUTE
+              done
             '
 
   boot:

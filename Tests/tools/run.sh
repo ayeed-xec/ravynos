@@ -333,6 +333,34 @@ test_llvm_pin_agrees() {
 	fi
 }
 
+test_check_macho() {
+	# The S02 Mach-O assertion must reject the wrong file type, CPU, minos and
+	# format, not only accept the right one.
+	local d="$WORK/macho" check="$ROOT/Tools/ci/check-macho.sh"
+	mkdir -p "$d"
+	printf 'int hello(void) { return 1; }\n' >"$d/h.c"
+	clang --target=x86_64-apple-macosx27.2 -ffreestanding -nostdinc -c "$d/h.c" -o "$d/h.o" || {
+		bad "check-macho: cannot compile the fixture"
+		return
+	}
+	ld64.lld -arch x86_64 -platform_version macos 27.2 27.2 -dylib \
+		-install_name /usr/lib/libh.dylib "$d/h.o" -o "$d/libh.dylib" || {
+		bad "check-macho: cannot link the fixture"
+		return
+	}
+	ld64.lld -arch x86_64 -platform_version macos 11.0 11.0 -dylib \
+		-install_name /usr/lib/libh.dylib "$d/h.o" -o "$d/old.dylib" 2>/dev/null
+	clang --target=x86_64-unknown-linux-gnu -ffreestanding -nostdinc -c "$d/h.c" -o "$d/h.elf.o"
+
+	expect_ok "check-macho accepts an x86_64 dylib" bash "$check" "$d/libh.dylib" x86_64 DYLIB
+	expect_fail "check-macho rejects the wrong file type" bash "$check" "$d/libh.dylib" x86_64 EXECUTE
+	expect_fail "check-macho rejects the wrong CPU" bash "$check" "$d/libh.dylib" arm64 DYLIB
+	expect_fail "check-macho rejects minos 11.0" bash "$check" "$d/old.dylib" x86_64 DYLIB
+	expect_fail "check-macho rejects an ELF object" bash "$check" "$d/h.elf.o" x86_64 OBJECT
+	expect_fail "check-macho rejects a missing file" bash "$check" "$d/none" x86_64 DYLIB
+	expect_fail "check-macho rejects an unknown arch" bash "$check" "$d/libh.dylib" mips DYLIB
+}
+
 test_commit_subjects() {
 	# GAP-59: subjects stay short and lowercase-scoped. The checker reads the
 	# repository it lives in, so run a copy inside a scratch repository.
@@ -411,6 +439,7 @@ test_fetch_pin
 test_llvm_pin_agrees
 test_commit_subjects
 test_expect_probe
+test_check_macho
 
 echo "host tool tests: $passed passed, $failed failed"
 [[ $failed -eq 0 ]]
