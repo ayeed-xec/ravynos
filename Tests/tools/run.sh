@@ -246,6 +246,118 @@ test_stage1_key() {
 	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$copy")" != "$(bash "$ROOT/Tools/toolchain/llvm/key.sh")" ]; then ok; else bad "stage1 key ignores changes to build.sh"; fi
 }
 
+test_buildtools_key() {
+	# The build tools and LLVM are separate stage-1 components: a change to one
+	# must not move the other's cache key (GAP-55), or a byacc fix would cost a
+	# full LLVM rebuild.
+	local t="$WORK/bt-tree" bt llvm
+	mkdir -p "$t/Tools" "$t/Boot"
+	cp -a "$ROOT/Tools/toolchain" "$ROOT/Tools/mig" "$t/Tools/"
+	cp -a "$ROOT/Boot/mkfat" "$ROOT/Boot/elf2pe" "$t/Boot/"
+	cp "$ROOT/VENDORS" "$t/"
+
+	bt=$(bash "$t/Tools/toolchain/buildtools/key.sh")
+	llvm=$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")
+	if [[ $bt =~ ^[0-9a-f]{64}$ ]]; then ok; else bad "buildtools key is not a sha256: $bt"; fi
+	if [ "$bt" = "$(bash "$ROOT/Tools/toolchain/buildtools/key.sh")" ]; then ok; else bad "buildtools key depends on the checkout path"; fi
+
+	printf '\n# a change to an LLVM input\n' >>"$t/Tools/toolchain/llvm/build.sh"
+	if [ "$(bash "$t/Tools/toolchain/buildtools/key.sh")" = "$bt" ]; then ok; else bad "an LLVM change moved the buildtools key"; fi
+	if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")" != "$llvm" ]; then ok; else bad "llvm key ignores llvm/build.sh"; fi
+	llvm=$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")
+
+	local input
+	for input in Tools/toolchain/buildtools/build.sh Tools/mig/patches/series Boot/mkfat/mkfat.c VENDORS; do
+		if [ "$input" = VENDORS ]; then
+			sed -i 's/"t20260126"/"t20251214"/' "$t/VENDORS"
+		else
+			printf '\n' >>"$t/$input"
+		fi
+		if [ "$(bash "$t/Tools/toolchain/buildtools/key.sh")" != "$bt" ]; then ok; else bad "buildtools key ignores $input"; fi
+		bt=$(bash "$t/Tools/toolchain/buildtools/key.sh")
+		if [ "$(bash "$ROOT/Tools/toolchain/llvm/key.sh" "$t/Tools/toolchain")" = "$llvm" ]; then ok; else bad "a change to $input moved the llvm key"; fi
+	done
+	# Only the byacc and unifdef pins are keyed, not the rest of VENDORS.
+	printf '\n# unrelated\n' >>"$t/VENDORS"
+	if [ "$(bash "$t/Tools/toolchain/buildtools/key.sh")" = "$bt" ]; then ok; else bad "an unrelated VENDORS edit moved the buildtools key"; fi
+
+	expect_ok "vendor-pin reads a fetched pin" bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" byacc
+	if [[ $(wc -l <"$WORK/out") -eq 3 ]] && grep -qx '[0-9a-f]\{40\}' "$WORK/out"; then ok; else bad "vendor-pin output is not upstream, tag, commit"; fi
+	expect_fail "vendor-pin refuses a committed tree" bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" xnu
+	expect_fail "vendor-pin refuses an unknown name" bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" no-such-tree
+	expect_fail "buildtools --verify refuses a cold cache" bash "$t/Tools/toolchain/buildtools.sh" --verify
+	if grep -q "not built" "$WORK/out"; then ok; else bad "buildtools --verify did not say the cache is cold"; fi
+	expect_fail "buildtools rejects an unknown flag" bash "$ROOT/Tools/toolchain/buildtools.sh" --fast
+}
+
+test_buildtools_verify() {
+	# A verify that cannot fail proves nothing: tamper with the recorded hashes
+	# and with an installed tool, and expect both checks to refuse.
+	local t="$WORK/bt-verify" bin
+	mkdir -p "$t/Tools" "$t/Boot" "$t/build/vendor"
+	cp -a "$ROOT/Tools/toolchain" "$ROOT/Tools/mig" "$t/Tools/"
+	cp -a "$ROOT/Boot/mkfat" "$ROOT/Boot/elf2pe" "$t/Boot/"
+	cp "$ROOT/VENDORS" "$t/"
+	# Reuse the checkout's fetched trees when it has them; fetch.sh checks the pin.
+	for tree in byacc unifdef; do
+		[ -d "$ROOT/build/vendor/$tree" ] && cp -a "$ROOT/build/vendor/$tree" "$t/build/vendor/"
+	done
+
+	expect_ok "buildtools builds in a scratch tree" bash "$t/Tools/toolchain/buildtools.sh"
+	bin=$(bash "$t/Tools/toolchain/buildtools.sh" --print-bin)
+	expect_ok "buildtools --verify passes on an honest cache" bash "$t/Tools/toolchain/buildtools.sh" --verify
+
+	cp "$bin/../tools.sha256" "$WORK/tools.sha256.good"
+	sed -i '1s/^[0-9a-f]\{8\}/deadbeef/' "$bin/../tools.sha256"
+	if cmp -s "$bin/../tools.sha256" "$WORK/tools.sha256.good"; then bad "the tamper left tools.sha256 unchanged"; else ok; fi
+	expect_fail "buildtools --verify refuses a tampered tools.sha256" bash "$t/Tools/toolchain/buildtools.sh" --verify
+	cp "$WORK/tools.sha256.good" "$bin/../tools.sha256"
+
+	printf '\n' >>"$bin/unifdef"
+	expect_fail "buildtools refuses a tampered installed tool" bash "$t/Tools/toolchain/buildtools.sh"
+	if grep -q "do not match tools.sha256" "$WORK/out"; then ok; else bad "buildtools did not name the hash mismatch"; fi
+	expect_fail "buildtools --verify refuses a tampered installed tool" bash "$t/Tools/toolchain/buildtools.sh" --verify
+
+	touch "$t/build/vendor/byacc/stray.h"
+	expect_fail "fetch refuses a pinned tree with an untracked file" bash "$t/Tools/toolchain/buildtools/fetch.sh" byacc
+}
+
+test_fetch_pin() {
+	# fetch.sh must refuse a tag that no longer names the pinned commit.
+	local up="$WORK/upstream" t="$WORK/fetch-tree" first second
+	git init -q "$up"
+	git -C "$up" -c user.name=t -c user.email=t@t commit -q --allow-empty -m one
+	first=$(git -C "$up" rev-parse HEAD)
+	git -C "$up" -c user.name=t -c user.email=t@t commit -q --allow-empty -m two
+	second=$(git -C "$up" rev-parse HEAD)
+	git -C "$up" -c user.name=t -c user.email=t@t tag -a -m v v1 "$second"
+
+	mkdir -p "$t/Tools/toolchain"
+	cp -a "$ROOT/Tools/toolchain/buildtools" "$t/Tools/toolchain/"
+	printf '[[vendor]]\nname     = "demo"\npath     = "build/vendor/demo"\nupstream = "file://%s"\ntag      = "v1"\ncommit   = "%s"\nfetch    = true\n' \
+		"$up" "$first" >"$t/VENDORS"
+	expect_fail "fetch refuses a tag that names another commit" bash "$t/Tools/toolchain/buildtools/fetch.sh" demo
+	if grep -q "VENDORS pins $first" "$WORK/out"; then ok; else bad "fetch did not report the pin mismatch"; fi
+
+	sed -i "s/$first/$second/" "$t/VENDORS"
+	expect_ok "fetch takes a tag that names the pinned commit" bash "$t/Tools/toolchain/buildtools/fetch.sh" demo
+	if [ "$(git -C "$t/build/vendor/demo" rev-parse HEAD)" = "$second" ]; then ok; else bad "fetch checked out the wrong commit"; fi
+}
+
+test_llvm_pin_agrees() {
+	# The LLVM pin is written twice until llvm/fetch.sh reads VENDORS (which
+	# would move the LLVM key): VENDORS and llvm/_PROVENANCE must agree.
+	local pin prov_url prov_tag prov_commit
+	mapfile -t pin < <(bash "$ROOT/Tools/toolchain/buildtools/vendor-pin.sh" llvm-project)
+	prov_url=$(sed -n 's/^\* Upstream URL: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
+	prov_tag=$(sed -n 's/^\* Tag: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
+	prov_commit=$(sed -n 's/^\* Commit: //p' "$ROOT/Tools/toolchain/llvm/_PROVENANCE")
+	if [ "${pin[0]:-}" = "$prov_url" ] && [ "${pin[1]:-}" = "$prov_tag" ] &&
+		[ "${pin[2]:-}" = "$prov_commit" ]; then ok; else
+		bad "VENDORS llvm-project (${pin[*]:-}) disagrees with llvm/_PROVENANCE ($prov_url $prov_tag $prov_commit)"
+	fi
+}
+
 test_commit_subjects() {
 	# GAP-59: subjects stay short and lowercase-scoped. The checker reads the
 	# repository it lives in, so run a copy inside a scratch repository.
@@ -319,6 +431,10 @@ test_hash_tools
 test_xnu_parsers
 test_doc_paths
 test_stage1_key
+test_buildtools_key
+test_buildtools_verify
+test_fetch_pin
+test_llvm_pin_agrees
 test_commit_subjects
 test_expect_probe
 

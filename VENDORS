@@ -37,8 +37,26 @@ prune    = ["migcom.tproj/parser.c", "migcom.tproj/lexxer.c"]
 [[vendor]]
 name     = "llvm-project"
 path     = "build/vendor/llvm-project"
-upstream = "https://github.com/swiftlang/llvm-project"
-tag      = "swift-6.4.3-RELEASE"
-commit   = "fb5f84d903a3b4e7aea15cd5666598a46f56c833"
-license  = "Apache-2.0"
+upstream = "https://github.com/llvm/llvm-project"
+tag      = "llvmorg-21.1.6"
+commit   = "a832a5222e489298337fbb5876f8dcaf072c5cca"
+license  = "Apache-2.0 WITH LLVM-exception"
+fetch    = true
+
+[[vendor]]
+name     = "byacc"
+path     = "build/vendor/byacc"
+upstream = "https://github.com/ThomasDickey/byacc-snapshots"
+tag      = "t20260126"
+commit   = "7856d035dd27104782612818630adc5011214c31"
+license  = "LicenseRef-public-domain"
+fetch    = true
+
+[[vendor]]
+name     = "unifdef"
+path     = "build/vendor/unifdef"
+upstream = "https://github.com/fanf2/unifdef"
+tag      = "unifdef-2.12"
+commit   = "99d17074b9ba66cc9da2ce60fb29c6b1beb0370a"
+license  = "BSD-2-Clause"
 fetch    = true

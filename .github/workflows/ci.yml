@@ -22,6 +22,33 @@ jobs:
           sudo apt-get install -y ninja-build clang lld llvm
           rustup component add rustfmt
 
+      - name: Stage-1 build tools cache key
+        id: buildtools
+        run: |
+          key=$(bash Tools/toolchain/buildtools/key.sh)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the stage-1 build tools
+        uses: actions/cache@v4
+        with:
+          path: build/toolchain/buildtools-${{ steps.buildtools.outputs.key }}
+          key: stage1-buildtools-${{ steps.buildtools.outputs.key }}
+
+      - name: Stage-1 build tools (byacc, unifdef, rvpatch, mkfat, elf2pe, mig)
+        run: |
+          cargo run --quiet --manifest-path Tools/rv/Cargo.toml -- bootstrap buildtools
+          Tools/toolchain/buildtools.sh --print-bin >> "$GITHUB_PATH"
+
+      - name: byacc and rvpatch resolve to stage 1, not the host
+        run: |
+          bin=$(Tools/toolchain/buildtools.sh --print-bin)
+          for tool in byacc unifdef rvpatch mig; do
+            [ "$(command -v "$tool")" = "$bin/$tool" ] || {
+              echo "$tool resolves to $(command -v "$tool"), expected $bin/$tool"
+              exit 1
+            }
+          done
+
       - name: Host tool gate (no GPL program in the build)
         run: |
           bash -n Tools/ci/check-host-tools.sh
@@ -93,7 +120,7 @@ jobs:
           RV="$PWD/Tools/rv/target/debug/rv" bash Tests/rv/negative/run.sh
 
       - name: mig builds from the pinned tree plus its patches
-        run: Tools/mig/build.sh
+        run: Tools/mig/build.sh --out "$RUNNER_TEMP/mig" --smoke
 
   gates-image:
     name: gates in the pinned image
@@ -115,6 +142,8 @@ jobs:
           docker run --rm -v "$PWD:/src" -w /src \
             -e GIT_CONFIG_COUNT -e GIT_CONFIG_KEY_0 -e GIT_CONFIG_VALUE_0 \
             ravynos-gates bash -eu -c '
+              Tools/toolchain/buildtools.sh
+              PATH="$(Tools/toolchain/buildtools.sh --print-bin):$PATH"
               Tools/ci/check-format.sh
               Tools/ci/check-spdx.sh
               Tools/ci/check-host-tools.sh

@@ -32,7 +32,7 @@ fn usage() -> ! {
     eprintln!(
         "usage: rv [--root <tree>] <command>\n\
          usage: rv build [-t <target>] [<component>|<layer>...]\n\
-         usage: rv bootstrap [--verify] [--refetch] [-j <jobs>]\n\
+         usage: rv bootstrap [--verify] [--refetch] [-j <jobs>] [buildtools|llvm...]\n\
          usage: rv graph [--reverse] [--forbid]\n\
          usage: rv shell [<component>]\n\
          usage: rv sdk [-t <target>]\n\
@@ -106,7 +106,12 @@ fn main() {
             }
             Cmd::Graph
         }
-        "bootstrap" => Cmd::Bootstrap,
+        "bootstrap" => {
+            if !bootstrap::args_valid(&args) {
+                usage();
+            }
+            Cmd::Bootstrap
+        }
         "sdk" => {
             if let Some(t) = args.iter().position(|a| a == "-t") {
                 target = args.get(t + 1).cloned().unwrap_or_else(|| usage());

@@ -4,7 +4,7 @@
 #        (cc is gcc on Debian, GPL-3; clang -E is the same C preprocessor)
 #      - clang on Linux rejects -arch; drop it from the preprocessor line
 #      - GNU sed takes no argument to -i (BSD syntax used upstream)
-# fate: keep until mig moves to our own MIT-licensed implementation.
+# fate: permanent
 diff -u a/migcom.tproj/mig.sh b/migcom.tproj/mig.sh
 --- a/migcom.tproj/mig.sh
 +++ b/migcom.tproj/mig.sh

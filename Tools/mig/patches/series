@@ -1,7 +1,7 @@
-# Patch series for Apple migcom on Linux. Applied in order by
-# ../build.sh with `rvpatch -p1` onto a pristine copy of
-# ../../../tools/mig/upstream/migcom.tproj. Every patch carries
-# why:/fate: headers (Docs/design/12-roadmap.md, W1).
+# Patch series for Apple migcom on Linux. Tools/mig/build.sh applies
+# exactly these patches, in this order, with `rvpatch -p1` onto a pristine
+# copy of Tools/mig/upstream/migcom.tproj. Every patch starts with the
+# why:/fate: header of SYSTEM-DESIGN.md section 2.5.
 
 01-type-h-u_int-on-linux.patch
 02-strdefs-h-bool-keyword.patch

@@ -715,22 +715,30 @@ Apple install names, ad hoc signatures on arm64.
   18 or newer; Rust per `rust-toolchain.toml`). CMake (BSD-3-Clause) and CPython
   (PSF-2.0) are also stage 0, used only by the `llvm` and `swift` component builds.
   Stage 0 builds only `rv` and stage 1.
-- **Stage 1** is built by `rv bootstrap` into `build/toolchain/<hash>/`, in three
+- **Stage 1** is built by `rv bootstrap` into `build/toolchain/`, in three
   steps:
-  - W0: LLVM from one tree, `llvm/llvm-project` at the Swift release tag
-    (`fetch = true` in `VENDORS`): clang, lld (`ld64.lld`, `ld.lld`, `lld-link`),
-    `llvm-ar`, `llvm-objdump`, `llvm-readtapi`, `llvm-lipo`, `dsymutil`, `llvm-nm`,
-    `llvm-strip`, libclang. Also `byacc` (public domain), `unifdef` (BSD-2-Clause),
-    `migcom` from `Tools/mig/` (APSL) with a hand-written lexer (GAP-11), the XNU host
-    tools (below), `rvpatch`, `mkfat`, `elf2pe`.
+  - W0: LLVM from one tree, upstream `llvm/llvm-project` at `llvmorg-21.1.6`
+    (ADR-31; `fetch = true` in `VENDORS`): clang, lld (`ld64.lld`, `ld.lld`,
+    `lld-link`), `llvm-ar`, `llvm-objdump`, `llvm-readtapi`, `llvm-lipo`, `dsymutil`,
+    `llvm-nm`, `llvm-strip`, libclang. Also the build tools: `byacc` (public domain),
+    `unifdef` (BSD-2-Clause), `migcom` from `Tools/mig/` (APSL) with a hand-written
+    lexer (GAP-11), `rvpatch`, `mkfat`, `elf2pe`; and the XNU host tools (below),
+    which nothing builds yet.
+  - LLVM and the build tools are two components with separate cache keys:
+    `llvm` (`Tools/toolchain/stage1.sh`, `build/toolchain/<key>/`) and `buildtools`
+    (`Tools/toolchain/buildtools.sh`, `build/toolchain/buildtools-<key>/`). Neither
+    key reads the other's repository inputs, so a change to the build tools never
+    rebuilds LLVM. `rv bootstrap [buildtools|llvm]` builds one or both.
   - W1: Apple `ld64` and `cctools` (APSL).
   - W2: the Swift compiler from `swiftlang/swift` at the same release tag
     (`fetch = true`), built against the same LLVM tree. S16 consumes it. Interim for
     W2 until it builds: the pinned swift.org release toolchain.
 - **Stage 2** is the system built with stage 1. Once ravynOS self-hosts, the same graph
   builds stage 1 on ravynOS.
-- Each stage-1 tool is hashed with its inputs. CI caches stage 1 by that hash.
-  `rv bootstrap --verify` rebuilds and compares hashes; CI runs it weekly.
+- Each stage-1 tool is hashed with its inputs. CI caches each component by its key.
+  `rv bootstrap --verify` rebuilds and compares hashes; CI runs it for a component
+  when one of its inputs changes, and weekly (`stage1-llvm.yml`,
+  `stage1-buildtools.yml`).
 
 Linker selection (ADR-04):
 
@@ -797,7 +805,10 @@ bison, flex or m4; a CI step asserts their absence before the build.
   exception.
 - ld64, cctools: vendored, APSL-2.0. Build files ours (no autotools).
 - migcom: vendored in `Tools/mig/upstream/`, APSL; patches in `Tools/mig/patches/`.
-- byacc: vendored, public domain. unifdef: vendored, BSD-2-Clause.
+- byacc (public domain) and unifdef (BSD-2-Clause): fetched by pin (`VENDORS`,
+  `fetch = true`) into `build/vendor/`, never committed, and compiled by
+  `Tools/toolchain/buildtools/build.sh` with clang alone (no configure, no make);
+  byacc's `config.h` is ours.
 - XNU host tools: from `Kernel/xnu/SETUP` (APSL-2.0); scanner ours (BSD-2-Clause).
 - `rvpatch` (seed `Tools/mig/rvpatch.c`; component in `Tools/rvpatch/`), `mkfat`,
   `elf2pe`, the Rust generators in `Tools/xnuhook`: ours, BSD-2-Clause.
@@ -805,7 +816,9 @@ bison, flex or m4; a CI step asserts their absence before the build.
 
 **Location.** `Tools/toolchain/<tool>/manifest.toml` for vendored and fetched tools
 (layer `build-toolchain`, kind `host-tool`): `llvm`, `swift`, `ld64`, `cctools`,
-`byacc`, `unifdef`. `Tools/mig/` (`mig`), `Tools/config/` (`xnu-config`),
+`byacc`, `unifdef`. Until rv builds host tools from manifests, `llvm` is built by
+`Tools/toolchain/stage1.sh` and `byacc`, `unifdef`, `rvpatch`, `mkfat`, `elf2pe` and
+`mig` by `Tools/toolchain/buildtools.sh` (GAP-62). `Tools/mig/` (`mig`), `Tools/config/` (`xnu-config`),
 `Tools/xnu-setup/` (`kextsymboltool`, `setsegname`, `decomment`, `installfile`,
 `replacecontents`), `Tools/rvpatch/` (`rvpatch`). `Tools/ci/Containerfile`.
 `rust-toolchain.toml` at the root.
